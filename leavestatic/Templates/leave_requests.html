@@ -6,142 +6,97 @@
 {% endblock %}
 
 {% block content %}
-    <div class="leave_requests_main" id="leave-requests_main">
-        <div class="leave_requests_header">
-            <a href="{% url 'admin_dashboard' slug %}">
-                <img src="{% static 'images/back.png' %}" width="25px" height="25px" alt="back_image" class="back-image">
-            </a>
-            <h1>Leave Requests</h1>
-        </div>
+    <div class="approvals-container">
 
-        {% if user_type == 'HOD' %}
-        <div class="HOD_main">
-            {% for department, statuses in all_head.items %}
-            <h3 class="h3">Department: {{ department.department_name }}</h3>
-            <div class="HOD_2">
-                {% for stat, leave_requests in statuses.items %}
-                <div class="stat" onclick="expandMyMenu('HOD_3_{{ forloop.parentloop.counter }}{{ forloop.counter}}')">
-                    <img src="{% if forloop.counter == 1 %}{% static 'images/pending.jpg' %}{% elif forloop.counter == 2 %}{% static 'images/3891942.jpg' %}{% else %}{% static 'images/denied.jpg' %}{% endif %}" alt="">
-                    <h3>{{ stat }}</h3>
-                </div>
-                
-                <div class="HOD_3" id="HOD_3_{{ forloop.parentloop.counter }}{{ forloop.counter}}">
-                    <div class="pp3">
-                        <div class="rko">
-                            <div class="top">
-                                <h2>{{ department.department_name }}</h2>
-                                <p class="close-button" onclick="expandMyMenu('HOD_3_{{ forloop.parentloop.counter }}{{ forloop.counter}}')">&times;</p>
-                            </div>
-                            <h3>{{ stat }} requests for Leave</h3>
-                        </div>
-                        <div class="rkp">
-                            {% for leave in leave_requests %} 
-                            {% if forloop.counter == 1 %}
-                            <div class="rqo rq1">
-                                <p><b>Name</b></p>
-                            </div>
-                            <div class="rqo rq1">
-                                <p><b>Type</b></p>
-                            </div>
-                            <div class="rqo rq1">
-                                <p><b>Date</b></p>
-                            </div>
-                            {% endif %}
-                            <div class="rqo">
-                                <a href="{% url 'leave_approval' leave.applicant.slug leave.id slug %}">
-                                    <p>{{ leave.applicant.last_name }}, {{ leave.applicant.first_name }} {{ leave.applicant.other_names }}</p>
-                                </a>
-                            </div>
-                            <div class="rqo">
-                                <p>{{ leave.type }}</p>
-                            </div>
-                            <div class="rqo rq2">
-                                <p>{{ leave.application_date }}</p>
-                                <hr>
-                            </div>
-                            
-                            <!-- <div class="rqo">
-                                    <p>{{ leave.leave_start_date }}</p>
-                            </div> -->
-                            <!-- <div class="rqo">
-                                
-                            </div> -->
-                            {% empty %}
-                                <div class="empty">
-                                    <img src="{% static 'images/3371471.jpg' %}" alt="empty">
-                                    <p>There are no {{ stat }} leave requests at the moment</p>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>                  
-                   
-                </div>
-            {% endfor %}
+  <!-- Pending Approvals -->
+  <section class="approvals-section approvals-pending">
+    <h2>Pending Approvals</h2>
+    <div class="cards">
+      {% if pending_approvals %}
+        {% for approval in pending_approvals %}
+          <div class="approval-card pending">
+            <header class="card-header">
+              <h3>{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}</h3>
+              <span class="status-label">{{ approval.get_status_display }}</span>
+            </header>
+            <div class="card-body">
+              <p><strong>Date:</strong> {{ approval.request.application_date }}</p>
+              <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
+              <p><strong>Days Requested:</strong> {{ approval.request.days_requested }}</p>
             </div>
-            {% endfor %}            
-        </div>
-        {% elif user_type == 'HOHR' or user_type == 'RECTOR' %}
-        <div class="department_list_wrapper">
-            <div class="admin-dept-grid">
-                {% for department, status in grouped.items %}
-                {% if status != '' %}
-                <div class="dept-wrapper{{forloop.counter}}">
-                    <div class="dept" onclick="showMyTable('{{forloop.counter}}')">
-                        <img {%if department.department_image %} src="{{ department.department_image.url }}" {% else %} src="{% static 'images/hierarchy.png' %}" {% endif %} width="130px" height="130px" alt="dept-image" class="dept-image">
-                        <p>{{ department.department_name }} <br><span class="count">*</span></p>
-                    </div>
-                    <div class="popup-wrapper" id="popup-wrapper{{forloop.counter}}">
-                        <div class="pop-head">
-                            <h2>Leave Requests for {{ department.department_name }}</h2>
-                            <p onclick="closeFunction('popup-wrapper{{forloop.counter}}')">&times;</p>
-                        </div>
-                        {% for stat, leave_requests in status.items %}
-                        <div class="stat-wrapper" id="stat-wrapper{{forloop.parentloop.counter}}{{forloop.counter}}">
-                            
-                            <h3 onclick="expandList('{{forloop.parentloop.counter}}{{forloop.counter}}')">{{ stat }}</h3>
-                            <div class="requests-grid" {% if forloop.counter == 1 %} style="display: grid;" {% endif %} id="requests-grid{{forloop.parentloop.counter}}{{forloop.counter}}">
-                                {% for leave in leave_requests %}
-                                {% if forloop.counter == 1 %}
-                                <div class="leave-requests jk1">
-                                    <p><b>Name</b></p>
-                                </div>
-                                <div class="leave-requests jk1">
-                                    <p><b>Position</b></p>
-                                </div>
-                                <div class="leave-requests jk1">
-                                    <p><b>Leave request</b></p>
-                                </div>
-                                <div class="leave-requests jk1">
-                                    <p><b>Date Applied</b></p>
-                                </div>
-                                {% endif %}
-                                <div class="leave-requests">
-                                    <a href="{% url 'leave_approval' leave.applicant.slug leave.id slug %}">
-                                        <p>{{ leave.applicant.last_name }}, {{ leave.applicant.first_name }} {{ leave.applicant.other_names }}</p>
-                                    </a>
-                                </div>
-                                <div class="leave-requests">
-                                    <p>{{ leave.applicant.position }}</p>
-                                </div>
-                                <div class="leave-requests">
-                                    <p>{{ leave.type }}</p>
-                                </div>
-                                <div class="leave-requests">
-                                    <p>{{ leave.application_date }}</p>
-                                <hr>
-                                </div>
-                                {% empty %}
-                                <p style="padding-left: 10px;">No {{stat}} leave requests to review at the moment</p>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
+            <footer class="card-actions">
+              <form action="" method="post" class="inline-form">
+                {% csrf_token %}
+                <input type="hidden" name="approval_id" value="{{approval.id}}" id="">
+                <input type="hidden" name="form_meta" value="approve" id="">
+                <button type="submit" class="btn btn-success">Approve</button>
+              </form>
+              <form action="" method="post" class="inline-form">
+                {% csrf_token %}
+                <input type="hidden" name="approval_id" value="{{approval.id}}" id="">
+                <input type="hidden" value="deny" name="form_meta" id="">
+                <button type="submit" class="btn btn-danger">Deny</button>
+              </form>
+            </footer>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="no-items">No pending approvals.</p>
+      {% endif %}
     </div>
+  </section>
+
+  <hr>
+
+  <!-- Approved Approvals -->
+  <section class="approvals-section approvals-approved">
+    <h2>Approved Approvals</h2>
+    <div class="cards">
+      {% if approved_approvals %}
+        {% for approval in approved_approvals %}
+          <div class="approval-card approved">
+            <header class="card-header">
+              <h3>{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}</h3>
+              <span class="status-label">{{ approval.get_status_display }}</span>
+            </header>
+            <div class="card-body">
+              <p><strong>Date:</strong> {{ approval.request.application_date }}</p>
+              <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
+              <p><strong>Days Approved:</strong> {{ approval.days_approved }}</p>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="no-items">No approved approvals.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- Denied Approvals -->
+  <section class="approvals-section approvals-denied">
+    <h2>Denied Approvals</h2>
+    <div class="cards">
+      {% if denied_approvals %}
+        {% for approval in denied_approvals %}
+          <div class="approval-card denied">
+            <header class="card-header">
+              <h3>{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}</h3>
+              <span class="status-label">{{ approval.get_status_display }}</span>
+            </header>
+            <div class="card-body">
+              <p><strong>Date:</strong> {{ approval.request.application_date }}</p>
+              <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
+              <p><strong>Reason:</strong> {{ approval.reason|default:"—" }}</p>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="no-items">No denied approvals.</p>
+      {% endif %}
+    </div>
+  </section>
+
+</div>
 {% endblock %}

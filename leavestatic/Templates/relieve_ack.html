@@ -6,51 +6,68 @@
 
 {% block content %}
 <div class="relief-main">
-    <div class="relief_header">
-        <h1>Relieving officer form</h1>
-    </div>
-    <div class="relief_content">
-        <form action="{% url 'relieve_ack' id slug %}" method="post">
-            {% csrf_token %}
-            <div class="r1">
-                <p>Date</p>
-                <p>{{ date }}</p>
-                <p>Relieving Officer Name</p>
-                <p>{{ leave_request.relieving_officer.first_name }} {{ leave_request.relieving_officer.last_name }}, {{ leave_request.relieving_officer.other_names }}</p>
-                <p>Designation</p>
-                <p>{{ leave_request.relieving_officer.position }}</p>
-                <p>Department</p>
-                <p>{{ leave_request.relieving_officer.department.department_name }}</p>
-            </div>
-            <h3>Leave Request Details</h3>
-            <div class="r1">
-                <p>Applicant</p>
-                <p>{{ leave_request.applicant.first_name }} {{leave_request.applicant.last_name }}, {{ leave_request.applicant.other_names }}</p>
-                <p>Leave Duration</p>
-                <p>from {{ leave_request.leave_start_date }} to {{ leave_request.leave_end_date }}</p>
-                <p>Responsibilities During Relief Period</p>
-                <p>Contact your administrator</p>
-            </div>
-            <h3>Acknowledgment of Assignment</h3>
-            <div class="r2">
-                <p>Please indicate your decision regarding the temporary relief assignment by selecting one of the options below: </p>
-                <div class="r211">
-                    <input type="radio" value="APPROVED" name="relief_ack" id="relief_ack_accept" required onclick="reliefReason(event)">
-                    <label for="relief_ack_accept">I accept the relieving officer assignment and confirm my availability for the specified period.</label>
-                </div>
-                <div class="r211">
-                    <input type="radio" onclick="reliefReason(event)" value="REJECTED" name="relief_ack" id="relief_ack_deny" required>
-                    <label for="relief_ack_deny">I am unable to accept the relieving officer assignment due to</label>
-                </div>
-                <div class="r21" id="reason_wrapper">
-                    <label for="reason">Reason<span class="required_indi">*</span></label>
-                    <textarea name="reason" id="reason" required></textarea>
-                </div>
-            </div>
-            <div class="button-wrapper">
-                <button type="submit" id="submit-button">Submit</button>
-            </div>
-        </form>
-    </div>
+  <div class="relief_header">
+    <h1>Relieving Officer Form</h1>
+  </div>
+
+  <div class="relief_content">
+    <form action="" method="post">
+      {% csrf_token %}
+      <!-- Section 1: Relieving Officer Info -->
+      <div class="r1">
+        <p><strong>Date:</strong></p>
+        <p>{{ date }}</p>
+
+        <p><strong>Relieving Officer Name:</strong></p>
+        <p>{{ ack.staff.first_name }} {{ ack.staff.last_name }}, {{ ack.staff.other_names }}</p>
+
+        <p><strong>Level:</strong></p>
+        <p>{{ ack.staff.level.name }}</p>
+
+        <p><strong>Group:</strong></p>
+        <p>{{ ack.staff.group.name }}</p>
+      </div>
+
+      <!-- Section 2: Leave Request Info -->
+      <h3>Leave Request Details</h3>
+      <div class="r1">
+        <p><strong>Applicant:</strong></p>
+        <p>{{ ack.request.applicant.first_name }} {{ ack.request.applicant.last_name }}, {{ ack.request.applicant.other_names }}</p>
+
+        <p><strong>Leave Duration:</strong></p>
+        <p>From {{ ack.request.start_date }} to {{ ack.request.return_date }}</p>
+
+        <p><strong>Responsibilities During Relief Period:</strong></p>
+        <p>Contact your administrator</p>
+      </div>
+
+      <!-- Section 3: Acknowledgment -->
+      <h3>Acknowledgment of Assignment</h3>
+      <div class="r2">
+        <p>Please indicate your decision regarding the temporary relief assignment:</p>
+
+        <div class="r211">
+          <input type="radio" value="approve" name="form_meta" id="relief_ack_accept" required onclick="reliefReason(event)">
+          <label for="relief_ack_accept">I accept the relieving officer assignment and confirm my availability for the specified period.</label>
+        </div>
+
+        <div class="r211">
+          <input type="radio" value="deny" name="form_meta" id="relief_ack_deny" required onclick="reliefReason2(event)">
+          <label for="relief_ack_deny">I am unable to accept the relieving officer assignment due to:</label>
+        </div>
+        <input type="hidden" name="ack_id" value="{{id}}" id="">
+        <div class="r21" id="reason_wrapper">
+          <label for="reason">Reason<span class="required_indi">*</span></label>
+          <textarea name="reason" id="reason" required></textarea>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="button-wrapper">
+        <button type="submit" id="submit-button">Submit</button>
+      </div>
+    </form>
+  </div>
 </div>
+
 {% endblock %}

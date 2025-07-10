@@ -67,10 +67,15 @@ class Staff(AbstractUser):
 # Position model REMOVED
 
 class Leave(models.Model):
+    class LeaveStatus(models.TextChoices):
+        On_Leave = "On Leave", "on_leave"
+        Completed = "Completed", "completed"
     name = models.CharField(max_length=255, null=True)
-    days = models.IntegerField(null=True)
+    days_granted = models.IntegerField(null=True)
+    days_remaining = models.IntegerField(null=True)
     request = models.ForeignKey("LeaveRequest", on_delete=models.CASCADE, null=True)
     is_active = models.BooleanField(default=True)
+    status = models.CharField(max_length=20, choices=LeaveStatus.choices, default=LeaveStatus.On_Leave)
     def __str__(self):
         return f"{self.name}"
 
@@ -162,12 +167,16 @@ class Ack(models.Model):
     class Type(models.TextChoices):
         RELIEF = "RELIEF", "relief"
         SELF = "SELF", "self"
+    class Status(models.TextChoices):
+        Pending = "Pending", "pending"
+        Approved = "Approved", "approved"
+        Denied = "Denied", "denied"
     request = models.ForeignKey("LeaveRequest", on_delete=models.CASCADE, null=True)
-    approve = models.BooleanField(default=False, null=True)
     date = models.DateTimeField(auto_now_add=True)
     reason = models.TextField(null=True)
     type = models.CharField(max_length=10, choices=Type.choices, default=Type.RELIEF)
     staff = models.ForeignKey("Staff", on_delete=models.CASCADE)
+    status = models.CharField(max_length=13, choices=Status.choices, default=Status.Pending)
     is_active = models.BooleanField(default=True)
 
 class LeaveRequest(models.Model):
@@ -193,7 +202,7 @@ class LeaveRequest(models.Model):
     med_note = models.FileField(upload_to='files/med-notes', null=True)
     letter = models.FileField(upload_to='files/letters', null=True)
     is_active = models.BooleanField(default=True)
-    end_date = models.IntegerField(null=True)
+    end_date = models.DateField(null=True)
     def save(self, *args, **kwargs):
         valid_days = 0
         total_days = 0

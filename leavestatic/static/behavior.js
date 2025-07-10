@@ -230,6 +230,7 @@ const loadLeave = (someValue ,leaveTypes, staffData) => {
     console.log("CC1", staffData)
     let leaveType = leaveTypes[someValue]
     let staffLeaveData = staffData[someValue]
+    document.getElementById("leave_type").value = someValue;
     // set leave type name
     document.querySelector(".leave1-header").textContent = leaveType.name
     // set days eligible for that type of leave
@@ -318,6 +319,19 @@ function countdownPassword(minute, seconds) {
     }
     return [minute, seconds];
     
+}
+
+function reliefReason2(event) {
+  const reasonWrapper = document.getElementById("reason_wrapper");
+  if (event.target.checked) {
+    reasonWrapper.style.display = "flex";
+    document.getElementById("reason").required = true;
+    document.getElementById("reason").disabled = false;
+  } else {
+    reasonWrapper.style.display = "none";
+    document.getElementById("reason").required = false;
+    document.getElementById("reason").disabled = true;
+  }
 }
 
 function editFields() {

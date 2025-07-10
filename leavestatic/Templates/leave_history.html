@@ -6,50 +6,40 @@
 {% endblock %}
 
 {% block content %}
-<div class="leave_history_wrapper">
-    <div class="leave_history">
-        <div class="leave_history_header">
-            <h1>History</h1>
+<div class="leave-history-container">
+  {% for year, requests in grouped_leave.items %}
+    <h2>{{ year }}</h2>
+    <div class="leave-card-grid">
+      {% for req in requests %}
+        <div class="leave-card">
+          <h3>
+            {{ req.type.name }}
+            <span class="status-tag status-{{ req.status|lower }}">{{ req.status }}</span>
+          </h3>
+          <p><strong>Applied:</strong> {{ req.application_date }}</p>
+          <p><strong>Duration:</strong> {{ req.start_date }} to {{ req.return_date }}</p>
+
+          <h4>Relieving Officer Acknowledgment</h4>
+          {% for ack in req.ack_set.all %}
+            <p>{{ ack.staff.first_name }}:
+              <span class="status-tag status-{{ ack.status|lower }}">{{ ack.status }}</span>
+            </p>
+          {% empty %}
+            <p class="empty">No acknowledgment yet.</p>
+          {% endfor %}
+
+          <h4>Approval Progress</h4>
+          {% for approval in req.approval_set.all %}
+            <p>{{ approval.approver.staff.first_name }}:
+              <span class="status-tag status-{{ approval.status|lower }}">{{ approval.status }}</span>
+            </p>
+          {% empty %}
+            <p class="empty">No approvals yet.</p>
+          {% endfor %}
         </div>
-        <div class="leave_history_body">
-            {% for year, leave_list in grouped_leave.items %}
-            <h2 style="text-align: end; color: gray;">{{ year }}</h2>
-            <div class="leave_grid_container">
-                {% for leave in leave_list %}
-                {% if forloop.counter == 1 %}
-                    <div class="leave_grid_item">
-                        <p><b>Type</b></p>
-                    </div>
-                    <div class="leave_grid_item">
-                        <p><b>Days requested</b></p>
-                    </div>
-                    <div class="leave_grid_item">
-                        <p><b>Date applied</b></p>
-                    </div>
-                    <div class="leave_grid_item">
-                        <p><b>Status</b></p>
-                    </div>
-                {% endif %}
-                    <div class="leave_grid_item">
-                        <a href="{% url 'leave_details' leave.id slug %}">
-                            <p>{{ leave.type }}</p>
-                        </a>
-                    </div>
-                    <div class="leave_grid_item">
-                        <p>{{ leave.leave_days_requested }}</p>
-                    </div>
-                    <div class="leave_grid_item">
-                        <p>{{ leave.application_date }}</p>
-                    </div>
-                    <div class="leave_grid_item">
-                        <p>{{ leave.status }}</p>
-                    </div>
-                    {% empty %}
-                    <p>All leave request will appear here</p>
-                {% endfor %}
-            </div>
-            {% endfor %}
-        </div>
+      {% endfor %}
     </div>
+  {% endfor %}
 </div>
+
 {% endblock %}

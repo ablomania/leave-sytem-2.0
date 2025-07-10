@@ -2,35 +2,76 @@
 {% load static %}
 
 {% block title %}
-    New Department
+    Leave History
 {% endblock %}
 
 {% block content %}
-<div class="add-department">
-    <h2>New Department</h2>
-    <div class="form-wrapper">
-        <form action="" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="field-wrapper">
-                <label for="dept_name">Department Name</label>
-                <input type="text" name="dept_name" required id="dept_name">
+    <div class="staff_main_container">
+        <div class="top1">
+            <div>
+                <h1>Welcome</h1>
+                <h4>Applicant: {{ user_name }}</h4>
             </div>
-            <div class="field-wrapper">
-                <label for="dept_head">Head of Department</label>
-                <select name="dept_head" id="dept_head" required>
-                    {% for head in all_staff %}
-                    <option value="{{ head.slug }}">{{ head.first_name }} {{ head.last_name }}, {{ head.other_names }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="field-wrapper">
-                <label for="dept_icon">Department Icon (if any)</label>
-                <input type="file" name="dept_icon" id="dept_icon">
-            </div>
-            <div class="button-wrapper">
-                <button type="submit">Submit</button>
-            </div>
-        </form>
+            <a href="{% url 'logout1' slug %}" class="logout-button">
+                <img src="{% static 'images/power-button.png' %}" width="20px" height="20px" alt="logout" title="Log out">
+            </a>
+        </div>
+                
+        <div class="grid_main">
+            <a href="{% url 'leave_request' slug %}">
+                <div class="grid_item">
+                    <img src="{% static 'images/ask.png' %}" height="100px" width="100px" alt="icon">
+                    <p>Request for leave</p>
+                </div>
+            </a>
+            
+            {% if ack.count > 0 %}
+            <a href="{% url 'relieve_ack' r_ack.id slug %}">
+                <div class="grid_item">
+                    <img src="{% static 'images/like.png' %}" height="100px" width="100px" alt="">
+                    <p>Relieve assignments ({{count}})</p>
+                </div>
+            </a>
+           {% endif %}
+            
+           {% if self_ack.count > 0 %}
+            <a href="{% url 'staff_ack' slug %}">
+                <div class="grid_item">
+                    <img src="{% static 'images/checkmark.png' %}"  height="100px" width="100px" alt="">
+                    <p>Leave Acknowledgement</p>
+                </div>
+            </a>
+            {% endif %}
+
+            {% if is_approver %}
+            <a href="{% url 'leave_requests' slug %}">
+                <div class="grid_item">
+                    <img src="{% static 'images/qtions.png' %}"  height="100px" width="100px" alt="">
+                    <p>Leave Requests</p>
+                </div>
+            </a>
+            {% endif %}
+
+            <a href="">
+                <div class="grid_item">
+                    <img src="{% static 'images/calf.png' %}"  height="100px" width="100px" alt="">
+                    <p>On Leave</p>
+                </div>
+            </a>
+            
+            <a href="{% url 'leave_history' slug %}">
+                <div class="grid_item">
+                    <img src="{% static 'images/past.png' %}"  height="100px" width="100px" alt="">
+                    <p>History</p>
+                </div>
+            </a>
+
+            <a href="{% url 'profile' slug %}">
+                <div class="grid_item">
+                    <img src="{% static 'images/user.png' %}"  height="100px" width="100px" alt="">
+                    <p>Profile</p>
+                </div>
+            </a>
+        </div>
     </div>
-</div>
 {% endblock %}

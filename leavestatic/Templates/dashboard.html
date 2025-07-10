@@ -25,23 +25,26 @@
                 </div>
             </a>
             
-            <a href="">
+            {% if ack.count > 0 %}
+            <a href="{% url 'relieve_ack' r_ack.id slug %}">
                 <div class="grid_item">
                     <img src="{% static 'images/like.png' %}" height="100px" width="100px" alt="">
                     <p>Relieve assignments ({{count}})</p>
                 </div>
             </a>
-           
+           {% endif %}
             
+           {% if self_ack.count > 0 %}
             <a href="{% url 'staff_ack' slug %}">
                 <div class="grid_item">
                     <img src="{% static 'images/checkmark.png' %}"  height="100px" width="100px" alt="">
                     <p>Leave Acknowledgement</p>
                 </div>
             </a>
+            {% endif %}
 
             {% if is_approver %}
-            <a href="">
+            <a href="{% url 'leave_requests' slug %}">
                 <div class="grid_item">
                     <img src="{% static 'images/qtions.png' %}"  height="100px" width="100px" alt="">
                     <p>Leave Requests</p>
@@ -49,19 +52,21 @@
             </a>
             {% endif %}
 
-            <a href="">
+            <a href="{% url 'staff_on_leave' slug %}">
                 <div class="grid_item">
                     <img src="{% static 'images/calf.png' %}"  height="100px" width="100px" alt="">
                     <p>On Leave</p>
                 </div>
             </a>
             
+            {% if leaves_count > 0 %}
             <a href="{% url 'leave_history' slug %}">
                 <div class="grid_item">
                     <img src="{% static 'images/past.png' %}"  height="100px" width="100px" alt="">
                     <p>History</p>
                 </div>
             </a>
+            {% endif %}
 
             <a href="{% url 'profile' slug %}">
                 <div class="grid_item">

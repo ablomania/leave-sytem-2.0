@@ -22,7 +22,7 @@
             <h1>Request For Leave</h1>
             <label for="leave_type_id">Please choose the type of leave that you want to apply for</label>
             <select name="leave_type_id" id="leave_type_id"
-            onchange="loadLeave(value, {{allowed_leave_types_dict}}, {{staff_leave_data}})">
+            onchange="loadLeave(value, {{allowed_leave_types_dict|safe}}, {{staff_leave_data|safe}})">
             {% for leave_type in allowed_leave_types %}
                 <option value="{{ leave_type.id }}">{{ leave_type.name }}</option>
             {% endfor %}
@@ -89,7 +89,7 @@
                     <select name="relieving_officer"  id="relieving_officer">
                         <option value="" disabled selected>-- Select Officer to temporarily relieve you of your duties --</option>
                         {% for staff in officers %}
-                        <option value="{{ staff.slug }}">{{ staff.first_name }} {{ staff.last_name }} {{ staff.other_names }} ({{ staff.seniority.name }})</option>
+                        <option value="{{ staff.id }}">{{ staff.first_name }} {{ staff.last_name }} {{ staff.other_names }} ({{ staff.seniority.name }})</option>
                         {% endfor %}
                     </select>
                 </div>

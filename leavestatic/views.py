@@ -12,14 +12,17 @@ import datetime, random
 from django.shortcuts import redirect
 from django.utils import timezone
 import threading
+from django.db.models import Prefetch, Q
 import time
 from django.shortcuts import get_object_or_404, redirect, render
 # Create your views here.
 import string
 from .admin_setup_functions import *
 from .functions import *
+from .formHandlers import *
 from django.utils.safestring import mark_safe
 import json
+from collections import defaultdict
 
 
 
@@ -130,11 +133,16 @@ def dashboard(request, slug):
     user = Staff.objects.get(slug=user_slug)
     is_approver = True if Approver.objects.filter(staff_id=user.id, is_active=True).count() > 0 else False
     print("pp ",is_approver)
+    
+    self_ack = Ack.objects.filter(staff_id=user.id, type=Ack.Type.SELF, status=Ack.Status.Pending).first()
+    r_ack = Ack.objects.filter(staff_id=user.id, type=Ack.Type.RELIEF, status=Ack.Status.Pending).first()
+    leaves_count = LeaveRequest.objects.filter(applicant_id=user.id).count()
 
     context = {
         "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
         'slug': slug,
-        'is_approver': is_approver,
+        'is_approver': is_approver, "self_ack": self_ack,
+        "r_ack": r_ack, "leaves_count": leaves_count,
     }
 
     response = render(request, "dashboard.html", context)
@@ -168,12 +176,13 @@ def password_reset(request):
             subject="GCPS Leave System Verification Code"
             message=f"{random_number} is your verification code. Don't share your code with anyone."
             receiver = email
-            new_email = Email(
-                subject = subject,
-                message = message,
-                receiver = receiver
-            )
-            new_email.save()
+            # new_email = Email(
+            #     subject = subject,
+            #     message = message,
+            #     receiver = receiver
+            # )
+            # new_email.save()
+            send_mail(subject=subject, message=message, from_email=settings.EMAIL_HOST_USER, recipient_list=[receiver])
             step = step + 1
             context.update({ 'random_number':random_number, 'step':step, 'username': username })
         elif step == 2:
@@ -252,7 +261,7 @@ def setup(request):
         if form_data['form_meta'] == "add_group": add_group(form_data)
         elif form_data['form_meta'] == "edit_group": edit_group(form_data)
         elif form_data['form_meta'] == "del_group": del_group(dict(form_data))
-        elif form_data['form_meta'] == "add_staff": add_staff(form_data)
+        elif form_data['form_meta'] == "add_staff": add_staff(form_data, request)
         elif form_data['form_meta'] == "rem_staff": rem_staff(form_data)
         elif form_data['form_meta'] == "edit_staff": edit_staff(form_data)
         elif form_data['form_meta'] == "del_staff_form": del_staff(dict(form_data))
@@ -404,22 +413,24 @@ def leave_request(request, slug):
     staffLeaveDetails = StaffLeaveDetail.objects.filter(staff_id=user.id)
     allowed_leave_type_dict = {
         lt.id: 
-        {"name": lt.name, "days": lt.days, "paidLeave": str(lt.paid_leave), "i_date": str(lt.includes_date_of_occurence),
+        {"name": str(lt.name) or "N/A", "days": lt.days or "N/A", "paidLeave": str(lt.paid_leave) or "N/A", "i_date": str(lt.includes_date_of_occurence),
         "i_institution": str(lt.includes_institution), "i_course": str(lt.includes_course), "i_note": str(lt.includes_med_note),
         "i_letter": str(lt.includes_letter) } 
         for lt in allowed_leave_types
     }
     staff_leave_data = {
         ld.leave_type_id:
-        {"taken": ld.days_taken, "remaining": ld.days_remaining, "leave_type": ld.leave_type.name}
+        {"taken": ld.days_taken or 0, "remaining": ld.days_remaining or 0, "leave_type": ld.leave_type.name or "N/A"}
         for ld in staffLeaveDetails
     }
     relieving_officers = Staff.objects.filter(is_active=True, group_id=user.group.id).exclude(id=user.id).order_by("first_name", "last_name")
 
     for leave_type in allowed_leave_types:
         leave_type_dict[leave_type.id] = leave_type.name
-    print("papp ", staff_leave_data)
-    print("\n\npapp ", allowed_leave_type_dict)
+    
+    if request.method == "POST":
+        form_data = request.POST
+        result = leaveRequestHandler(form_data, user, request, slug)
 
     # if request.method == "POST":
     #     form_data = request.POST
@@ -500,128 +511,93 @@ def leave_request(request, slug):
 
 
 
-# def relieve_ack(request, id, slug):
-#     """Handles relieving officer acknowledgment with session validation."""
+def relieve_ack(request, id, slug):
+    # 1. Validate session
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=[id]))
 
-#     user_slug = request.session.get("user_slug") or change_session(slug)
+    # 2. Fetch Ack and related staff in one query
+    ack = get_object_or_404(Ack.objects.select_related("staff"), id=id)
+    user = ack.staff
 
-#     if not user_slug:
-#         return redirect(reverse("login", args=[id]))
+    # 3. Ensure the session user matches the Ack's staff
+    if user_slug != user.slug:
+        return redirect(reverse("login", args=[id]))
 
-#     leave_request = get_object_or_404(
-#         Leave_Request.objects.select_related("applicant", "relieving_officer"), id=id
-#     )
-#     user = leave_request.relieving_officer
+    # 4. Determine next page based on user type
+    next_page = "leave_list" if getattr(user, "type", "STAFF") == "STAFF" else "admin_dashboard"
 
-#     if user_slug != user.slug:
-#         return redirect(reverse("login", args=[id]))
+    # 5. Update session and LoginSession
+    session_updates = {
+        "prev_page": "not",
+        "message": "Your response has been received and will be reviewed. For more information, please contact your administrator.",
+        "button": "not",
+        "next_page": next_page,
+        "next_btn": "Back to Dashboard",
+    }
+    request.session.update(session_updates)
 
-#     request.session.update({
-#         "prev_page": "not",
-#         "message": "Your response has been received and will be reviewed. For more information, please contact your administrator.",
-#         "button": "not",
-#         "next_page": f"leave_list" if user.type == "STAFF" else f"admin_dashboard",
-#         "next_btn": "Back to Dashboard",
-#     })
+    LoginSession.objects.filter(slug=user_slug).update(**session_updates)
 
-#     # Update LoginSession efficiently
-#     LoginSession.objects.filter(slug=user_slug).update(
-#         prev_page="not",
-#         button="not",
-#         next_page=f"leave_list" if user.type == "STAFF" else f"admin_dashboard",
-#         next_btn="Back to Dashboard",
-#         message="Your response has been received and will be reviewed. For more information, please contact your administrator.",
-#     )
+    # 6. Handle POST submission
+    if request.method == "POST":
+        form_data = request.POST
+        if form_data['form_meta'] == "approve": approve_ack(form_data, request)
+        elif form_data['form_meta'] == "deny": deny_ack(form_data, request)
+        response = HttpResponseRedirect(reverse("dashboard", args=[slug]))
+        response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+        return response
 
-#     if request.method == "POST":
-#         form_data = request.POST
-#         leave_request.relieving_officer_approval = form_data["relief_ack"]
-#         leave_request.relieving_officer_approval_date = timezone.now()
-
-#         if "reason" in form_data:
-#             leave_request.relieving_officer_reason = form_data["reason"]
-
-#         leave_request.save()
-
-#         # Handle APPROVAL case
-#         if leave_request.relieving_officer_approval == "APPROVED":
-#             leave_request.status = "APPROVED"
-#             leave_request.save()
-
-#             Email.objects.create(
-#                 subject="Confirmation of Task Acceptance by Relieving Officer",
-#                 message=(
-#                     f"Dear {leave_request.applicant.first_name},\n\n"
-#                     f"I am pleased to inform you that your relieving officer, {user.first_name} {user.last_name} {user.other_names}, "
-#                     f"has accepted the task and will be handling your responsibilities during your leave period.\n\n"
-#                     f"Wishing you a smooth transition and restful leave.\n\n"
-#                     f"Best regards,\nGCPS Leave System"
-#                 ),
-#                 receiver=leave_request.applicant.email,
-#             )
-
-#         # Handle REJECTION case
-#         elif leave_request.relieving_officer_approval == "REJECTED":
-#             leave_request.status = "REJECTED"
-#             leave_request.save()
-
-#             Email.objects.create(
-#                 subject="Notification of Leave Request Denial",
-#                 message=(
-#                     f"Dear {leave_request.applicant.first_name},\n\n"
-#                     f"Your leave request, submitted on {leave_request.application_date}, has been reviewed but unfortunately cannot be approved. "
-#                     f"Your relieving officer has indicated the assignment cannot be accommodated due to {leave_request.relieving_officer_reason.lower()}.\n\n"
-#                     f"We encourage you to explore alternative dates or discuss concerns with your supervisor.\n\n"
-#                     f"Best regards,\nGCPS Leave System"
-#                 ),
-#                 receiver=leave_request.applicant.email,
-#             )
-
-#         response = HttpResponseRedirect(reverse("success_page", args=[slug,]))
-#         response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-#         return response
-
-#     context = {
-#         "date": datetime.datetime.today(),
-#         "leave_request": leave_request,
-#         "id": id,
-#         'slug':slug
-#     }
-
-#     response = render(request, "relieve_ack.html", context)
-#     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
-#     return response
+    # 7. Render template
+    context = {
+        "date": timezone.now().date(),
+        "ack": ack,
+        "id": id,
+        "slug": slug,
+    }
+    response = render(request, "relieve_ack.html", context)
+    response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+    return response
 
 
 
 
 def leave_history(request, slug):
-    """Handles user leave history with optimized query execution."""
+    """Displays a user's leave history with approval and acknowledgment progress."""
 
     user_slug = request.session.get("user_slug") or change_session(slug)
-
     if not user_slug:
         return redirect(reverse("login", args=["leave_history"]))
 
     user = get_object_or_404(Staff, slug=user_slug)
 
-    leave_requests = Leave_Request.objects.filter(applicant=user).order_by("-application_date")
+    # Prefetch related approvals and acknowledgments
+    leave_requests = (
+        LeaveRequest.objects
+        .filter(applicant=user)
+        .select_related("type")
+        .prefetch_related(
+            Prefetch("approval_set", queryset=Approval.objects.select_related("approver__staff")),
+            Prefetch("ack_set", queryset=Ack.objects.select_related("staff"))
+        )
+        .order_by("-application_date")
+    )
 
-    grouped_leave = {
-        year: list(leave_requests.filter(application_date__year=year))
-        for year in leave_requests.values_list("application_date__year", flat=True).distinct()
-    }
+    # Group by year
+    grouped_leave = {}
+    for lr in leave_requests:
+        year = lr.application_date.year
+        grouped_leave.setdefault(year, []).append(lr)
 
     context = {
         "leave_requests": leave_requests,
         "grouped_leave": grouped_leave,
-        "slug": slug, 
+        "slug": slug,
     }
 
     response = render(request, "leave_history.html", context)
     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
     return response
 
 
@@ -967,28 +943,38 @@ def staff_ack(request, slug):
 
 
 def users_on_leave(request, slug):
-    """Handles listing users currently on leave with optimized queries."""
+    """Lists all users currently on leave, grouped by their department (group)."""
 
     user_slug = request.session.get("user_slug") or change_session(slug)
-
     if not user_slug:
         return redirect(reverse("login", args=["staff_on_leave"]))
 
     user = get_object_or_404(Staff, slug=user_slug)
+    today = timezone.now().date()
 
-    # Fetch leave requests efficiently and group by department using dictionary comprehension
-    dept_group = {
-        dept: Leave_Request.objects.filter(
-            applicant__department=dept, final_approval="APPROVED", applicant_approval="APPROVED"
-        ).select_related("applicant")
-        for dept in Department.objects.all()
+    # Fetch all active leave objects with related request and applicant
+    active_leaves = Leave.objects.select_related(
+        "request__applicant__group", "request__type"
+    ).filter(
+        is_active=True,
+        request__is_active=True,
+        request__return_date__gte=today,
+        request__status=LeaveRequest.Status.APPROVED
+    ).exclude(request__status=LeaveRequest.Status.COMPLETED)
+
+    # Group leaves by department
+    dept_group = defaultdict(list)
+    for leave in active_leaves:
+        group = leave.request.applicant.group
+        dept_group[group].append(leave)
+
+    context = {
+        "slug": slug,
+        "dept_group": dict(dept_group),
     }
-
-    context = {"dept_group": dept_group, 'slug': slug}
 
     response = render(request, "on_leave.html", context)
     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
     return response
 
 
@@ -1222,55 +1208,59 @@ def users_on_leave(request, slug):
 
 
 def profile(request, slug):
-    """Handles user profile management with optimized session validation."""
+    """Displays and manages a staff profile with leave stats and approver status."""
 
     user_slug = request.session.get("user_slug") or change_session(slug)
-    print("sl",slug)
     if not user_slug:
         return redirect(reverse("login", args=["profile"]))
 
-    user = get_object_or_404(Staff.objects.select_related("department"), slug=user_slug)
-    leave_details = get_object_or_404(Leave_Details, staff=user)
+    user = get_object_or_404(Staff, slug=user_slug)
 
+    # Fetch all leave details for this staff
+    leave_details = StaffLeaveDetail.objects.filter(staff=user, is_active=True).select_related("leave_type")
+
+    # Check if user is an approver
+    is_approver = Approver.objects.filter(staff=user, is_active=True).exists()
+
+    # Update session metadata
     request.session.update({
         "prev_page": "profile",
         "message": "Profile updated successfully",
         "button": "Back to Profile",
-        "next_page": "leaveapplications" if user.type == "STAFF" else "admin_dashboard",
+        "next_page": "leaveapplications" if user.is_staff else "admin_dashboard",
         "next_btn": "Back to Dashboard",
     })
 
-    # Update LoginSession efficiently
+    # Update login session
     LoginSession.objects.filter(slug=user_slug).update(
         prev_page="profile",
         button="Back to Profile",
-        next_page="leave_list" if user.type == "STAFF" else "admin_dashboard",
+        next_page="leave_list" if user.is_staff else "admin_dashboard",
         next_btn="Back to Dashboard",
         message="Profile updated successfully",
         last_activity=timezone.now(),
         date_to_expire=timezone.now() + timezone.timedelta(days=1),
     )
 
+    # Handle profile update
     if request.method == "POST":
         form_data = request.POST
         user.email = form_data.get("email", user.email)
         user.phone_number = form_data.get("phone", user.phone_number)
         user.first_name = form_data.get("f_name", user.first_name)
         user.last_name = form_data.get("l_name", user.last_name)
-        user.other_names = form_data.get('o_name', user.other_names)
-        user.position = form_data.get("position", user.position)
-        user.sex = form_data.get("sex", user.sex)
+        user.other_names = form_data.get("o_name", user.other_names)
         user.save()
 
     context = {
         "user": user,
         "leave_details": leave_details,
-        'slug': slug
+        "is_approver": is_approver,
+        "slug": slug,
     }
 
     response = render(request, "profile.html", context)
     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
     return response
 
 
@@ -1373,97 +1363,69 @@ def profile(request, slug):
 
 
 def leave_requests(request, slug):
-    """Handles the leave requests view with optimized queries and session validation."""
-
+    # 1. Session check
     user_slug = request.session.get("user_slug") or change_session(slug)
-
     if not user_slug:
         return redirect(reverse("login", args=["leave_requests"]))
 
-    user = get_object_or_404(Staff.objects.select_related("department"), slug=user_slug)
+    # 2. Load user
+    try:
+        user = Staff.objects.get(slug=user_slug)
+    except Staff.DoesNotExist:
+        return redirect(reverse("login", args=["leave_requests"]))
 
-    if user.type == "HOD":
-        user_head = Department.objects.filter(department_head_id=user.id) | Department.objects.filter(acting_department_head_id=user.id)
-        all_head = {}
-        status = ["Pending", "Approved", "Denied"]
-        for department in user_head:
-            temp = {}
-            for stat in status:
-                leave_requests = Leave_Request.objects.filter(applicant__department=department, relieving_officer_approval="APPROVED", status=stat.upper()).order_by("-application_date")
-                temp[stat] = leave_requests
-            all_head[department] = temp
+    # 3. Ensure approver
+    approvers = (
+        Approver.objects
+        .filter(staff=user, is_active=True)
+        .select_related("group_to_approve")
+    )
+    if not approvers.exists():
+        return redirect(reverse("login", args=["0"]))
 
-        context = {
-            "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
-            "all_head": all_head,
-            "slug": slug,
-            "user_type": user.type,
-            "department_name": user.department.department_name,
-        }
+    # 4. Fetch all relevant approvals in one go
+    approvals = (
+        Approval.objects
+        .filter(
+            approver__in=approvers,
+            is_active=True
+        )
+        .exclude(request__applicant=user)
+        .select_related(
+            "request__applicant",
+            "request__type",
+            "approver__group_to_approve"
+        )
+    )
 
-    elif user.type == "HOHR":
-        grouped_dict = {
-            department: {
-                "Pending": Leave_Request.objects.filter(
-                    department_head_approval="APPROVED",
-                    applicant__department=department,
-                    HOHR_approval="PENDING",
-                ),
-                "Approved": Leave_Request.objects.filter(
-                    department_head_approval="APPROVED",
-                    applicant__department=department,
-                    HOHR_approval="APPROVED",
-                ),
-                "Denied": Leave_Request.objects.filter(
-                    department_head_approval="APPROVED",
-                    applicant__department=department,
-                    HOHR_approval="REJECTED",
-                ),
-            }
-            for department in Department.objects.all()
-        }
+    # 5. Split by status
+    pending_approvals  = approvals.filter(status=Approval.ApprovalStatus.Pending)
+    approved_approvals = approvals.filter(status=Approval.ApprovalStatus.Approved)
+    denied_approvals   = approvals.filter(status=Approval.ApprovalStatus.Denied)
 
-        context = {
-            "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
-            "user_type": user.type,
-            "grouped": grouped_dict,
-            'slug': slug,
-        }
-
-    elif user.type == "RECTOR":
-        grouped_dict = {
-            department: {
-                "Pending": Leave_Request.objects.filter(
-                    department_head_approval="APPROVED",
-                    HOHR_approval="APPROVED",
-                    applicant__department=department,
-                    final_approval="PENDING",
-                ),
-                "Approved": Leave_Request.objects.filter(
-                    department_head_approval="APPROVED",
-                    HOHR_approval="APPROVED",
-                    applicant__department=department,
-                    final_approval="APPROVED",
-                ),
-                "Denied": Leave_Request.objects.filter(
-                    department_head_approval="APPROVED",
-                    HOHR_approval="APPROVED",
-                    applicant__department=department,
-                    final_approval="REJECTED",
-                ),
-            }
-            for department in Department.objects.all()
-        }
-
-        context = {
-            "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
-            "grouped_dict": grouped_dict,
-            "user_type": user.type,
-        }
-
+    if request.method == "POST":
+        form_data = request.POST
+        if form_data['form_meta'] == "approve": approve_leave(form_data)
+        elif form_data["form_meta"] == "deny": deny_leave(form_data)
+        return redirect(reverse("leave_requests", args=[slug,]))
+    # 6. Render
+    context = {
+        "slug": slug,
+        "approval_groups": approvers,
+        "pending_approvals": pending_approvals,
+        "approved_approvals": approved_approvals,
+        "denied_approvals": denied_approvals,
+    }
     response = render(request, "leave_requests.html", context)
-    response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
 
+    # 7. Mirror session key into a cookie
+    response.set_cookie(
+        "session_id",
+        request.session.session_key,
+        max_age=86400,
+        secure=True,
+        httponly=True
+    )
     return response
 
 
