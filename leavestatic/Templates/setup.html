@@ -1,0 +1,1706 @@
+{% extends 'main.html' %}
+{% load static %}
+{% load static custom_filters %}
+
+{% block title %}
+    System Admin 
+{% endblock %}
+
+{% block content %}
+<div class="setup_page">
+    <h1>Settings</h1>
+    <div class="nav001" id="nav001">
+        <button type="button" onclick="loadSettings(event, '.general')" class="navgen nav" style="display: none;">General</button>
+        <button type="button" onclick="loadSettings(event, '.groups')" class="navgp nav">Groups</button>
+        <button type="button" onclick="loadSettings(event, '.staff')" class="navst nav">Staff</button>
+        <button type="button" onclick="loadSettings(event, '.app356')" class="navapp nav">Approvers</button>
+        <button type="button" onclick="loadSettings(event, '.leave_types')" class="navlt nav">Leave Types</button>
+        <button type="button" onclick="loadSettings(event, '.holidays')" class="navh nav">Holidays</button>
+        <button type="button" onclick="loadSettings(event, '.genders')" class="navgend nav">Genders</button>
+        <button type="button" onclick="loadSettings(event, '.categories')" class="navcat nav">Categories</button>
+        <button type="button" onclick="loadSettings(event, '.levels')" class="navl nav">Levels</button>
+        <button type="button" onclick="loadSettings(event, '.emails')" class="navem nav">Emails</button>
+    </div>
+
+    <div class="emails" style="display: none;">
+    <div class="emails_header">
+        <h3>Emails</h3>
+        <button type="button" onclick="mySwitcher('.emails', '.email_form_add')">Compose</button>
+    </div>
+
+    <div class="emails_list" style="margin-bottom: 20px;">
+        {% for email in all_emails %}
+        {% if email.is_active %}
+        <div class="email-card">
+            <div class="email-content">
+            <h3>{{ email.subject }}</h3>
+            <p><strong>From:</strong> {{ email.sender }}</p>
+            <p><strong>To:</strong> {{ email.receiver }}</p>
+            <p><strong>Date:</strong> {{ email.date_created }}</p>
+            </div>
+            <div class="email-actions">
+            <button type="button" onclick="mySwitcher('.emails', '.email_form_edit{{email.id}}')">Edit</button>
+            <form action="" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="form_meta" value="del_email">
+                <input type="hidden" name="email_id" value="{{ email.id }}">
+                <button type="submit" class="delete-btn">Delete</button>
+            </form>
+            </div>
+        </div>
+        {% endif %}
+        {% empty %}
+        <div class="no-emails">No emails found.</div>
+        {% endfor %}
+    </div>
+
+    <div class="inactive_emails">
+        <div class="in_header">
+        <button class="rot_email" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+            onclick="show1('in_body_email'), rotateMe('.rot_email')"
+        >&#10094;</button>
+        <p onclick="show1('in_body_email'), rotateMe('.rot_email')">Archived Emails</p>
+        </div>
+        <div class="in_body_email">
+        {% for email in i_emails %}
+        <div class="email-card">
+            <div class="email-content">
+            <h3>{{ email.subject }}</h3>
+            <p><strong>From:</strong> {{ email.sender }}</p>
+            <p><strong>To:</strong> {{ email.receiver }}</p>
+            <p><strong>Date:</strong> {{ email.date_created }}</p>
+            </div>
+            <div class="email-actions">
+            <form action="" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="form_meta" value="res_email">
+                <input type="hidden" name="email_id" value="{{ email.id }}">
+                <button type="submit" class="delete-btn">Restore</button>
+            </form>
+            </div>
+        </div>
+        {% empty %}
+        <div class="no-emails">No archived emails found.</div>
+        {% endfor %}
+        </div>
+    </div>
+    </div>
+
+    
+    <div class="general"></div>
+
+    <div class="levels" style="display: none;">
+        <div class="levels_header">
+            <h3>Levels</h3>
+            <button type="button" onclick="mySwitcher('.levels', '.level_form_add')">New Level</button>
+        </div>
+
+        <div class="levels_list" style="margin-bottom: 20px;">
+            {% for level in all_levels %}
+            {% if level.is_active %}
+            <div class="level-card">
+                <div class="level-content">
+                <h3>{{ level.name }}</h3>
+                <p><strong>Level Rank:</strong> {{ level.level }}</p>
+                </div>
+                <div class="level-actions">
+                <button type="button" onclick="mySwitcher('.levels', '.level_form_edit{{level.id}}')">Edit</button>
+                <form action="" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_meta" value="del_level">
+                    <input type="hidden" name="level_id" value="{{ level.id }}">
+                    <button type="submit" class="delete-btn">Delete</button>
+                </form>
+                </div>
+            </div>
+            {% endif %}
+            {% empty %}
+            <div class="no-levels">No levels found.</div>
+            {% endfor %}
+        </div>
+
+        <div class="inactive_levels">
+            <div class="in_header">
+            <button class="rot_level" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+                onclick="show1('in_body_level'), rotateMe('.rot_level')"
+            >&#10094;</button>
+            <p onclick="show1('in_body_level'), rotateMe('.rot_level')">Inactive Levels (deleted)</p>
+            </div>
+            <div class="in_body_level">
+            {% for level in i_levels %}
+                <div class="level-card">
+                <div class="level-content">
+                    <h3>{{ level.name }}</h3>
+                    <p><strong>Level Rank:</strong> {{ level.level }}</p>
+                </div>
+                <div class="level-actions">
+                    <form action="" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_meta" value="res_level">
+                    <input type="hidden" name="level_id" value="{{ level.id }}">
+                    <button type="submit" class="delete-btn">Restore</button>
+                    </form>
+                </div>
+                </div>
+            {% empty %}
+                <div class="no-levels">No inactive levels found.</div>
+            {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="level_form_add" style="display: none;">
+        <div class="sf10">
+            <div class="sf10h">
+            <button type="button" onclick="mySwitcher('.level_form_add', '.levels')">
+                <b>Back</b> &rsaquo; Levels
+            </button>
+            <h2>New Level</h2>
+            </div>
+            <p>Fill the form below to add a new level</p>
+            <img src="{% static 'images/cat1.png' %}" width="300px" alt=""
+                style="border-radius: 50%; border: 1px solid #ddd;">
+        </div>
+        <form class="sf12" action="" method="post">
+            <input type="hidden" name="form_meta" value="add_level">
+            {% csrf_token %}
+            <div class="sf45">
+            <div class="fld33">
+                <label for="level_name_add">Name</label>
+                <input type="text" name="name" id="level_name_add" required>
+            </div>
+            <div class="fld33">
+                <label for="level_rank_add">Level</label>
+                <input type="number" name="level" id="level_rank_add" required>
+            </div>
+            </div>
+            <div class="bt23">
+            <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+
+    {% for lvl in all_levels %}
+    <div class="level_form_edit level_form_edit{{lvl.id}}" style="display: none;">
+        <div class="sf10">
+            <div class="sf10h">
+                <button type="button" onclick="mySwitcher('.level_form_edit{{lvl.id}}', '.levels')">
+                    <b>Back</b> &rsaquo; Levels
+                </button>
+                <h2>Edit Level</h2>
+            </div>
+            <p>Edit the details of this level below.</p>
+            <img src="{% static 'images/cat1.png' %}" style="border-radius: 50%; border: #ddd 2px dashed;" width="300px" alt="">
+        </div>
+        <form class="sf12" action="" method="post">
+            <input type="hidden" name="form_meta" value="edit_level">
+            <input type="hidden" name="level_id" value="{{lvl.id}}">
+            {% csrf_token %}
+            <div class="sf45">
+                <div class="fld33">
+                    <label for="level_name_edit{{lvl.id}}">Name</label>
+                    <input type="text" name="name" id="level_name_edit{{lvl.id}}" value="{{lvl.name}}" required>
+                </div>
+                <div class="fld33">
+                    <label for="level_rank_edit{{lvl.id}}">Level</label>
+                    <input type="number" name="level" id="level_rank_edit{{lvl.id}}" value="{{lvl.level}}" required>
+                </div>
+            </div>
+            <div class="bt23">
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+    {% endfor %}
+
+
+
+    <div class="genders" style="display: none;">
+        <div class="genders_header">
+            <h3>Genders</h3>
+            <button type="button" onclick="mySwitcher('.genders', '.gender_form_add')">New Gender</button>
+        </div>
+        <div class="genders_list" style="margin-bottom: 20px;">
+        {% for gender in all_genders %}
+        {% if gender.is_active %}
+            <div class="gender-card">
+                <div class="gender-content">
+                    <h3>{{ gender.name }}</h3>
+                    <p><strong>Pronoun:</strong> {{ gender.pronoun }}</p>
+                </div>
+                <div class="gender-actions">
+                    <button type="button" onclick="mySwitcher('.genders', '.gender_form_edit{{gender.id}}')">Edit</button>
+                    <form action="" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_meta" value="del_gender" id="">
+                        <input type="hidden" name="gender_id" value="{{gender.id}}" id="">
+                        <button type="submit" class="delete-btn">Delete</button>
+                    </form>
+                    
+                </div>
+            </div>
+        {% endif %}
+        {% empty %}
+            <div class="no-genders">No genders found.</div>
+        {% endfor %}
+        </div>
+        <div class="inactive_gend">
+            <div class="in_header">
+                <button class="rot_gend" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+                onclick="show1('in_body_gend'), rotateMe('.rot_gend')"
+                >&#10094;</button>
+                <p onclick="show1('in_body_gend'), rotateMe('.rot_gend')">Inactive Genders (deleted)</p>
+            </div>
+            <div class="in_body_gend">
+            {% for gender in all_genders %}
+        {% if not gender.is_active %}
+            <div class="gender-card">
+                <div class="gender-content">
+                    <h3>{{ gender.name }}</h3>
+                    <p><strong>Pronoun:</strong> {{ gender.pronoun }}</p>
+                </div>
+                <div class="gender-actions">
+                    <!-- <button type="button" onclick="mySwitcher('.genders', '.gender_form_edit{{gender.id}}')">Edit</button> -->
+                    <form action="" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_meta" value="res_gender" id="">
+                        <input type="hidden" name="gender_id" value="{{gender.id}}" id="">
+                        <button type="submit" class="delete-btn">Restore</button>
+                    </form>
+                    
+                </div>
+            </div>
+        {% endif %}
+        {% empty %}
+            <div class="no-genders">No genders found.</div>
+        {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="categories" style="display: none;">
+        <div class="genders_header">
+            <h3>Categories / Types Of Staff</h3>
+            <button type="button" onclick="mySwitcher('.categories', '.cat_form_add')">New Category</button>
+        </div>
+        <div class="genders_list">
+        {% for sen in a_seniority %}
+            <div class="gender-card">
+                <div class="gender-content">
+                    <h3>{{ sen.name }}</h3>
+                    <p><strong>Rank:</strong> {{ sen.rank }}</p>
+                </div>
+                <div class="gender-actions">
+                    <button type="button" onclick="mySwitcher('.categories', '.cat_form_edit{{sen.id}}')">Edit</button>
+                    <form action="" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_meta" value="del_sen" id="">
+                        <input type="hidden" name="sen_id" value="{{sen.id}}" id="">
+                        <button type="submit" class="delete-btn">Delete</button>
+                    </form>
+                </div>
+            </div>
+        {% empty %}
+            <div class="no-genders">No categories found.</div>
+        {% endfor %}
+        </div>
+
+        <div class="inactive_cat">
+            <div class="in_header">
+                <button class="rot_cat" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+                onclick="show1('in_body_cat'), rotateMe('.rot_cat')"
+                >&#10094;</button>
+                <p onclick="show1('in_body_cat'), rotateMe('.rot_cat')">Inactive Categories (deleted)</p>
+            </div>
+            <div class="in_body_cat">
+            {% for sen in i_seniority %}
+            <div class="gender-card" style="margin-bottom: 10px;">
+                <div class="gender-content">
+                    <h3>{{ sen.name }}</h3>
+                    <p><strong>Rank:</strong> {{ sen.rank }}</p>
+                </div>
+                <div class="gender-actions">
+                    <!-- <button type="button" onclick="mySwitcher('.genders', '.gender_form_edit{{gender.id}}')">Edit</button> -->
+                    <form action="" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_meta" value="res_sen" id="">
+                        <input type="hidden" name="sen_id" value="{{sen.id}}" id="">
+                        <button type="submit" class="delete-btn">Restore</button>
+                    </form>
+                    
+                </div>
+            </div>
+        {% empty %}
+            <div class="no-genders">No categories found.</div>
+        {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="cat_form_add" style="display: none;">
+        <div class="sf10">
+            <div class="sf10h">
+                <button type="button" onclick="mySwitcher('.cat_form_add', '.categories')"><b>Back</b> &rsaquo; Categories</button>
+                <h2>New Category</h2>
+            </div>
+            <p>Fill the form below to add a new category</p>
+            <img src="{% static 'images/cat1.png' %}" width="300px" alt=""
+            style="border-radius: 50%; border: 1px solid #ddd;"
+            >
+        </div>
+        <form class="sf12" action="" method="post">
+            <input type="hidden" name="form_meta" value="add_cat">
+            {% csrf_token %}
+            <div class="sf45">
+                <div class="fld33">
+                    <label for="cat_name_add">Name</label>
+                    <input type="text" name="name" id="cat_name_add" required>
+                </div>
+                <div class="fld33">
+                    <label for="cat_rank_add">Rank</label>
+                    <input type="number" name="rank" id="cat_rank_add" required>
+                </div>
+            </div>
+            <div class="bt23">
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+    {% for sen in seniority %}
+    <div class="cat_form_edit cat_form_edit{{sen.id}}" style="display: none;">
+        <div class="sf10">
+            <div class="sf10h">
+                <button type="button" onclick="mySwitcher('.cat_form_edit{{sen.id}}', '.categories')"><b>Back</b> &rsaquo; Categories</button>
+                <h2>Edit Category</h2>
+            </div>
+            <p>Edit the details of this category below.</p>
+            <img src="{% static 'images/cat1.png' %}" style="border-radius: 50%; border: #ddd 2px dashed;" width="300px" alt="">
+        </div>
+        <form class="sf12" action="" method="post">
+            <input type="hidden" name="form_meta" value="edit_cat">
+            <input type="hidden" name="cat_id" value="{{sen.id}}">
+            {% csrf_token %}
+            <div class="sf45">
+                <div class="fld33">
+                    <label for="cat_name_edit{{sen.id}}">Name</label>
+                    <input type="text" name="name" id="cat_name_edit{{sen.id}}" value="{{sen.name}}" required>
+                </div>
+                <div class="fld33">
+                    <label for="cat_pronoun_edit{{sen.id}}">Rank</label>
+                    <input type="number" name="rank" id="cat_rank_edit{{sen.id}}" value="{{sen.rank}}" required>
+                </div>
+            </div>
+            <div class="bt23">
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+    {% endfor %}
+
+    
+  <div class="staff" style="display: block;">
+    <div class="staff_nav_button">
+        <h3>All staff</h3>
+      <button type="button" onclick="mySwitcher('.staff', '.staff_form_add', '.staff')">New Staff</button>
+    </div>
+  <!-- Navigation Tabs -->
+  <div class="staff_nav">
+    <ul class="staff_nav_tabs">
+      <li class="staff_nav_item active" onclick="switchStaffTab('staff_all', this)">All Staff (A–Z)</li>
+      {% for group in active_groups %}
+      <li class="staff_nav_item" onclick="switchStaffTab('staff_group_{{ group.id }}', this)">
+        {{ group.name }}
+      </li>
+      {% endfor %}
+      <li class="staff_nav_item" onclick="switchStaffTab('staff_unassigned', this)">Unassigned</li>
+      <li class="staff_nav_item" onclick="switchStaffTab('staff_inactive', this)">Inactive</li>
+    </ul>
+    
+  </div>
+
+  <!-- Panels -->
+  <div class="staff_panels">
+    <div class="staff_search">
+        <input type="text" id="staffSearchInput" placeholder="Search staff by name..." oninput="filterStaffByName(this.value)">
+    </div>
+
+    <!-- All Staff A–Z Panel -->
+    <div class="staff_panel" id="staff_all">
+      <div class="staff_cards">
+        {% for staff in all_staff|dictsort:"first_name" %}
+        {% if staff.is_active %}
+        <div class="staff_card">
+          <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
+          <p><strong>Role:</strong> {{ staff.role }}</p>
+          <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
+          <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Individual Groups -->
+    {% for group in active_groups %}
+    <div class="staff_panel" id="staff_group_{{ group.id }}" style="display: none;">
+      <div class="staff_cards">
+        {% with staff_list=groups_list|get_item:group %}
+        {% for staff in staff_list %}
+        {% if staff.is_active %}
+        <div class="staff_card">
+          <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
+          <p><strong>Role:</strong> {{ staff.role }}</p>
+          <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
+          <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% endwith %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Unassigned -->
+    <div class="staff_panel" id="staff_unassigned" style="display: none;">
+      <div class="staff_cards">
+        {% for staff in all_staff %}
+        {% if staff.is_active and not staff.group %}
+        <div class="staff_card">
+          <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
+          <p><strong>Role:</strong> {{ staff.role }}</p>
+          <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
+          <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Inactive -->
+    <div class="staff_panel" id="staff_inactive" style="display: none;">
+      <div class="staff_cards">
+        {% for staff in all_staff %}
+        {% if not staff.is_active %}
+        <form method="post" class="staff_card">
+          {% csrf_token %}
+          <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
+          <p><strong>Role:</strong> {{ staff.role }}</p>
+          <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
+          <input type="hidden" name="form_meta" value="restore_staff">
+          <input type="hidden" name="staff_id" value="{{ staff.id }}">
+          <button type="submit">Restore</button>
+        </form>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+
+
+
+    <div class="groups" style="display: none;">
+        <div class="group_buttons">
+            <h2>Groups</h2>
+            <div>
+                <input type="checkbox" class="select_all_groups" id="select_all_groups" onclick="selectAllBoxes(this.checked, 'group_item', '.groups .mid', '.groups .mid .count_selected', '.groups .mid .count_total', '.groups', '.group_item_ch', 'select_all_groups')">
+                <label id="select_all_label" for="select_all_groups">Select All</label>
+            </div>
+            <button type="button" onclick="mySwitcher('.groups', '.staff_form_add_groups')">New Staff</button>
+            <button type="button" onclick="mySwitcher('.groups', '.group_forms_add')" style="margin-right: 5px;">New Group</button>
+        </div>
+        <div class="mid" style="display: none;">
+            <div>
+                <label for="mid_action">Action: </label>
+                <select name="mid_action" id="mid_sel" 
+                style="width: max-content; height: 30px; border-radius: 10px; background-color: inherit; border: 1px solid #ddd;"
+                onchange="setMeta(value, 'group_form')"
+                >   
+                    <option value="del_group">Delete selected groups</option>
+                    <option value="rem_staff">Remove all staff from selected groups</option>
+                </select>
+            </div>
+            <span><span class="count_selected">0</span> of <span class="count_total">{{ all_groups|length }}</span> selected</span>
+            <button type="button" class="lvtsve" onclick="show4('del_group')">&check; Save</button>
+            <button type="button" class="lvtdsd" 
+            onclick="
+                clearMyForm('group_form', `input[name='group_ids']`),
+                selectAllBoxes(false, 'group_item', '.groups .mid', '.groups .mid .count_selected', '.groups .mid .count_total', '.groups', '.group_item_ch', 'select_all_groups')
+            "
+            >&times; Discard</button>
+        </div>
+        <div class="a_groups">
+            {% for group in active_groups %}
+            <div class="group_item">
+                <input type="checkbox"
+                name="group_ids"
+                value="{{group.id}}" 
+                class="group_item_ch" 
+                onchange="
+                selectReact(event, 'group_item', '.groups .mid', '.groups .mid .count_selected', '.groups .mid .count_total', '.group_item_ch', 'select_all_groups'),
+                setForm(event, 'group_form', `input[name='group_ids']`)
+                " 
+                style="position:absolute; left:10px; top:10px;">
+                <button type="button" class="dept-info" onclick="mySwitcher('.groups', '.gpd{{group.id}}')">
+                    <h3 class="heading_pos">{{ group.name }}</h3>
+                    <p class="count">
+                        {% with staff_list=groups_list|get_item:group %}
+                            {{ staff_list|length }} staff
+                        {% endwith %}
+                    </p>
+                </button>
+                <button type="button" class="np" onclick="mySwitcher('.groups', '.edit_group_form{{group.id}}')">Edit</button>
+            </div>
+            {% empty %}
+            <div class="no-groups">No groups found.</div>
+            {% endfor %}
+        </div>
+
+        <div class="inactive_groups">
+            <div class="in_header">
+                <button class="rotb" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+                onclick="show1('in_body'), rotateMe('.rotb')"
+                >&#10094;</button>
+                <p onclick="show1('in_body'), rotateMe('.rotb')">Inactive Groups (deleted)</p>
+            </div>
+            <div class="in_body">
+                
+                <div class="a_groups">
+                    {% for group in all_groups %}
+                    {% if not group.is_active %}
+                    <form class="group_item" method="post">
+                        {% csrf_token %}
+                        <button type="button" class="dept-info" onclick="mySwitcher('.groups', '.gpd{{group.id}}')">
+                            <h3 class="heading_pos">{{ group.name }}</h3>
+                            <p class="count">
+                                {% with staff_list=groups_list|get_item:group %}
+                                    {{ staff_list|length }} staff
+                                {% endwith %}
+                            </p>
+                        </button>
+                        <input type="hidden" name="form_meta" value="restore_group" id="">
+                        <input type="hidden" value="{{group.id}}" name="group_ids">
+                        <button type="submit" class="np">Restore</button>
+                    </form>
+                    {% endif %}
+                    {% empty %}
+                        <div class="no-groups">No groups found.</div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+        </div>
+
+        <form action="" method="post" id="group_form" class="group_form" style="display: none;">
+            {% csrf_token %}
+            <input type="hidden" value="del_group" name="form_meta" id="">
+        </form>
+    </div>
+
+
+
+    <div class="staff_form_add staff_form_add_groups" style="display: none;">
+        <div class="sf10">
+            <div class="sf10h">
+                <button type="button" onclick="mySwitcher2('.staff_form_add_groups')"><b>Back</b> &rsaquo; </button>
+                <h2>New Staff</h2>
+            </div>
+            <p>Fill the form below to add a new staff member and assign to group(s)</p>
+            <img src="{% static 'images/add-contact.png' %}" width="400px" alt="">
+        </div>
+        <form class="sf12 staff_form_add_group_form" action="" method="post">
+            <input type="hidden" name="form_meta" value="add_staff">
+            {% csrf_token %}
+            <div class="sgr45">
+                <div class="fld33">
+                    <label for="first_name_add_groups">First Name</label>
+                    <input type="text" name="first_name" id="first_name_add_groups" required>
+                </div>
+                <div class="fld33">
+                    <label for="last_name_add_groups">Last Name</label>
+                    <input type="text" name="last_name" id="last_name_add_groups" required>
+                </div>
+                <div class="fld33">
+                    <label for="other_names_add_groups">Other Names</label>
+                    <input type="text" name="other_names" id="other_names_add_groups">
+                </div>
+                <div class="fld33">
+                    <label for="gender_add_groups">Gender</label>
+                    <select name="gender_add" id="gender_add_groups">
+                        {% for gender in all_genders %}
+                        <option value="{{gender.id}}">{{gender.name}} ({{gender.pronoun}})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="fld33">
+                    <label for="phone_number_add_groups">Phone Number</label>
+                    <input type="text" name="phone_number" id="phone_number_add_groups">
+                </div>
+                <div class="fld33">
+                    <label for="email_add_groups">Email</label>
+                    <input type="email" name="email" id="email_add_groups">
+                </div>
+                <div class="fld33">
+                    <label for="seniority_add_groups">Seniority</label>
+                    <select name="seniority" id="seniority_add_groups">
+                        {% for sen in seniority %}
+                        <option value="{{sen.id}}">{{sen.name}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="fld33">
+                    <label>Assign to Group</label>
+                    <select name="group" id="group_id">
+                        {% for group in all_groups %}
+                        <option value="{{group.id}}">{{group.name}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="fld33">
+                    <label for="is_active_add_groups">Active?</label>
+                    <select name="is_active" id="is_active_add_groups">
+                        <option value="true" selected>Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+            </div>
+            <div class="bt23">
+                <button class="save" type="button" onclick="submitMyForm4('.staff_form_add_group_form', '.groups')">Save</button>
+                <button class="saaave" type="button" onclick="submitMyForm4('.staff_form_add_group_form', '.staff_form_add_groups')">Save and add another</button>
+            </div>
+        </form>
+    </div>
+
+    {% for group in all_groups %}
+    <div class="grpfms23 edit_group_form{{group.id}}" style="display: none;">
+        <div class="gp134h">
+            <div class="gp134hh">
+                <button type="button" onclick="mySwitcher('.edit_group_form{{group.id}}', '.gpd{{group.id}}')"><b>Back</b> &rsaquo; {{group.name}}</button>
+                <h2>Edit Group</h2>
+            </div>
+            
+            <img src="{% static 'images/group4.png' %}" width="500px" alt="">
+        </div>
+        <div class="grpfms">
+            <form action="" class="edit_group_form_form" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="form_meta" value="edit_group">
+                <input type="hidden" name="group_id" value="{{group.id}}">
+                {% csrf_token %}
+                <div class="fld456">
+                    <label for="group_name_edit{{group.id}}">Name</label>
+                    <input type="text" name="name" id="group_name_edit{{group.id}}" value="{{group.name}}" required>
+                </div>
+                <div class="fld456">
+                    <label for="group_image_edit{{group.id}}">Image</label>
+                    <input type="file" name="image" id="group_image_edit{{group.id}}" accept="image/*">
+                    {% if group.image %}
+                    <img src="{{ group.image.url }}" width="80px" style="margin-top:5px;">
+                    {% endif %}
+                </div>
+                <div class="fld456">
+                    <label for="group_active_edit{{group.id}}">Active?</label>
+                    <select name="is_active" id="group_active_edit{{group.id}}">
+                        <option value="true" {% if group.is_active %}selected{% endif %}>Yes</option>
+                        <option value="false" {% if not group.is_active %}selected{% endif %}>No</option>
+                    </select>
+                </div>
+                <div class="bt23">
+                    <button class="save" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="grpfms23 group_forms_add" style="display: none;">
+        <div class="gp134h">
+            <div>
+                <button type="button" onclick="mySwitcher('.group_forms_add', '.groups')"><b>Back</b> &rsaquo; Groups</button>
+                <h2>New Group</h2>
+            </div>
+            
+            <p>Fill the forms below to add a new group</p>
+            <img src="{% static 'images/addtogroup.png' %}" width="500px" alt="">
+        </div>
+        <div class="grpfms">
+            <form action="" method="post" class="grp_forms_add_form">
+                <input type="hidden" name="form_meta" value="add_group">
+                {% csrf_token %}
+                <div class="fld456">
+                    <label for="group_name_add">Name</label>
+                    <input type="text" name="group_name" id="group_name_add" required>
+                </div>
+                <div class="fld456">
+                    <label for="group_image_add">Image</label>
+                    <input type="file" name="image" id="group_image_add" accept="image/*">
+                </div>
+                <div class="fld456">
+                    <label for="group_active_add">Active?</label>
+                    <select name="is_active" id="group_active_add">
+                        <option value="true" selected>Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div class="bt23">
+                    <button class="save" type="button" onclick="submitMyForm4('.grp_forms_add_form', '.groups')">Save</button>
+                    <button class="saaave" type="button" onclick="submitMyForm4('.grp_forms_add_form', '.group_forms_add')">Save and add another</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% for group in all_groups %}
+    <div class="gpd gpd{{group.id}}" style="display: none;">
+        <div class="gpd_header">
+            <button class="bk" type="button" onclick="mySwitcher('.gpd.gpd{{group.id}}', '.groups')"><b>Back</b> &rsaquo; Groups</button>
+            <h2>{{group.name}}</h2>
+            <button type="button" class="np" onclick="mySwitcher('.gpd{{group.id}}', '.edit_group_form{{group.id}}')">Edit</button>
+            <button type="button" class="np" onclick="mySwitcher('.gpd{{group.id}}', '.staff_form_add2{{group.id}}')">New Staff</button>
+        </div>
+        <div class="mid" style="display: none;">
+            <input type="checkbox"
+                id="select_all_staff_{{group.id}}"
+                onclick="selectAllBoxes(this.checked, 'staff_item_{{group.id}}', '.gpd{{group.id}} .mid', '.gpd{{group.id}} .mid .count_selected', '.gpd{{group.id}} .mid .count_total')">
+            <label for="select_all_staff_{{group.id}}">Select All</label>
+            <span>
+                <span class="count_selected">0</span> of
+                <span class="count_total">
+                    {% for st, stv in staff_dict.items %}
+                    {% if st == group.id %}
+                    {{stv}}
+                    {% endif %}
+                    {% endfor %}
+                </span> selected kk
+            </span>
+            <button type="button" class="lvtsve" onclick="show4('del_staff')">&check; Save</button>
+            <button type="button" class="lvtdsd" onclick="lvtdell2('gpd_del')">&times; Discard</button>
+        </div>
+        <div class="group_staff_list">
+            <p class="ava">Group leader: {% if group.leader and group.leader.first_name %}{{group.leader.first_name}} {{group.leader.last_name}}{% else %}Unknown{% endif %}</p>
+            <p class="ava">Staff in this group:</p>
+            <div class="staff_list">
+                {% with staff_list=groups_list|get_item:group %}
+                    {% if staff_list %}
+                        {% for staff in staff_list %}
+                            {% if staff.is_active %}
+                            <div class="staff_item staff_item_{{group.id}}'">
+                                <input type="checkbox"
+                                    value="{{staff.id}}"
+                                    name="staff_ids"
+                                    class="staff_item_ch"
+                                    id="staff{{staff.id}}"
+                                    onchange="selectReact(event, 'staff_item_{{group.id}}', '.gpd{{group.id}} .mid', '.gpd{{group.id}} .mid .count_selected', '.gpd{{group.id}} .mid .count_total', '.staff_item_ch'),
+                                    setForm(event, 'del_staff_form{{group.id}}', `input[name='staff_ids']`)"
+                                    >
+                                <label for="staff{{staff.id}}" class="staff_label">{{staff.first_name}} {{staff.last_name}}</label>
+                                <button type="button" onclick="mySwitcher('.gpd{{group.id}}', '.staff_form_edit{{staff.id}}')">&#9998;</button>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p>No staff in this group.</p>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+
+        <div class="inactive_staff">
+            <div class="in_header in_header{{group.id}}">
+                <button class="rotb_staff rotb_staff{{group.id}}" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+                onclick="show1('staff_in_body'), rotateMe('.rotb_staff{{group.id}}')"
+                >&#10094;</button>
+                <p onclick="show1('staff_in_body{{group.id}}'), rotateMe('.rotb_staff{{group.id}}')">Inactive Staff (deleted)</p>
+            </div>
+            <div class="staff_in_body staff_in_body{{group.id}}">
+                <div class="staff_list">
+                    {% with staff_list=groups_list|get_item:group %}
+                        {% if staff_list %}
+                            {% for staff in staff_list %}
+                                {% if not staff.is_active %}
+                                <form method="post" action="" class="staff_item staff_item_{{group.id}}'">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="form_meta" value="restore_staff" id="">
+                                    <input type="hidden"
+                                        value="{{staff.id}}"
+                                        name="staff_id"
+                                        class="staff_item_ch"
+                                        id="staff{{staff.id}}"
+                                        >
+                                    <label for="staff{{staff.id}}" class="staff_label">{{staff.first_name}} {{staff.last_name}}</label>
+                                    <button type="submit">Restore</button>
+                                </form>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <p>No staff in this group.</p>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <form action="" method="post" id="del_staff_form{{group.id}}" class="del_staff_form{{group.id}}" style="display: none;">
+        {% csrf_token %}
+        <input type="hidden" value="del_staff_form" name="form_meta" id="">
+    </form>
+    {% endfor %}
+
+    
+
+    {% for group in all_groups %}
+    <!-- <div class="edit_group_form edit_group_form{{group.id}}" style="display: none;"> -->
+        <!-- Group edit form here -->
+    <!-- </div> -->
+    <div class="staff_form_add2 staff_form_add2{{group.id}}" style="display: none;">
+        <div class="sf10">
+            <div class="sf10h">
+                <button type="button" onclick="mySwitcher('.staff_form_add2{{group.id}}', '.gpd{{group.id}}')"><b>Back</b> &rsaquo; {{group.name}}</button>
+                <h2>New Staff</h2>
+            </div>
+            <p>Fill the form below to add a new staff member to the <b>{{group.name}}</b> group</p>
+            <img src="{% static 'images/add-contact.png' %}" width="400px" alt="">
+        </div>
+        <form class="sf12 staff_form_add2_form" action="" method="post">
+            <input type="hidden" name="form_meta" value="add_staff_to_group" id="">
+            <input type="hidden" name="group" value="{{group.id}}">
+            {% csrf_token %}
+            <div class="sgr45">
+                <div class="fld33">
+                    <label for="first_name_add2_{{group.id}}">First Name</label>
+                    <input type="text" name="first_name" id="first_name_add2_{{group.id}}" required>
+                </div>
+                <div class="fld33">
+                    <label for="last_name_add2_{{group.id}}">Last Name</label>
+                    <input type="text" name="last_name" id="last_name_add2_{{group.id}}" required>
+                </div>
+                <div class="fld33">
+                    <label for="other_names_add2_{{group.id}}">Other Names</label>
+                    <input type="text" name="other_names" id="other_names_add2_{{group.id}}">
+                </div>
+                <div class="fld33">
+                    <label for="gender_add2_{{group.id}}">Gender</label>
+                    <select name="gender" id="gender_add2_{{group.id}}">
+                        {% for gender in all_genders %}
+                        <option value="{{gender.id}}">{{gender.name}} ({{gender.pronoun}})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="fld33">
+                    <label for="phone_number_add2_{{group.id}}">Phone Number</label>
+                    <input type="text" name="phone_number" id="phone_number_add2_{{group.id}}">
+                </div>
+                <div class="fld33">
+                    <label for="email_add2_{{group.id}}">Email</label>
+                    <input type="email" name="email" id="email_add2_{{group.id}}">
+                </div>
+                <div class="fld33">
+                    <label for="seniority_add2_{{group.id}}">Seniority</label>
+                    <select name="seniority" id="seniority_add2_{{group.id}}">
+                        {% for sen in seniority %}
+                        <option value="{{sen.id}}">{{sen.name}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="fld33">
+                    <label for="is_active_add2_{{group.id}}">Active?</label>
+                    <select name="is_active" id="is_active_add2_{{group.id}}">
+                        <option value="true" selected>Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+            </div>
+            <div class="bt23">
+                <button class="save" type="button" onclick="submitMyForm4('.staff_form_add2_form', '.gpd{{group.id}}')">Save</button>
+                <button class="saaave" type="button" onclick="submitMyForm4('.staff_form_add2_form', '.staff_form_add2{{group.id}}')">Save and add another</button>
+            </div>
+        </form>
+    </div>
+    {% endfor %}
+
+    {% for staff in all_staff %}
+    <div class="staff_form_edit staff_form_edit{{staff.id}}" style="display: none;">
+        <div class="sf10">
+            <div class="sf10h">
+                <button type="button" onclick="mySwitcher('.staff_form_edit{{staff.id}}', '.gpd{{staff.group.id}}')"><b>Back</b> &rsaquo; {{staff.group.name}}</button>
+                <h2>Edit Staff</h2>
+            </div>
+            <p>Edit the details of this staff member in the {{staff.group.name}} group</p>
+            <img src="{% static 'images/regi.png' %}" width="500px" alt="">
+        </div>
+        <form class="sf12" action="" method="post" class="edit_group_form_form">
+            <input type="hidden" name="form_meta" value="edit_staff" id="">
+            <input type="hidden" name="staff_id" value="{{staff.id}}" id="">
+            {% csrf_token %}
+            <div class="sf56">
+                <img src="{% static 'images/add-contact.png' %}" width="200px" alt="">
+            </div>
+            <div class="sgr45">
+                <div class="fld33">
+                    <label for="first_name_edit{{staff.id}}">First Name</label>
+                    <input type="text" name="first_name" id="first_name_edit{{staff.id}}" value="{{staff.first_name}}" required>
+                </div>
+                <div class="fld33">
+                    <label for="last_name_edit{{staff.id}}">Last Name</label>
+                    <input type="text" name="last_name" id="last_name_edit{{staff.id}}" value="{{staff.last_name}}" required>
+                </div>
+                <div class="fld33">
+                    <label for="other_names_edit{{staff.id}}">Other Names</label>
+                    <input type="text" name="other_names" id="other_names_edit{{staff.id}}" value="{{staff.other_names}}">
+                </div>
+                <div class="fld33">
+                    <label for="gender_edit{{staff.id}}">Gender</label>
+                    <select name="gender" id="gender_edit{{staff.id}}" required>
+                        {% for gender in all_genders %}
+                        <option value="{{gender.id}}" {% if staff.gender and staff.gender.id == gender.id %}selected{% endif %}>{{gender.name}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="fld33 fld34">
+                    <label for="id_phone_number_edit{{staff.id}}">Phone Number</label>
+                    <input type="text" name="phone_number" id="id_phone_number_edit{{staff.id}}" value="{{staff.phone_number}}" required>
+                </div>
+            </div>
+            <div class="fld33">
+                <label for="email_edit{{staff.id}}">Email</label>
+                <input type="email" name="email" id="email_edit{{staff.id}}" value="{{staff.email}}" required>
+            </div>
+            <div class="fld33">
+                <label for="group_edit{{staff.id}}">Assign to group:</label>
+                <select name="group" id="group_edit{{staff.id}}">
+                    {% for grp in all_groups %}
+                    <option value="{{grp.id}}" {% if grp.id == group.id %} selected {% endif %}>{{grp.name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fld33">
+                <label for="type_edit{{staff.id}}">Seniority</label>
+                <select name="seniority" id="type_edit{{staff.id}}" required>
+                    {% for sen in seniority %}
+                    <option value="{{sen.id}}" {% if staff.seniority and staff.seniority.id == sen.id %}selected{% endif %}>{{sen.name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fld33">
+                    <label for="is_active_edit{{staff.id}}">Active?</label>
+                    <select name="is_active" id="is_active_edit{{staff.id}}">
+                        <option value="true" {% if staff.is_active %}selected{% endif %}>Yes</option>
+                        <option value="false" {% if not staff.is_active %}selected{% endif %}>No</option>
+                    </select>
+                </div>
+            <div class="bt23">
+                <button type="submit" id="submit-button">Save</button>
+            </div>
+        </form>
+    </div>
+    {% endfor %}
+    
+   
+   <div class="app356" style="display: none;">
+    <div class="app3561">
+        <h3 class="app356h">Approvers</h3>
+        <button type="button" onclick="mySwitcher('.app356', '.app_form_add', true)">New Approver</button>
+    </div>
+    <div class="approver-list">
+    {% for staff, approver_objs in approvers_list.items %}
+        {% if approver_objs|any_active %}
+            <div class="approver-item">
+                <h3 onclick="mySwitcher('.app356', '.appedit{{staff.id}}')" style="cursor: pointer;">
+                    {{ staff.first_name }} {{ staff.other_names }} {{ staff.last_name }}
+                </h3>
+
+                <form action="" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_meta" value="del_approver">
+                    <input type="hidden" name="staff_id" value="{{ staff.id }}">
+                    <button type="submit" title="Delete Approver" style="background: none; border: none;">
+                        <img src="{% static 'images/trash1.png' %}" width="15" height="15" alt="Delete">
+                    </button>
+                </form>
+
+                <ul class="group-level-list">
+                    {% for approver in approver_objs %}
+                        {% if approver.is_active %}
+                            <li>
+                                <strong>Group:</strong> {{ approver.group_to_approve.name }}  
+                                &nbsp;|&nbsp;  
+                                <strong>Level:</strong> {{ approver.level.name }}
+                            </li>
+                        {% endif %}
+                    {% empty %}
+                        <li><em>No active approvals</em></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        {% endfor %}
+        </div>
+
+
+        <!-- Inactive Approvers Section -->
+        <div class="inactive_approvers">
+            <div class="in_header">
+                <button class="rot_app" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+                onclick="show1('in_body_app'), rotateMe('.rot_app')"
+                >&#10094;</button>
+                <p onclick="show1('in_body_app'), rotateMe('.rot_app')">Inactive Approvers (deleted)</p>
+            </div>
+            
+            <ul class="in_body_app">
+                {% for staff, approver_objs in approvers_list.items %}
+                    {% for approver in approver_objs %}
+                        {% if not approver.is_active %}
+                        <li class="approver-item">
+                            <div class="approver-info">
+                                <strong>Name:</strong>
+                                {{ staff.first_name }} {{ staff.other_names }} {{ staff.last_name }}
+                            </div>
+                            <div class="approver-group">
+                                <strong>Approves Groups:</strong>
+                                {{ approver.group_to_approve.name }} - {{ approver.level.name }}
+                            </div>
+                            <div class="approver-actions">
+                                <form action="" method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="form_meta" value="restore_approver">
+                                    <input type="hidden" name="approver_id" value="{{ approver.id }}">
+                                    <button type="submit">Restore</button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                {% empty %}
+                    <li class="no-approvers" style="text-align:center;">No inactive approvers found.</li>
+                {% endfor %}
+            </ul>
+
+        </div>
+    </div>
+
+    <div class="app_form_add" style="display: none;">
+        <div class="app_form_header">
+            <div class="apfh">
+                <button type="button" onclick="mySwitcher('.app_form_add', '.app356')"><b>Back</b> &rsaquo; Approvers</button>
+                <h2>New Approver</h2>
+            </div>
+            <p>Fill the form below to add a new approver to the {{group.name}} group</p>
+            <img src="{% static 'images/agree.png' %}" width="400px" alt="">
+        </div>
+        <form class="app_form" action="" method="post">
+            <input type="hidden" name="form_meta" value="add_approver" id="">
+            {% csrf_token %}
+            <div class="fld456">
+                <label for="approver_name">Approver Name</label>
+                <select name="approver_name" id="approver_name">
+                    <option value="None">--------</option>
+                    {% for approver in all_staff %}
+                    <option value="{{approver.id}}">{{approver.first_name}} {{approver.last_name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fld456">
+                <label for="approver_group">Group to approve</label>
+                <select name="approver_group" id="approver_group">
+                    {% for group in groups_list.keys %}
+                    <option value="{{group.id}}">{{group.name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fld456">
+                <label for="approver_level">Approver Level</label>
+                <select name="approver_level" id="approver_level">
+                    {% for level in all_levels %}
+                    <option value="{{level.id}}">{{level.name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="bt23">
+                <button class="save" type="button" onclick="submitMyForm4('.app_form', '.app356')">Save</button>
+                <button class="saaave" type="button" onclick="submitMyForm4('.app_form', '.app_form_add')">Save and add another</button>
+            </div>
+        </form>
+    </div>
+    
+
+    {% for staff, approver_objs in approvers_list.items %}
+    <div class="appedit appedit{{staff.id}}" style="display: none;">
+        <div class="appedit_header">
+            <div class="appeh">
+                <button type="button" onclick="mySwitcher('.appedit{{staff.id}}', '.app356')"><b>Back</b> &rsaquo; Approvers</button>
+                <h2>Edit Approver</h2>
+            </div>
+            <p>Fill the form below to edit the approver</p>
+            <img src="{% static 'images/appr23.png' %}" width="500px" alt="">
+        </div>
+        <div class="appedit_form">
+            <form action="" method="post">
+                <input type="hidden" value="edit_app" name="form_meta" id="">
+                <input type="hidden" name="staff_id" value="{{staff.id}}" id="app_id">
+                {% csrf_token %}
+                <div class="fld456">
+                    <label for="approver_staff_{{staff.id}}">Approver Name</label>
+                    <select name="approver_staff" id="approver_staff_{{staff.id}}">
+                        {% for s in all_staff %}
+                        <option value="{{s.id}}" {% if staff.id == s.id %}selected{% endif %}>
+                            {{s.first_name}} {{s.other_names}} {{s.last_name}}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="fld456">
+                    <label>Groups and Levels</label>
+                    {% for group in all_groups %}
+                    {% with approver_obj=approver_objs|get_group:group %}
+                    <div style="margin-bottom: 8px;">
+                        <input type="checkbox"
+                            name="groups"
+                            value="{{group.id}}"
+                            id="group_{{staff.id}}_{{group.id}}"
+                            {% if approver_obj %}checked{% endif %}>
+                        <label for="group_{{staff.id}}_{{group.id}}">{{group.name}}</label>
+                        <select name="levels">
+                            <option value="">---</option>
+                            {% for level in all_levels %}
+                            <option value="{{level.id}}"
+                                {% if approver_obj and approver_obj.level.id == level.id %}selected{% endif %}>
+                                {{level.name}}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+                <div class="fld456">
+                    <button type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}   
+
+    <div class="leave_types" style="display: none;">
+        <div class="lvtheader">
+            <h3>Leave Types</h3>
+            <button type="button" onclick="mySwitcher('.leave_types','.lvt_form_add')">New Leave Type</button>
+            <!-- <button class="del56" onclick="show4('delete')" type="button"><img src="{% static 'images/trash1.png' %}" alt="" width="20px" height="20px"></button> -->
+        </div>
+        <div class="lvtmid" style="display: none;">
+            <button type="button" class="lvtsve" onclick="show4('del_leave_type')">&check; save</button>
+            <button type="button" class="lvtdsd" onclick="lvtdell2('lvt_del')">&times; discard</button>
+        </div>
+        <div class="lvtbody">
+            {% for leave in all_leave %}
+            {% if leave.is_active %}
+            <div class="lvtlb">
+                <button type="button" class="lvtype_heading" onclick="mySwitcher('.leave_types', '.lvt_form_edit{{leave.id}}', true)">
+                    <p><b>{{leave.name}}</b></p>
+                    <p>{{leave.days}} days</p>
+                    <p>{{leave.seniority.name}}</p>
+                </button>
+                <input type="hidden" id="lvt{{leave.id}}" name="leave_type" value="{{leave.id}}">
+                <!-- <button type="button">&#9998;</button> -->
+                <button type="button" id="lvtdel_button" onclick="lvtdell(event, 'lvt_del')">select</button>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="inactive_lvt">
+            <div class="in_header">
+                <button class="rot_lvt" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+                onclick="show1('in_body_lvt'), rotateMe('.rot_lvt')"
+                >&#10094;</button>
+                <p onclick="show1('in_body_lvt'), rotateMe('.rot_lvt')">Inactive Approvers (deleted)</p>
+            </div>
+            <div class="in_body_lvt">
+                {% for leave in all_leave %}
+                {% if leave.is_active == False %}
+                <form method="post" class="lvtlb">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_meta" value="res_lvt">
+                    <input type="hidden" name="leave_id" value="{{leave.id}}" id="">
+                    <button type="button" class="lvtype_heading" onclick="mySwitcher('.leave_types', '.lvt_form_edit{{leave.id}}', true)">
+                        <p><b>{{leave.name}}</b></p>
+                        <p>{{leave.days}} days</p>
+                        <p>{{leave.seniority.name}}</p>
+                    </button>
+                    <input type="hidden" class="lvt_res" id="lvt{{leave.id}}" name="leave_type" value="{{leave.id}}">
+                    <!-- <button type="button">&#9998;</button> -->
+                    <button type="submit"  class="lvt_res">Restore</button>
+                </form>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        
+        <form action="" class="lvt_del" method="post">
+            {% csrf_token %}
+            <input type="hidden" value="del_lvt" name="form_meta" id="">
+        </form>
+    </div>
+
+    
+    {% for leave in all_leave %}
+    <div class="lvt_form_edit lvt_form_edit{{leave.id}}" style="display: none;">
+        <div class="lvt_form1">
+            <div class="lvt_formh">
+                <button type="button" onclick="mySwitcher('.lvt_form_edit{{leave.id}}', '.leave_types')"><b>Back</b> &rsaquo; All Leave Types</button>
+                <h2>Modify {{leave.name}} Leave</h2>
+            </div>
+            <p>Please update the fields below to modify this leave type</p>
+            <img src="{% static 'images/leaf.png' %}" width="500px" alt="">
+        </div>
+
+        <div class="lvt_form26">
+            <form action="" method="post" class="lvt_form26d">
+                {% csrf_token %}
+                <input type="hidden" name="form_meta" value="edit_lvt">
+                <input type="hidden" name="leave_id" value="{{leave.id}}" id="">
+
+                <div class="lvt476">
+                    <label for="lvt_name{{leave.id}}">Name</label>
+                    <input type="text" name="name" value="{{leave.name}}" id="lvt_name{{leave.id}}">
+                </div>
+
+                <div class="lvt476">
+                    <label for="lvt_code{{leave.id}}">Leave Code</label>
+                    <input type="text" name="code" value="{{leave.code}}" id="lvt_code{{leave.id}}">
+                </div>
+
+                <div class="lvt476">
+                    <label for="lvt_days{{leave.id}}">Maximum Days Allowed</label>
+                    <input type="number" name="days" value="{{leave.days}}" id="lvt_days{{leave.id}}">
+                </div>
+
+                <div class="lvt476">
+                    <label for="seniority{{leave.id}}">Who can apply (seniority)</label>
+                    <select name="seniority" id="seniority{{leave.id}}">
+                        {% for sen in seniority %}
+                        <option value="{{sen.id}}" {% if leave.seniority.id == sen.id %}selected{% endif %}>{{sen.name}} (Level {{sen.rank}})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="lvt476">
+                    <label for="reset_period{{leave.id}}">Reset Period</label>
+                    <select name="reset_period" id="reset_period{{leave.id}}">
+                        <option value="YEARLY" {% if leave.reset_period == "YEARLY" %}selected{% endif %}>Yearly</option>
+                        <option value="SEMI ANNUALLY" {% if leave.reset_period == "SEMI ANNUALLY" %}selected{% endif %}>Semi Annually</option>
+                        <option value="QUARTERLY" {% if leave.reset_period == "QUARTERLY" %}selected{% endif %}>Quarterly (3 months)</option>
+                        <option value="MONTHLY" {% if leave.reset_period == "MONTHLY" %}selected{% endif %}>Monthly</option>
+                        <option value="NONE" {% if leave.reset_period == "NONE" %}selected{% endif %}>No Reset</option>
+                    </select>
+                </div>
+
+                <div class="lvt476">
+                    <label for="multiple{{leave.id}}">Allow Multiple Applications?</label>
+                    <select name="allow_multiple_applications" id="multiple{{leave.id}}">
+                        <option value="True" {% if leave.allow_multiple_applications %}selected{% endif %}>Yes</option>
+                        <option value="False" {% if not leave.allow_multiple_applications %}selected{% endif %}>No</option>
+                    </select>
+                </div>
+
+                <div class="lvt476">
+                    <label for="paid_leave{{leave.id}}">Is This a Paid Leave?</label>
+                    <select name="paid_leave" id="paid_leave{{leave.id}}">
+                        <option value="True" {% if leave.paid_leave %}selected{% endif %}>Yes</option>
+                        <option value="False" {% if not leave.paid_leave %}selected{% endif %}>No</option>
+                    </select>
+                </div>
+
+                <div class="lvt476">
+                    <label for="eligibility{{leave.id}}">Eligibility Requirements</label>
+                    <textarea name="eligibility" id="eligibility{{leave.id}}" rows="3">{{leave.eligibility}}</textarea>
+                </div>
+
+                <!-- <div class="lvt476">
+                    <label for="requires_document{{leave.id}}">Requires Document Upload?</label>
+                    <select name="requires_document" id="requires_document{{leave.id}}">
+                        <option value="True" {% if leave.requires_document %}selected{% endif %}>Yes</option>
+                        <option value="False" {% if not leave.requires_document %}selected{% endif %}>No</option>
+                    </select>
+                </div> -->
+
+                <div class="lvt476">
+                    <p>Inputs this leave type accepts:</p>
+                    <div><input type="checkbox" name="i_date" value="True" {% if leave.includes_date_of_occurence %}checked{% endif %}> <label>Date of occurrence</label></div>
+                    <div><input type="checkbox" name="i_institution" value="True" {% if leave.includes_institution %}checked{% endif %}> <label>Institution name</label></div>
+                    <div><input type="checkbox" name="i_course" value="True" {% if leave.includes_course %}checked{% endif %}> <label>Course name</label></div>
+                    <div><input type="checkbox" name="i_note" value="True" {% if leave.includes_med_note %}checked{% endif %}> <label>Medical note</label></div>
+                    <div><input type="checkbox" name="i_letter" value="True" {% if leave.includes_letter %}checked{% endif %}> <label>Admission letter</label></div>
+                </div>
+
+                <div class="lvt767">
+                    <button type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+
+
+    <div class="lvt_form_add" style="display: none;">
+        <div class="lvt_form1">
+            <div class="lvt_formh">
+                <button type="button" onclick="mySwitcher('.lvt_form_add', '.leave_types')"><b>Back</b> &rsaquo; All Leave Types</button>
+                <h2>New Type of Leave</h2>
+            </div>
+            <p>Please fill the form to add a new type of leave</p>
+            <img src="{% static 'images/yoga.png' %}" width="500px" alt="">
+        </div>
+
+        <div class="lvt_form26">
+            <form action="" class="lvt_form26d" method="post">
+                {% csrf_token %}
+                <input type="hidden" value="add_lvt" name="form_meta">
+
+                <div class="lvt476">
+                    <label for="lvt_name">Name</label>
+                    <input type="text" name="name" id="lvt_name">
+                </div>
+
+                <div class="lvt476">
+                    <label for="lvt_code">Leave Code</label>
+                    <input type="text" name="code" id="lvt_code" placeholder="e.g. AL, CL, SL">
+                </div>
+
+                <div class="lvt476">
+                    <label for="lvt_days">Maximum Days Allowed</label>
+                    <input type="number" name="days" id="lvt_days">
+                </div>
+
+                <div class="lvt476">
+                    <label for="seniority">Who can apply for this type of leave (seniority)</label>
+                    <select name="seniority" id="seniority">
+                        {% for sen in seniority %}
+                        <option value="{{sen.id}}">{{sen.name}} (Level {{sen.rank}} staff)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="lvt476">
+                    <label for="reset_period">Reset Period</label>
+                    <select name="reset_period" id="reset_period">
+                        <option value="YEARLY">Yearly</option>
+                        <option value="SEMI ANNUALLY">Semi Annually</option>
+                        <option value="QUARTERLY">Quarterly (3 months)</option>
+                        <option value="MONTHLY">Monthly</option>
+                        <option value="NONE">No Reset</option>
+                    </select>
+                </div>
+
+                <div class="lvt476">
+                    <label for="multiple">Allow Multiple Applications?</label>
+                    <select name="allow_multiple_applications" id="multiple">
+                        <option value="True">Yes</option>
+                        <option value="False">No</option>
+                    </select>
+                </div>
+
+                <div class="lvt476">
+                    <label for="paid_leave">Is This a Paid Leave?</label>
+                    <select name="paid_leave" id="paid_leave">
+                        <option value="True">Yes</option>
+                        <option value="False">No</option>
+                    </select>
+                </div>
+
+                <div class="lvt476">
+                    <label for="eligibility">Eligibility Requirements</label>
+                    <textarea name="eligibility" id="eligibility" rows="3" placeholder="e.g. Must have completed 6 months of service"></textarea>
+                </div>
+
+                <!-- <div class="lvt476">
+                    <label for="requires_document">Requires Document Upload?</label>
+                    <select name="requires_document" id="requires_document">
+                        <option value="True">Yes</option>
+                        <option value="False">No</option>
+                    </select>
+                </div> -->
+
+                <div class="lvt476">
+                    <p>This leave type should accept this input:</p>
+                    <div>
+                        <input type="checkbox" value="True" name="i_date" id="i_date">
+                        <label for="i_date">Date of occurrence</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" value="True" name="i_institution" id="i_institution">
+                        <label for="i_institution">Institution name</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" value="True" name="i_course" id="i_course">
+                        <label for="i_course">Course Name</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" value="True" name="i_note" id="i_note">
+                        <label for="i_note">Medical note</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" value="True" name="i_letter" id="i_letter">
+                        <label for="i_letter">Admission letter</label>
+                    </div>
+                </div>
+
+                <div class="lvt767">
+                    <button type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <form action="" class="hol_del" method="post">
+        {% csrf_token %}
+        <input type="hidden" value="del_hol" name="form_meta" id="">
+    </form>
+
+    {% for holiday in all_holidays %}
+    <div class="hol_form_edit hol_form_edit{{holiday.id}}" style="display: none;">
+        <div class="hf233">
+            <div class="hf243">
+                <button type="button" onclick="mySwitcher('.hol_form_edit{{holiday.id}}', '.holidays')"><b>Back</b> Holidays</button>
+                <h2>Edit Holiday</h2>
+            </div>
+            <p>Edit the details of this holiday below.</p>
+            <img src="{% static 'images/beach.png' %}" width="500px" alt="">
+        </div>
+        <form action="" method="post">
+            {% csrf_token %}
+            <input type="hidden" value="edit_hol" name="form_meta" id="">
+            <input type="hidden" name="hol_id" value="{{holiday.id}}" id="">
+            <div class="hf454">
+                <label for="name{{holiday.id}}">Name</label>
+                <input type="text" name="name" id="name{{holiday.id}}" value="{{holiday.name}}">
+            </div>
+            <div class="hf454">
+                <label for="date{{holiday.id}}">Date</label>
+                <input type="date" name="date" id="date{{holiday.id}}" value="{{holiday.date|date:'Y-m-d'}}">
+            </div>
+            <div class="hf454">
+                <label for="type{{holiday.id}}">Type of holiday (based on occurrence)</label>
+                <select name="type" id="type{{holiday.id}}">
+                    <option value="Fixed" {% if holiday.type == "Fixed" %}selected{% endif %}>Fixed</option>
+                    <option value="Variable" {% if holiday.type == "Variable" %}selected{% endif %}>Variable</option>
+                </select>
+            </div>
+            <div class="hf454">
+                <label for="recur{{holiday.id}}">Does this holiday recur annually?</label>
+                <select name="recur" id="recur{{holiday.id}}">
+                    <option value="True" {% if holiday.recurs_annually %}selected{% endif %}>Yes</option>
+                    <option value="False" {% if not holiday.recurs_annually %}selected{% endif %}>No</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+    {% endfor %}
+
+    <div class="hol_form_add" style="display: none;">
+        <div class="hf233">
+            <div class="hf243">
+                <button type="button" onclick="mySwitcher('.hol_form_add', '.holidays')"><b>Back</b> Holidays</button>
+                <h2>New Holiday</h2>
+            </div>
+            
+            <p>Please fill the form to add a new holiday object</p>
+            <img src="{% static 'images/beach.png' %}" width="500px" alt="">
+        </div>
+        <form action="" method="post">
+            {% csrf_token %}
+            <input type="hidden" value="add_hol" name="form_meta" id="">
+            <div class="hf454">
+                <label for="name">Name</label>
+                <input type="text" name="name" id="name">
+            </div>
+            <div class="hf454">
+                <label for="date">Date</label>
+                <input type="date" name="date" id="date">
+            </div>
+            <div class="hf454">
+                <label for="type">Type of holiday (based on occurrence)</label>
+                <select name="type" id="type">
+                    <option value="Fixed">Fixed</option>
+                    <option value="Variable">Variable</option>
+                </select>
+            </div>
+            <div class="hf454">
+                <label for="recur">Does this holiday recur annually?</label>
+                <select name="recur" id="recur">
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+
+
+    <div class="holidays" style="display: none;">
+        <div class="hol341">
+            <h3>Holidays</h3>
+            <button type="button" onclick="mySwitcher('.holidays','.hol_form_add')">New Holiday</button>
+        </div>
+        <!-- <div class="holmid" style="display: none;">
+            <button type="button" class="lvtsve" onclick="confirmAction(event, '.conf167', '.confheader', '.confmsg1', '.confmsg2')">&check; save</button>
+            <button type="button" class="lvtdsd" onclick="lvtdell2('lvt_del')">&times; discard</button>
+        </div> -->
+        <div class="hol342">
+            <div class="vhol351">
+                <div class="vhol352">
+                    {% if v_holidays.count > 0 %}
+                    <h2>Variable holidays</h2>
+                    {% endif %}
+                </div>
+                <div class="vhol253">
+                    {% for holiday in v_holidays %}
+                    {% if holiday.is_active %}
+                    <form class="vholitem" method="post">
+                        {% csrf_token %}
+                        <button class="tt" type="button" onclick="mySwitcher('.holidays', '.hol_form_edit{{holiday.id}}', true)">
+                            <h2>{{holiday.name}}</h2>
+                            <p>{{holiday.date}}</p>
+                        </button>
+                        <input type="hidden" name="form_meta" value="del_hol" id="">
+                        <input type="hidden" value="{{holiday.id}}" name="holiday" id="holiday_id">
+                        <button class="bb" type="submit">Delete</button>
+                    </form>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="fhol351">
+                <div class="fhol352">
+                    {% if f_holidays.count > 0 %}
+                    <h2>Fixed holidays</h2>
+                    {% endif %}
+                </div>
+                <div class="fhol253">
+                    {% for holiday in f_holidays %}
+                    {% if holiday.is_active %}
+                    <form class="fholitem">
+                        {% csrf_token %}
+                        <button class="tt" type="button" onclick="mySwitcher('.holidays', '.hol_form_edit{{holiday.id}}', true)">
+                            <h2>{{holiday.name}}</h2>
+                            <p>{{holiday.date}}</p>
+                        </button>
+                        <input type="hidden" name="form_meta" value="del_hol" id="">
+                        <input type="hidden" value="{{holiday.id}}" name="holiday" id="holiday_id">
+                        <button class="bb" type="submit">Delete</button>
+                    </form>
+                    {% endif %}
+                    {% endfor %}
+                    {% if v_holidays.count == 0 and f_holidays.count == 0 %}
+                    <p style="text-align: center; width: 100%;">No holidays found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="inactive_hol">
+            <div class="in_header">
+                <button class="rot_hol" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+                onclick="show1('in_body_hol'), rotateMe('.rot_hol')"
+                >&#10094;</button>
+                <p onclick="show1('in_body_hol'), rotateMe('.rot_hol')">Inactive Holidays (deleted)</p>
+            </div>
+            <div class="in_body_hol">
+                {% for holiday in all_holidays %}
+                {% if not holiday.is_active %}
+                <form class="holitem" method="post">
+                    {% csrf_token %}
+                    <button class="tt" type="button" onclick="mySwitcher('.holidays', '.hol_form_edit{{holiday.id}}', true)">
+                        <h2>{{holiday.name}}</h2>
+                        <p>{{holiday.date}}</p>
+                    </button>
+                    <input type="hidden" name="form_meta" value="res_hol" id="">
+                    <input type="hidden" value="{{holiday.id}}" name="holiday" id="holiday_id">
+                    <button class="bb" type="button">restore</button>
+                </form>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="gender_form_add" style="display: none;">
+        <div class="sf10">
+            <div class="sf10h">
+                <button type="button" onclick="mySwitcher('.gender_form_add', '.genders')"><b>Back</b> &rsaquo; Genders</button>
+                <h2>New Gender</h2>
+            </div>
+            <p>Fill the form below to add a new gender</p>
+            <img src="{% static 'images/gender.png' %}" width="300px" alt="">
+        </div>
+        <form class="sf12" action="" method="post">
+            <input type="hidden" name="form_meta" value="add_gender">
+            {% csrf_token %}
+            <div class="sf45">
+                <div class="fld33">
+                    <label for="gender_name_add">Name</label>
+                    <input type="text" name="name" id="gender_name_add" required>
+                </div>
+                <div class="fld33">
+                    <label for="gender_pronoun_add">Pronoun</label>
+                    <input type="text" name="pronoun" id="gender_pronoun_add" required>
+                </div>
+            </div>
+            <div class="bt23">
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+    {% for gender in all_genders %}
+    <div class="gender_form_edit gender_form_edit{{gender.id}}" style="display: none;">
+        <div class="sf10">
+            <div class="sf10h">
+                <button type="button" onclick="mySwitcher('.gender_form_edit{{gender.id}}', '.genders')"><b>Back</b> &rsaquo; Genders</button>
+                <h2>Edit Gender</h2>
+            </div>
+            <p>Edit the details of this gender below.</p>
+            <img src="{% static 'images/gender2.png' %}" width="300px" alt="">
+        </div>
+        <form class="sf12" action="" method="post">
+            <input type="hidden" name="form_meta" value="edit_gender">
+            <input type="hidden" name="gender_id" value="{{gender.id}}">
+            {% csrf_token %}
+            <div class="sf45">
+                <div class="fld33">
+                    <label for="gender_name_edit{{gender.id}}">Name</label>
+                    <input type="text" name="name" id="gender_name_edit{{gender.id}}" value="{{gender.name}}" required>
+                </div>
+                <div class="fld33">
+                    <label for="gender_pronoun_edit{{gender.id}}">Pronoun</label>
+                    <input type="text" name="pronoun" id="gender_pronoun_edit{{gender.id}}" value="{{gender.pronoun}}" required>
+                </div>
+            </div>
+            <div class="bt23">
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+    {% endfor %}
+
+    <div class="conf167" style="display: none;">
+        <h2 class="confheader"></h2>
+        <p class="confmsg1"></p>
+        <div class="conf78">
+            <img src="{% static 'images/3776063.png' %}" width="300px" alt="">
+            <p class="confmsg2"></p>
+        </div>
+        <div class="button_wrapper">
+            <button type="button" class="confbtn"  onclick="submitMyForm3()">Confirm</button>
+            <button type="button" class="cancelfbtn" onclick="closeFirst('conf167')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+

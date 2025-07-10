@@ -1,0 +1,32 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.index, name='index'),
+    path('leave_system_admin_login', views.sys_admin_login, name = 'sys_admin_login'),
+    path('leave_request/<str:slug>', views.leave_request, name='leave_request'),
+    path('login/<str:next_page>', views.login_user, name='login'),
+    path('dashboard/<str:slug>', views.dashboard, name="dashboard"),
+    # path('leavedetails/<int:leave_id>/<str:slug>', views.leave_details, name="leave_details"),
+    # path('leave_approval/<str:applicant_slug>/<int:leave_id>/<str:slug>', views.leave_approval, name="leave_approval"),
+    # path('signup/<str:slug>', views.signup_user, name='signup'),
+    # path('leave_details_form/<str:staff_slug>/<str:slug>', views.leave_details_view, name='leave_details_view'),
+    path('password_reset', views.password_reset, name='password_reset'),
+    # path('all_staff/<str:slug>', views.all_staff, name="all_staff"),
+    # path('staff_details/<str:staff_slug>/<str:slug>', views.staff_details, name="staff_details"),
+    # path('department_details/<int:department_id>/<str:slug>', views.department_details, name='department_details'),
+    # path('staff_delete/<str:slug>', views.staff_delete, name='staff_delete'),
+    # path('staff_password_reset/<str:slug>', views.staff_password_reset, name='staff_password_reset'),
+    path('leave_requests/<str:slug>', views.leave_requests, name='leave_requests'),
+    path('profile/<str:slug>', views.profile, name='profile'),
+    path('leave_history/<str:slug>', views.leave_history, name="leave_history"),
+    # path('add_department/<str:slug>', views.add_department, name='add_department'),
+    path('logout/<str:slug>', views.user_logout, name='logout1'),
+    path('staff_on_leave/<str:slug>', views.users_on_leave, name='staff_on_leave'),
+    # path('relief_ack/<int:id>/<str:slug>', views.relieve_ack, name='relieve_ack'),
+    path('staff_ack/<str:slug>', views.staff_ack, name='staff_ack'),
+    # path('success/<str:slug>', views.success_page, name='success_page'),
+    # path('device_info/<str:slug>', views.sec_check, name="sec_check"),
+    path('system_admin', views.sys_admin, name='sys_admin'),
+    path('system_setup', views.setup, name='setup'),
+]

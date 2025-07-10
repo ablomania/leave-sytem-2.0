@@ -1,0 +1,30 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+    Success
+{% endblock %}
+
+{% block content %}
+<div class="success_page">
+    {% with prev=''  prev_text='' next='' nexr_text='' %}
+    <div class="s1">
+        <img src="{% static 'images/accept.png' %}" alt="check">
+        {% if prev_page == 'signup' %}
+        <h2>Account Created Successfully</h2>
+        {% endif %}
+    </div>
+    <div class="s2">
+        {% if prev_page != 'not' or button != 'not' %}
+        <a href="/{{prev_page}}">
+            <button type="button" class="b1">{{button}}</button>
+        </a>
+        {% endif %}
+        <a href="/{{next_page}}">
+            <button type="button" class="b2">{{next_btn}}</button>
+        </a>
+        
+    </div>
+    {% endwith %}
+</div>
+{% endblock %}

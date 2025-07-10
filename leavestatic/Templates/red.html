@@ -1,0 +1,29 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Check</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<script src="{% static 'behavior.js' %}"></script>
+<body>
+    <div class="sec_check">
+        <div class="sc1">
+            <h1>Checking device info</h1>
+            <div class="sc2">
+                <form action="" method="post">
+                    <input type="checkbox" value="true" onchange="getSomeInfo()" name="user_input" id="user_input">
+                    <label for="user_input">I am a human</label>
+                    <input type="hidden" name="os_name" id="os_name">
+                    <input type="hidden" name="os_version" id="os_version">
+                    <input type="hidden" name="device_type" id="device_type">
+                    <input type="hidden" name="browser_name" id="browser_name">
+                    <input type="hidden" name="browser_version" id="browser_version">
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

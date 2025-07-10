@@ -1,0 +1,69 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+    Staff on leave
+{% endblock %}
+
+{% block content %}
+<div class="users_on_leave">
+    <div class="on_leave_header">
+        <a href="{% url 'admin_dashboard' slug %}">
+            <img src="{% static 'images/back.png' %}" width="25px" height="25px" alt="back_image" class="back-image">
+        </a>
+        <h1>Staff On Leave</h1>
+    </div>
+    <div class="main_content">
+        <div class="main_grid">
+            {% for dept, leave_requests in dept_group.items %}
+            {% if leave_requests.count > 0 %}
+            <h3>{{ dept.department_name }}</h3>
+            <div class="dept_grid">
+                {% for leave in leave_requests %}
+                {% if forloop.counter == 1 %}
+                <div class="grid_item">
+                    <p><b>Name</b></p>
+                </div>
+                <div class="grid_item">
+                    <p><b>Leave type</b></p>
+                </div>
+                <div class="grid_item">
+                    <p><b>Start Date</b></p>
+                </div>
+                <div class="grid_item">
+                    <p><b>End Date</b></p>
+                </div>
+                <div class="grid_item">
+                    <p><b>Resumption Date</b></p>
+                </div>
+                {% endif %}
+                <div class="grid_item">
+                    <p>{{ leave.applicant.first_name }} {{ leave.applicant.last_name }}, {{ leave.applicant.other_names }}</p>
+                </div>
+                <div class="grid_item">
+                    <p style="text-transform: lowercase;">{{ leave.type }}</p>
+                </div>
+                <div class="grid_item">
+                    <p>{{ leave.leave_start_date }}</p>
+                </div>
+                <div class="grid_item">
+                    <p>{{ leave.leave_end_date }}</p>
+                </div>
+                <div class="grid_item">
+                    <p>{{ leave.resumption_date }}</p>
+                </div>
+                {% empty %}
+                <p>No staff is on leave at the moment</p>
+                {% endfor %}
+            </div>
+            {% else %}
+            {% if forloop.counter == 1 %}
+            <p>No staff is on leave at the moment</p>
+            {% endif %}
+            {% endif %}
+            {% endfor %}
+        </div>
+        
+    </div>
+</div>
+{% endblock %}

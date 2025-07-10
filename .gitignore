@@ -1,0 +1,60 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django stuff:
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+db.sqlite3
+media/
+local_settings.py
+
+# If using Django's collectstatic
+/static/
+
+# Environment folders
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Test coverage
+htmlcov/
+.coverage
+.tox/
+.nox/
+.cache/
+.pytest_cache/
+
+# Migrations (optional — only if you regenerate them often)
+**/migrations/*.py
+!**/migrations/__init__.py
+
+# Git LFS pointer files (if used)
+.gitattributes
+
+# Node (if using npm for frontend)
+node_modules/
+package-lock.json

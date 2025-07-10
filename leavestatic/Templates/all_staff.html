@@ -1,0 +1,164 @@
+{% extends 'main.html' %}
+{% load static %}
+
+
+{% block title %}
+{% if user_type == "HOD" %}
+Staff of {{department_name}}
+{% else %}
+Staff Of GCPS
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="all_staff" id="all-staff">
+    <div class="all_staff_header">
+        <a href="{% url 'admin_dashboard' slug2 %}">
+            <img src="{% static 'images/back.png' %}" width="25px" height="25px" alt="back_image" class="back-image">
+        </a>
+        <h1>Staff Info</h1>
+    </div>
+    
+    {% if user_type == "HOD" %}
+    <div class="HOD-wrapper">
+        {% for department, staff_members in members.items %}
+        
+        <div class="HOD_grid_main">
+            <h3>{{ department.department_name }}</h3>
+            <div class="HOD_grid_l2">
+                {% for staff in staff_members %}
+                <div class="HOD_grid">
+                    {% if forloop.counter == 1 %}
+                    <div class="HOD_item HOD_head">
+                        <p><b>Name</b></p>
+                    </div>
+                    <div class="HOD_item HOD_head">
+                        <p><b>Position</b></p>
+                    </div>
+                    <div class="HOD_item HOD_head">
+                        <p><b>Department</b></p>
+                    </div>
+                    <div class="HOD_item HOD_head">
+                        <p><b>Leave Status</b></p>
+                    </div>
+                    {% endif %}
+                    <div class="HOD_item">
+                        <!-- <a href="{% url 'staff_details' staff.slug slug2 %}"> -->
+                            <p class="p-link" title="Click to view the details of {{ staff.first_name }}">
+                                <img class="i1" src="{% static 'images/user.png' %}" alt="">
+                            {{ staff.last_name }}, {{ staff.first_name }} {{ staff.other_names }}
+                            </p>
+                        <!-- </a> -->
+                    </div>
+                    <div class="HOD_item">
+                        <p><img class="i1" src="{% static 'images/case.png' %}" alt="">{{ staff.position }}</p>
+                    </div>
+                    <div class="HOD_item">
+                        <p><img class="i1" src="{% static 'images/hierarchy.png' %}" alt="">{{ staff.department.department_name }}</p>
+                    </div>
+                    <div class="HOD_item">
+                        <p style="text-transform: lowercase;"><img class="i1" src="{% static 'images/leave1.png' %}" alt="">{{ staff.leave_status }}</p>
+                    </div>
+                    
+                </div>
+                {% endfor %}
+            </div>
+            
+        </div>
+        
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if user_type == 'HOHR' or user_type == 'RECTOR' %}
+    <div class="staff-grid">
+        {% for department, members in group.items %}
+            <div class="dept-info g3" onclick="showList(event, '{{ department.department_name }}','{{department.id}}', '{{slug}}', `{% url 'department_details' department.id slug %}`, `{% cycle '0' '1' '2' '3' '4' '5' '6' '7' '8' '9' '10' '11' %}`)">
+                <img class="dept-image" {% if department.department_image %} src="{{ department.department_image.url }}" {% else %} src="{% static 'images/hierarchy.png' %}" {% endif %} alt="Department Icon">
+                <p class="all-staff-dept" id="all-staff-dept">{{ department.department_name }}</p>
+            </div>
+            <div class="inner1234" id="inner-{% cycle '0' '1' '2' '3' '4' '5' '6' '7' '8' '9' '10' '11' %}">
+                
+                <div class="popup-header">
+                    <h1 id="popup-heading">{{ department.department_name }}</h1>
+                    <a class="myLink" id="myLink{% cycle '0' '1' '2' '3' '4' '5' '6' '7' '8' '9' '10' '11' %}" href="">
+                        <img class="popup-header-pen" src="{% static 'images/pen.png' %}" alt="change" width="25px" height="25px">
+                    </a>
+                    <div class="top" onclick="closeUp()">
+                        <p id="close-button" onclick="closeUp()">&#10006;</p>
+                    </div>
+                </div>
+                <div class="special_buttons">
+                    <button type="button">Delete</button>
+                </div>
+                <div class="inner-grid">{% for staff in members %}
+                    <div class="staff-cell-1">
+                        
+                        {% if forloop.counter == 1 %}
+                        <div class="staff-cell " style="display: flex; flex-direction: row;
+                        justify-content: space-between; align-items: center;">
+                            <p class="staff-cell-header"><b>Name</b></p>
+                            <!-- <div class="select-all-unselect">
+                                <img src="{% static 'images/check.png' %}" width="25px" height="25px" alt="select all" title="Select all staff in this department" class="select-all" onclick="selectAll('{{ department.id }}')">
+                                <img src="{% static 'images/unselect.png' %}" width="25px" height="25px" alt="unselect all" title="Unselect all staff in this department" class="unselect-all" onclick="unselectAll('{{ department.id }}')">
+                            </div> -->
+                            
+                        </div>
+                        <div class="staff-cell staff-cell-header">
+                            <p><b>Position</b></p>
+                        </div>
+                        <div class="staff-cell staff-cell-header">
+                            <p><b>Department</b></p>
+                        </div>
+                        <div class="staff-cell staff-cell-header">
+                            <p><b>Leave Status</b></p>
+                        </div>   
+                        {% endif %}                         
+                        <div class="staff-cell">
+                            <div class="staff-name">
+                                <a href="{% url 'staff_details' staff.slug slug2 %}">
+                                    <p class="class_name">{{ staff.first_name }} {{ staff.last_name }}, {{ staff.other_names }}</p>
+                                </a>
+                                
+                                <!-- <div class="icon-links">
+                                    <a href="">
+                                        <img class="hover-view" src="{% static 'images/view.png' %}" alt="view" title="View staff details">
+                                    </a>
+                                </div>
+                                <input type="checkbox" name="staff_id" value="{{ staff.id }}" class="staff-checkbox" onclick="toggleCheckbox('{{ department.id }}')"> -->
+                            </div>
+                        </div>
+                        <div class="staff-cell">
+                            <p><span class="r3"><img src="{% static 'images/case.png' %}" alt="" width="20px" height="20px"></span>{{ staff.position }}</p>
+                        </div>
+                        <div class="staff-cell">
+                            <p><span class="r3"><img src="{% static 'images/hierarchy.png' %}" alt="" width="20px" height="20px"></span>{{ staff.department.department_name }}</p>
+                        </div>
+                        <div class="staff-cell">
+                            <p style="text-transform: lowercase;"><span class="r3"><img src="{% static 'images/leave1.png' %}" alt="" width="20px" height="20px"></span>{{ staff.leave_status }}</p>
+                        </div>
+                        
+                    </div> {% endfor %}
+                </div>
+            </div>
+           
+        {% endfor %}
+        {% if ustaff %}
+        <div class="unassigned g3">
+            <img src="{% static 'images/team.png' %}" alt="unassigned_image" width="90px" height="90px">
+            <p>Unassigned Staff</p>
+        </div>
+        {% endif %}
+        <a href="{% url 'add_department' slug2 %}">
+            <div class="add-department-button g3">
+                <img src="{% static 'images/plus.png' %}" alt="add department image" width="80px" height="80px">
+                <p>Add New Department</p>
+            </div>
+        </a>
+        
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+

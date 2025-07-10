@@ -1,0 +1,28 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+    Leave Details
+{% endblock %}
+
+{% block content %}
+<div class="details_form">
+    <h1> Annual Leave Details</h1>
+    <h3>Staff: {{ user_name }}</h3>
+    <p>NB: This only applies to annual leave of the specified employee</p>
+    <form action="{% url 'leave_details_view' staff_slug slug %}" method="post">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="field-wrapper">
+                {{field.label_tag}}
+                {{field}}
+            </div>
+        {% endfor %}
+        <div class="submit-button-wrapper">
+            <input type="submit" value="submit">
+        </div>
+        
+    </form>
+</div>
+    
+{% endblock %}

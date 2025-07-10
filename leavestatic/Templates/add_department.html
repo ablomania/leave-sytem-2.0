@@ -1,0 +1,36 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+    New Department
+{% endblock %}
+
+{% block content %}
+<div class="add-department">
+    <h2>New Department</h2>
+    <div class="form-wrapper">
+        <form action="" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="field-wrapper">
+                <label for="dept_name">Department Name</label>
+                <input type="text" name="dept_name" required id="dept_name">
+            </div>
+            <div class="field-wrapper">
+                <label for="dept_head">Head of Department</label>
+                <select name="dept_head" id="dept_head" required>
+                    {% for head in all_staff %}
+                    <option value="{{ head.slug }}">{{ head.first_name }} {{ head.last_name }}, {{ head.other_names }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field-wrapper">
+                <label for="dept_icon">Department Icon (if any)</label>
+                <input type="file" name="dept_icon" id="dept_icon">
+            </div>
+            <div class="button-wrapper">
+                <button type="submit">Submit</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

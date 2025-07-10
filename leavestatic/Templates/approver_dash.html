@@ -1,0 +1,122 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+    Dashboard
+{% endblock %}
+
+{% block content %}
+    <div id="admin-dashboard">
+        <div class="heading">
+            <h3>{{user_name}}</h3>
+            <a href="{% url 'logout1' slug %}" class="logout-button">
+                <img src="{% static 'images/power-button.png' %}" width="20px" height="20px" alt="logout" title="Log out">
+            </a>
+        </div>
+        <div class="tiles">
+            {% if st_ack %}
+            <a href="{% url 'staff_ack' slug %}">
+                <div class="image">
+                    <img src="{% static 'images/checkmark.png' %}"  height="100px" width="100px" alt="">
+                </div>
+                <div class="image-label">
+                    <p>Leave Acknowledgement</p>
+                </div>
+            </a>
+            {% endif %}
+            <!-- <a href="{% url 'signup' slug %}">
+                <div class="tile" title="{% if user_type == 'HOD' %}click to add a staff to your department{% elif user_type == 'HOHR' %}click to add a staff or HOD to a department{% else %}click to add a staff or HOD{% endif %}">
+                    <div class="image">
+                        <img src="{% static 'images/user1.png' %}" alt="add-user-logo">
+                    </div>
+                    <div class="image-label">
+                        <p>Add User</p>
+                    </div>
+                </div>
+            </a> -->
+            <!-- <a href="">
+                <div class="tile" title="{% if user_type == 'HOD' %}click to add a staff to your department{% elif user_type == 'HOHR' %}click to add a staff or HOD to a department{% else %}click to add a staff or HOD{% endif %}">
+                    <div class="image">
+                        <img src="{% static 'images/user-settings.png' %}" alt="user-settings-logo">
+                    </div>
+                    <hr>
+                    <div class="image-label">
+                        <p>User settings</p>
+                    </div>
+                </div>
+            </a> -->
+            <!-- <a href="{% url 'all_staff' slug %}">
+                <div class="tile">
+                    <div class="image">
+                        <img src="{% static 'images/group.svg' %}" alt="">
+                    </div>
+                    <div class="image-label">
+                        <p>All users</p>
+                    </div>
+                </div>
+            </a> -->
+            {% if relieve %}
+            <a href="/relief_ack/{{relieve}}/{{slug}}">
+                <div class="tile">
+                    <div class="image">
+                        <img src="{% static 'images/like(1).png' %}" height="100px" width="100px" alt="">
+                    </div>
+                    <div class="image-label">
+                        <p>Relieve assignments <span style="color: red;"> ({{count}})*</span></p>
+                    </div>
+                </div>
+            </a>
+            {% endif %}
+            <a href="{% url 'leave_request' slug %}">
+                <div class="tile">
+                    <div class="image">
+                        <img src="{% static 'images/ask.png' %}" height="100px" width="100px" alt="icon">
+                    </div>
+                    <div class="image-label">
+                        <p>Request for leave</p>
+                    </div>
+                </div>
+            </a>
+            <a href="{% url 'leave_requests' slug %}">
+                <div class="tile">
+                    <div class="image">
+                        <img src="{% static 'images/leave.png' %}" alt="leave requests">
+                    </div>
+                    <div class="image-label">
+                        <p>Leave Requests</p>
+                    </div>
+                </div>
+            </a>
+            <a href="{% url 'staff_on_leave' slug %}">
+                <div class="tile">
+                    <div class="image">
+                        <img src="{% static 'images/on-leave.png' %}" alt=" users on leave">
+                    </div>
+                    <div class="image-label">
+                        <p>Users on leave</p>
+                    </div>
+                </div>
+            </a>
+            <a href="{% url 'leave_history' slug %}">
+                <div class="tile">
+                    <div class="image">
+                       <img src="{% static 'images/past.png' %}"  height="100px" width="100px" alt="">
+                    </div>
+                    <div class="image-label">
+                        <p>History</p>
+                    </div>
+                </div>
+            </a>
+            <a href="{% url 'profile' slug %}">
+                <div class="tile">
+                    <div class="image">
+                        <img src="{% static 'images/user.png' %}"  height="100px" width="100px" alt="">
+                    </div>
+                    <div class="image-label">
+                        <p>Profile</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+    Login
+{% endblock %}
+
+{% block content %}
+    <div class="login_page">
+        <div class="logo">
+            <img src="{% static 'images/logo.jpg' %}" alt="logo" width="100px" height="100px"/>
+        </div>
+        <H2>GCPS Leave System</H2>
+        {% if is_sys_admin %}
+        <b>System Admin</b>
+        {% endif %}
+        <form action="" method="post" id="login_form">
+            {% for field in form %}
+            <div class="field-wrapper">
+                {{field.label_tag}}
+                {{field}}
+                {% endfor %}
+                <div>
+                    <input type="checkbox" value="true" name="showPassword" id="showPassword" onchange="showMePassword2(value,'id_password')">
+                    <label for="showPassword">Show Password</label>
+                </div>
+                
+                {% csrf_token %}
+            </div>
+            <div class="login_button_wrapper">
+                <input type="submit" value="Log In" class="login_button">
+            </div>
+        </form>
+        <div class="forgotten_password_wrapper">
+            <a href="{% url 'password_reset' %}">Forgotten password?</a>
+        </div>
+        
+    </div>
+
+{% endblock %}

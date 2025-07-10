@@ -1,0 +1,11 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+    GCPS Leave System
+{% endblock %}
+
+{% block content %}
+    <h1>Welcome to the GCPS Leave System</h1>
+    <p>Click <a href="{% url 'login' '0' %}">here</a> to sign in.</p>
+{% endblock %}

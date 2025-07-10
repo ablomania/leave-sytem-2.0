@@ -1,0 +1,160 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+Department Details 
+{% endblock %}
+
+{% block content %}
+<div class="department_details">
+    <div class="group1">
+        <h1>Details of {{ department.department_name }}</h1>
+        <div class="content">
+            <h3>Department name</h3>
+            <p>{{ department.department_name }}</p>
+        </div>
+        <div class="content">
+            <h3>Head Of Department</h3>
+            <p>{{ department.department_head.first_name }} {{ department.department_head.last_name }}, {{ department.department_head.other_names }}</p>
+            <div class="content">
+                <h4>Head Of Department Email</h4>
+                <p>{{ department.department_head_email }}</p>
+            </div>
+            <div class="content">
+                <h4>Head of Department Phone Number</h4>
+                <p>{{ department.department_head_phone }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="icon">
+        <h3>Department Icon</h3>
+        <img {% if department.department_image %} src="{{ department.department_image.url }}" {% else %} src="{% static 'images/hierarchy.png' %}" {% endif %} alt="Icon" height="200px" width="200px">
+        <div class="dept-buttons">
+            <button id="edit-button" onclick="editDepartment()" type="button">edit</button>
+            <button id="delete-button" onclick="deleteDepartment()" type="button">delete</button>
+            <a href="{% url 'signup' slug %}">
+                <button id="add-button" type="button">add a staff</button>
+            </a>
+        </div>
+    </div>
+
+    <div class="popup0">
+        <div class="k3">
+            <img id="i1" src="{% static 'images/2997438.jpg' %}" width="300px" height="300px" alt="">
+        </div>
+        <div id="edit">
+            <form action="{% url 'department_details' department.id slug %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="input">
+                    <label for="department_name">Name</label>
+                    <input type="text" value="{{ department.department_name }}" name="department_name" id="department_name">
+                </div>
+                <div class="input">
+                    <label for="department_head">Head Of Department</label>
+                    <select name="department_head" id="department_head">
+                        <option value="">-----------</option>
+                        {% for staff in all_staff %}
+                        <option value="{{ staff.id }}" {% if staff.id == department.department_head.id %} selected {% endif %}>{{ staff.first_name }} {{ staff.last_name }}, {{ staff.other_names }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="input">
+                    <label for="dept-image">Department Icon</label>
+                    <input type="file" name="dept-image" id="dept-image" accept=".jpg, .jpeg, .png">
+                </div>
+                <div class="buttons-wrapper">
+                    <button type="button" onclick="editDepartment()" class="cancel-button">Cancel</button>
+                    <button type="submit" class="submit-button">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="popup1">
+        <div class="popup2-header">
+            <h2>Confirm Delete</h2>
+            <p class="close-button" onclick="deleteDepartment()">&#10006;</p>
+        </div>
+        <hr width="300px" />
+        <div class="i1">
+            <img src="" alt="">
+        </div>
+        <div class="inside">
+            <p>You are about to delete <b>{{ department.department_name }}</b> department.</p>
+            {% if members|length > 0 %}
+            <p>{{ department.department_name }} has the following staff:</p>
+            <ul>
+                <li>
+                    Head of Department: {{ department.department_head.last_name }}, {{ department.department_head.first_name }} {{ department.department_head.other_names }}
+                </li>
+                {% for member in members %}
+                <li>{{ member.last_name }}, {{ member.first_name }} {{ member.other_names }}</li>
+                {% endfor %}
+            </ul>
+            <p>Please select one of the options below:</p>
+            <form action="{% url 'department_details' department.id slug %}" method="post" id="delete-department-form">
+                {% csrf_token %}
+                <div>
+                    <input type="radio" value="reassign" onchange="deleteVariant(event, value)" required name="delete-option" id="reassign">
+                    <label for="reassign">Reasign members to different departments</label>
+                </div>
+                <div>
+                    <input type="radio" value="set_to_none" onchange="deleteVariant(event, value)" required name="delete-option" id="set_to_none">
+                    <label for="set_to_none">Delete department only, and keep members unassigned for now</label>
+                </div>
+                <div>
+                    <input type="radio" value="delete_all" onchange="deleteVariant(event, value)" required name="delete-option" id="delete_all">
+                    <label for="delete_all">Delete department with all members of its staff</label>
+                </div>
+                <div class="reassign-wrapper">
+                    <p>What will happen: </p>
+                    <p><b>The staff of {{ department.department_name }} will be reassigned respectively to the departments that you choose.</b></p>
+                    <p>Please select the departments you want to assign the staff to</p>
+                    {% for member in members %}
+                    <label for="member_name">{{ member.last_name }}, {{ member.first_name }} {{ member.other_names }}</label>
+                    <select name="member_name{{forloop.counter}}" id="member_name">
+                        {% for department in all_departments %}
+                        <option value="{{ department.id}}">{{ department.department_name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% endfor %}
+                </div>
+                <div class="set_to_null-wrapper">
+                    <p>What will happen: </p>
+                    <p><b>All staff that belong to {{ department.department_name }} with be unassigned. </b><b>Note: They will not belong to any department</b></p>
+                </div>
+                <div class="delete_all-wrapper">
+                    <p>What will happen: </p>
+                    <ul>
+                        <li>
+                           <b>The department named {{ department.department_name }} will be permanently deleted.</b>
+                        </li>
+                        <li><b>All staff that belong to {{ department.department_name }} will be deleted permanently.</b></li>
+                    </ul>
+                </div>
+                <div class="delete-button-wrapper">
+                    <button class="cancel-button" type="button" onclick="deleteDepartment()">Cancel</button>
+                    <button class="submit-button" type="submit">Continue</button>
+                </div>
+                
+            </form>
+        </div>
+
+        {% else %}
+        <div class="empty_staff">
+            <form action="{% url 'department_details' department.id slug %}" method="post">
+                {% csrf_token %}
+                <p>The departmentment with name {{ department.department_name }} has no staff members at this moment.</p>
+                <div class="delete-button-wrapper">
+                    <button class="cancel-button" type="button" onclick="deleteDepartment()">Cancel</button>
+                    <button class="submit-button" type="submit">Delete</button>
+                </div>
+            </form>
+        </div>
+        
+        {% endif %}
+    </div>
+    
+</div>
+{% endblock %}

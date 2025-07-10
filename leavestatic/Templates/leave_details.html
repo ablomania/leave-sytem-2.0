@@ -1,0 +1,40 @@
+{% extends 'main.html' %}
+
+{% block title %}
+    Leave Details
+{% endblock %}
+
+{% block content %}
+    <div class="leave_details_staff">
+        <div class="level_1_1">
+            <h1>Leave Object Details</h1>
+            <h3>for</h3>
+            <h3>{{ user_name }}</h3>
+        </div>
+        
+        <div class="level_1_2">
+            <p>Date applied</p>
+            <p>{{ leave_request.application_date }}</p>
+            <p>Status</p>
+            <p>{{ leave_request.status }}</p>
+            <p>Days entitled</p>
+            <p>{{ user_leave_details.days_entitled }}</p>
+            <p>Days eligible</p>
+            <p>{{ user_leave_details.days_eligible }}</p>
+            <!-- <p>Days taken: {{ user_leave_details.days_taken }}</p>
+            <p>Days remaining: {{ user_leave_details.days_remaining }}</p> -->
+
+            <p>Days requested</p>
+            <p>{{ leave_request.leave_days_requested }}</p>
+            <p>Start date</p>
+            <p>{{ leave_request.leave_start_date }}</p>
+            <p>End date</p><p>{{ leave_request.leave_end_date }}</p>
+            <p>Resumption date</p>
+            <p>{{ leave_request.resumption_date }}</p>
+            <p>Reason</p>
+            <p>{{ leave_request.reason }}</p>
+        </div>
+        
+        
+    </div>
+{% endblock %}

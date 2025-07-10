@@ -1,0 +1,76 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>
+            {% block title %}
+            {% endblock %}
+        </title>
+        <link rel="stylesheet" href="{% static 'style.css' %}">
+    </head>
+    <script src="{% static 'behavior.js' %}"></script>
+    <body>
+        {% if not login %}
+        <div class="header">
+            <div class="leftHeader">
+                <div class="logo">
+                    <img src="{% static 'images/logo.jpg' %}" alt="GCPS Logo" class="logoImage" width="
+                    100" height="100">
+                </div>
+            </div>
+            <div class="midHeader">
+                <h1 class="main-header">GCPS Leave System</h1>
+            </div>
+        </div>
+        {% endif %}
+        <div class="body" id="body">
+        {% block content %}
+        {% endblock %}
+            {% if all_leave %}
+            <div class="siderow">
+                <div class="t1">
+                    <img src="{% static 'images/left-chevron.png' %}" width="25px" height="40px" alt="">
+                </div>
+                <div class="side_header">
+                    <h2>Review</h2>
+                </div>
+                <div class="side_1">
+                    <div class="in1">
+                        {% for head, group in all_leave.items %}
+                        <div class="in2">
+                            <h3>{{head}} - On Leave</h3>
+                            {% for gp in group %}
+                            <div class="user">
+                                <div class="side_1heading">
+                                    <p><b>{{gp.applicant.first_name}} {{gp.applicant.last_name}}{% if gp.applicant.other_names != "" %}, {{gp.applicant.othernames}}{% endif %}</b></p>
+                                </div>
+                                <div class="side_1body">
+                                    <p>Leave Type</p>
+                                    <p style="text-transform: lowercase;">{{ gp.type }}</p>
+                                    <p>Days Approved</p>
+                                    <p>{{ gp.leave_days_requested }}</p>
+                                    <p>Start Date</p>
+                                    <p>{{ gp.leave_start_date }}</p>
+                                    <p>Date to resume</p>
+                                    <p>{{ gp.resumption_date }}</p>
+                                </div>
+                                <p>Relieving Officer</p>
+                                <p>{{ gp.relieving_officer.first_name }} {{ gp.relieving_officer.last_name }}, {{ gp.relieving_officer.other_names }}</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                            
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="footer">
+            <p>&copy; 2025</p>
+            <p>Ghana College of Physicians and Surgeons</p>
+        </div>
+    </body>
+</html>

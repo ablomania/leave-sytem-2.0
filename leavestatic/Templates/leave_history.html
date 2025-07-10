@@ -1,0 +1,55 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+    History
+{% endblock %}
+
+{% block content %}
+<div class="leave_history_wrapper">
+    <div class="leave_history">
+        <div class="leave_history_header">
+            <h1>History</h1>
+        </div>
+        <div class="leave_history_body">
+            {% for year, leave_list in grouped_leave.items %}
+            <h2 style="text-align: end; color: gray;">{{ year }}</h2>
+            <div class="leave_grid_container">
+                {% for leave in leave_list %}
+                {% if forloop.counter == 1 %}
+                    <div class="leave_grid_item">
+                        <p><b>Type</b></p>
+                    </div>
+                    <div class="leave_grid_item">
+                        <p><b>Days requested</b></p>
+                    </div>
+                    <div class="leave_grid_item">
+                        <p><b>Date applied</b></p>
+                    </div>
+                    <div class="leave_grid_item">
+                        <p><b>Status</b></p>
+                    </div>
+                {% endif %}
+                    <div class="leave_grid_item">
+                        <a href="{% url 'leave_details' leave.id slug %}">
+                            <p>{{ leave.type }}</p>
+                        </a>
+                    </div>
+                    <div class="leave_grid_item">
+                        <p>{{ leave.leave_days_requested }}</p>
+                    </div>
+                    <div class="leave_grid_item">
+                        <p>{{ leave.application_date }}</p>
+                    </div>
+                    <div class="leave_grid_item">
+                        <p>{{ leave.status }}</p>
+                    </div>
+                    {% empty %}
+                    <p>All leave request will appear here</p>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

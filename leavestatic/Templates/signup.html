@@ -1,0 +1,111 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+    Sign Up
+{% endblock %}
+
+{% block content %}
+    <!-- <div class="image_wrapper">
+        <img src="{% static 'images/add-friend.png' %}" alt="">
+    </div> -->
+    <div class="sign_up_page">
+        <h1>Add User</h1>
+        <form class="sign_up_form" action="{% url 'signup' slug %}" method="post">
+            <div class="errorNode"></div>
+            <div class="field_wrapper_grid">
+                <div class="field_wrapper">
+                    <label for="first_name">First name</label>
+                    <input type="text" maxlength="255" name="first_name" id="first_name" placeholder="first name" required>
+                </div>
+                <div class="field_wrapper">
+                    <label for="last_name">Last name</label>
+                    <input type="text" maxlength="255" name="last_name" id="last_name" placeholder="last name" required>
+                </div>
+                <div class="field_wrapper">
+                    <label for="other_names">Other names</label>
+                    <input type="text" maxlength="255" name="other_names" id="other_names" placeholder="other names" required>
+                </div>
+                <div class="field_wrapper">
+                    <label for="phone_number">Phone number</label>
+                    <input type="text" maxlength="255" name="phone_number" id="phone_number" placeholder="phone number" required>
+                </div>
+            </div>
+            <div class="field_wrapper">
+                <label for="sex">Gender</label>
+                <select name="sex" id="sex" required>
+                    <option value="NONE">None</option>
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                </select>
+            </div>
+            <div class="field_wrapper">
+                <label for="email">Email</label>
+                <input type="email" name="email" id="email" oninput="checkForEmail(event, value, 'submit-button', {{emails}})" required>
+            </div>
+            <!-- <div class="field_wrapper">
+                <label for="password_1">Password</label>
+                <input type="password" name="password_1" id="password_1" required>
+            </div>
+            <div class="field_wrapper">
+                <label for="password_2">Confirm Password</label>
+                <input type="password" name="password_2" id="password_2" required>
+                <div class="f2">
+                    <input type="checkbox" id="show" value="true" onchange="showMePassword(value, password_1.id, password_2.id)">
+                    <label for="show">Show Passwords</label>
+                </div>
+            </div> -->
+            <div class="field_wrapper days">
+                <input type="radio" onchange="showDepartment(event)" name="add_department" id="show_department">
+                <label for="show_department">Show departments</label>
+            </div>
+            <div class="field_wrapper days">
+                <input type="radio" name="add_department" onchange="addDepartment(event)" id="add_department">
+                <label for="add_department">Add the user to a newly created department.</label>
+            </div>
+            <div class="field_wrapper t2" style="display: none; background-color: #ddd;">
+                <label for="dept_name">Name of Department</label>
+                <input type="text" name="dept_name" id="dept_name" required disabled>
+            </div>
+            <div class="field_wrapper t1" style="display: none; background-color: #ddd;">
+                <label for="department">Department</label>
+                <select name="department" id="department" required disabled>
+                    {% for department in all_departments %}
+                    <option value="{{ department.id }}">{{ department.department_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field_wrapper">
+                <label for="type">Staff type</label>
+                <select name="type" id="type" required>
+                    <option value="STAFF">Staff</option>
+                    <option value="HOD">Head Of Department</option>
+                    <option value='HOHR'>Admin</option>
+                    <option value='RECTOR'>Super Admin</option>
+                </select>
+            </div>
+            <div class="field_wrapper">
+                <label for="staff_level">Seniority</label>
+                <select name="Seniority" id="staff_level">
+                    <option value="SENIOR">Senior Staff</option>
+                    <option value="JUNIOR">Junior Staff</option>
+                </select>
+            </div>
+            <div class="field_wrapper">
+                <label for="position">Position</label>
+                <input type="text" maxlength="255" name="position" id="position" required>
+            </div>
+            <div class="field_wrapper days">
+                <input type="checkbox" value="True" name="leave_details" id="id_leave_details">
+                <label style="color: #0077c0;" for="id_leave_details">Use default value (36 days) for Annual Leave Details</label>
+            </div>
+            {% csrf_token %}
+            <input type="hidden" name="user_type" id="user_type" value="{{ current_user.type }}">
+            <input type="hidden" name="user_department_id" id="user_department_id" value="{{ current_user.department_id }}">
+            <div class="button-container">
+                <input type="submit" value="Continue" id="submit-button">
+            </div>
+        </form>
+    </div>
+    
+{% endblock %}

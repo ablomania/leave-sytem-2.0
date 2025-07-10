@@ -1,0 +1,61 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+    Acknowledgement
+{% endblock %}
+
+{% block content %}
+<div class="leave_ack">
+    <h1>Leave Acknowledgement</h1>
+    <div class="leave_details">
+        <p>Name</p>
+        <p>{{leave_request.applicant.first_name}} {{leave_request.applicant.last_name}}, {{leave_request.applicant.other_names}}</p>
+        <p>Leave Type</p>
+        <p>{{leave_request.type}}</p>
+        <p>Start Date</p>
+        <p>{{leave_request.leave_start_date}}</p>
+        <p>Duration</p>
+        <p>{{leave_duration}}</p>
+        <p>End Date</p>
+        <p>{{leave_request.leave_end_date}}</p>
+        <p>Date to Resume</p>
+        <p>{{leave_request.resumption_date}}</p>
+        <p>Relieving Officer</p>
+        <p>{{leave_request.relieving_officer.first_name}} {{leave_request.relieving_officer.last_name}}, {{leave_request.relieving_officer.other_names}}</p>
+    </div>
+    <h2>Approved By:</h2>
+    <div class="approver_details">
+        <p><b>Head Of Department</b></p>
+        <p></p><br>
+        <p><b>Administrator</b></p>
+        <p>{{admin_head_name}}</p><br>
+        <p><b>Rector</b></p>
+        <p>{{super_admin_name}}</p>
+    </div>
+    <div class="leave_approved">
+        <p><b>Leave Approved</b></p>
+        <p>Your request has been reviewed and is approved in accordance with college policies.</p>
+        <p>During your leave period, please ensure that any outstanding tasks are appropriately delegated or completed before your departure. Should any urgent matters arise, kindly provide an alternative point of contact for smooth workflow continuity.</p>
+        <p>If you have any questions or require further clarification, do not hesitate to reach out. Kindly review and acknowledge this leave approval by filling the form below.</p>
+        <p>We appreciate your contributions and hope you have a restful and productive leave.</p>
+    </div>
+    <div class="acceptance">
+        <p>Kindly review and acknowledge this leave approval by signing below.</p>
+        <form action="" method="post">
+            {% csrf_token %}
+            <div class="accept_wrapper">
+            <input type="radio" required name="staff_ack" value="APPROVED" id="accept_ack">
+            <label for="accept_ack">I acknowledge and approve the terms of this leave request.</label>
+            </div>
+            <div class="deny_wrapper">
+                <input type="radio" required name="staff_ack" value="REJECTED" id="deny_ack">
+                <label for="deny_ack">I decline this leave request and understand it will require further discussion.</label>
+            </div>
+            <div class="button_wrapper">
+                <button type="submit">Submit</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

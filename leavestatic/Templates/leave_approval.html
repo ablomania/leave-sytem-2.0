@@ -1,0 +1,127 @@
+{% extends 'main.html' %}
+
+{% block title %}
+    Leave Approval
+{% endblock %}
+
+{% block content %}
+    <div class="leave_approval_container">
+        <div class="main_content">
+            <div class="leave_approval_header">
+                <h1>Leave Approval</h1>
+                {% if leave_request.department_head_approval == 'PENDING' and user_type == 'HOD' %}
+                    <p>An <span style="text-transform: lowercase;"><b>{{leave_request.type}}</b></span> leave is pending your approval, Head of {{department_name}}, {{department_head_name}}</p>
+                {% elif leave_request.admin_head_approval == 'PENDING' and leave_request.department_head_approval == 'APPROVED' and user_type == 'HOHR' %}
+                    <p>An <span style="text-transform: lowercase;"><b>{{leave_request.type}}</b></span> leave is pending your approval, Head Of Administration</p>
+                {% elif leave_request.admin_head_approval == 'APPROVED' and leave_request.final_approval == 'PENDING' and leave_request.department_head_approval == "APPROVED" and user_type == 'RECTOR' %}
+                    <p>Leave request has been approved by:</p>
+                    <ul>
+                        <li>Head of {{department_name}}, {{department_head_name}}</li>
+                        <li>Head of Administration, {{admin_head_name}}</li>
+                    </ul>
+                {% endif %}
+                <p>{{applicant_name}} has applied for a leave</p>
+            </div>
+            
+            <div class="leave_tails">
+                <div class="p3">
+                    <p>Type</p>
+                    <p style="text-transform: lowercase;">{{ leave_request.type }}</p>
+                    <p> Number of days applied</p>
+                    <p>{{leave_request.leave_days_requested}}</p>
+                    <p> Reason</p>
+                    <p style="background-color: #fff; border-radius: 5px; padding: 5px;grid-column-start: 1; grid-column-end: 3; overflow-y: auto; max-height: 170px;">{% if leave_request.reason != "" %}{{leave_request.reason}}{% else %}<i>None</i>{% endif %}</p>
+                    <p>Relieving Officer</p>
+                    <p>{{ leave_request.relieving_officer.first_name }} {{ leave_request.relieving_officer.last_name }}, {{ leave_request.relieving_officer.other_names }}</p>
+                    <p>Relieving officer acceptance</p>
+                    <p style="text-transform: lowercase;">{{ leave_request.relieving_officer_approval }}</p>
+                </div>
+                
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="gh1">
+                        <input type="checkbox" name="change_days" id="change_days" value="true" onclick="changeDays({{leave_request.leave_days_requested}},'{{leave_request.leave_start_date|date:'Y-m-d'}}', '{{leave_request.leave_end_date|date:'Y-m-d'}}', value)">
+                        <label for="change_days">Change number of days</label><br>
+                    </div>
+                    
+                    <label for="days_requested" id="days_requested_label">Days approved</label>
+                    <select name="days_requested" id="days_requested" onchange="calcEndDate(start_date.value, value)" disabled>
+                        {% for day in days %}
+                            <option value="{{ day }}" {% if day == leave_request.leave_days_requested %} selected {% endif %}>{{ day }}</option>
+                        {% endfor %}
+                    </select>
+                    <!-- <input type="number" name="days_requested" id="days_requested" min="1" max="{{leave_details.days_eligible}}" value="{{leave_request.leave_days_requested}}" onchange="calcEndDate(start_date.value, value)" disabled><br> -->
+                    <div id="start_date_container">
+                        <label for="start_date" id="start_date_label">Date approved: </label>
+                        <input type="date" name="start_date" id="start_date" value="{{leave_request.leave_start_date|date:"Y-m-d"}}" disabled onchange="calcEndDate(value, days_requested.value)"><br>
+                        <p id="end_date"></p>
+                        <input type="date" name="end_date" id="end_date_input" value="{{leave_request.leave_end_date|date:"Y-m-d"}}" hidden>
+                        <input type="date" name="resumption_date" id="resumption_date" value="{{leave_request.resumption_date|date:"Y-m-d"}}" hidden>
+                    </div>
+                    <!-- File Access Section -->
+                {% if leave_request.type == "SICK" and medical_note_link %}
+                    <div class="file_section">
+                        <p><b>Medical Note:</b></p>
+                        <a href="{{ medical_note_link }}" style="color: blueviolet; text-decoration: underline;" target="_blank">Download Medical Note</a>
+                    </div>
+                {% elif leave_request.type == "STUDY_LEAVE_WITH_PAY" or leave_request.type == "STUDY_LEAVE_WITHOUT_PAY" and admission_letter_link %}
+                    <div class="file_section">
+                        <p><b>Admission Letter:</b></p>
+                        <a href="{{ admission_letter_link }}" style="color: blueviolet; text-decoration: underline;" target="_blank">Download Admission Letter</a>
+                    </div>
+                {% endif %}
+                    <div class="gh1">
+                        <input type="radio" onclick="approveReason(event)" name="approval" id="approval" value="APPROVED" required>
+                        <label for="approval">Approve</label><br>
+                    </div>
+                    <div class="gh1">
+                        <input type="radio" onclick="approveReason(event)" name="approval" id="approval2" value="REJECTED" required>
+                        <label for="approval2">Disapprove</label><br>
+                    </div>
+                    <textarea style="display: none;" name="reason" id="reason" rows="4" cols="50" placeholder="Reason" required disabled></textarea>
+                    <div class="button-wrapper">
+                        <button type="submit" value="submit" onclick="enableField()">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div id="sidebar">
+            <h3>more details</h3>
+            <div class="p1">
+                <p>applicant name</p>
+                <p>{{applicant_name}}</p>
+                <p>department</p>
+                <p>{{department_name}}</p>
+                <p>head of department</p>
+                <p>{{department_head_name}}</p>
+            </div>
+            <h3>leave</h3>
+            <div class="p1">
+                <p>entitled</p>
+                <p>{{leave_details.days_entitled}}</p>
+                <p>eligible</p>
+                <p>{{leave_details.days_eligible}}</p>
+                <p>taken</p>
+                <p>{{leave_details.days_taken}}</p>
+                <p>remaining</p>
+                <p>{{leave_details.days_remaining}}</p>
+                <p>days remaining after leave</p>
+                <p>{{days_remaining}}</p>
+            </div>
+            <div class="p2">
+            {% if leave_request.department_head_approval == 'APPROVED' and user_type == 'HOHR' %}
+                <p>Aproved by</p>
+                <p><b>{{department_head_name}} (Head of {{department_name}})</b></p>
+            {% elif leave_request.department_head_approval == 'APPROVED' and leave_request.admin_head_approval == 'APPROVED' and user_type == 'RECTOR' %}
+                <p>Approved by</p>
+                <ul>
+                    <li><b>{{department_head_name}} (Head of {{department_name}})</b></li>
+                    <li><b>{{admin_head_name}} (Administration Manager)</b></li>
+                </ul>
+            {% endif %}
+            </div>
+            
+        </div>
+    </div>
+{% endblock %}

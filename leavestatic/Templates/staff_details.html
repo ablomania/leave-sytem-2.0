@@ -1,0 +1,176 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+    Staff Details 
+{% endblock %}
+
+{% block content %}
+<div class="staff_details">
+    <form action="{% url 'staff_delete' slug %}" method="post" id="staff-delete-form" class="staff-delete-form">
+        {% csrf_token %}
+        <input type="hidden" name="slug" id="user_slug" value="{{ slug }}">
+        <input type="hidden" name="staff_id" id="staff_id" value="{{ staff.id }}">
+    </form>
+    <form action="{% url 'staff_password_reset' slug %}" method="post" id="password-reset-form" class="password-reset-form">
+        {% csrf_token %}
+        <input type="hidden" name="slug" id="user_slug" value="{{ slug }}">
+        <input type="hidden" name="staff_id" id="staff_id" value="{{ staff.id }}">
+    </form>
+    <div class="staff-details-header">
+        <a href="{% url 'all_staff' slug %}">
+            <img src="{% static 'images/back.png' %}" width="25px" height="25px" alt="back_image" class="back-image">
+        </a>
+        <h2>Details of {{ staff.first_name }}</h2>
+        <div class="buttons-wrapper">
+            <button type="button" onclick="changeDetails()" class="change-button">change details</button>
+            <button type="button" onclick="loadConfirmer(3)" class="reset-button">Reset Password</button>
+            <button type="button" onclick="loadConfirmer(2)" class="delete-button">Delete</button>
+            
+        </div>
+    </div>
+    
+    <div class="containerz">
+        <div class="left">
+            <div class="personal">
+                <h4>Personal</h4>
+                <div class="some">
+                    <p>Name</p>
+                    <p>{{ staff.last_name }}, {{ staff.first_name }} {{staff.other_names }}</p>
+                    <p>Email</p>
+                    <p>{{ staff.email }}</p>
+                    <p>Phone number</p>
+                    <p>{{ staff.phone_number }}</p>
+                </div>
+            </div>
+            <div class="other">
+                <h4>Work</h4>
+                <div class="some">
+                    <p>Current Department</p>
+                    <p>{{ staff.department.department_name }}</p>
+                    <p>Position</p>
+                    <p>{{ staff.position }}</p>
+                    <p>Leave Status</p>
+                    <p class="leave-status-text">{{ staff.leave_status }}</p>
+                </div>
+            </div>
+            <div class="leave">
+                <h4>Leave</h4>
+                <div class="some">
+                    <p>Days entitled</p>
+                    <p>{{ leave_details.days_entitled }}</p>
+                    <p>Days eligible</p>
+                    <p>{{ leave_details.days_eligible }}</p>
+                    <p>Days taken</p>
+                    <p>{{ leave_details.days_taken }}</p>
+                    <p>Days remaining</p>
+                    <p>{{ leave_details.days_remaining }}</p> 
+                </div>
+            </div>
+            
+        </div>
+        
+        <div class="staff-details-forms-wrapper">
+            <form action="{% url 'staff_details' staff.slug slug %}" method="post" id="staff-details-form" class="staff-details-form">
+                {% csrf_token %}
+                <div class="personal">
+                    <div class="pp">
+                        <label for="first_name">First name</label>
+                        <input type="text" id="first_name" name="first_name" value="{{ staff.first_name }}" required>
+                    </div>
+                    <div class="pp">
+                        <label for="last_name">Last name</label>
+                        <input type="text" id="last_name" name="last_name" value="{{ staff.last_name }}" required>
+                    </div>
+                    <div class="pp">
+                        <label for="other_names">Other names</label>
+                        <input type="text" id="other_names" name="other_names" value="{{ staff.other_names }}" required>
+                    </div>
+                    <div class="pp">
+                        <label for="phone">Phone</label>
+                        <input type="text" name="phone" id="phone" value="{{ staff.phone_number }}" required>
+                    </div>
+                </div>
+                <div class="other">
+                    <div>
+                        <label for="department">Department</label>
+                        <select name="department" id="department" required>
+                            {% for department in departments %}
+                                <option value="{{ department.id }}" {% if department.id == staff.department.id %}selected{% endif %}>
+                                    {{ department.department_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="staff_type">Staff Type</label>
+                        <select name="staff_type" id="staff_type" {% if user_type == 'HOD' %} disabled {% endif %}>
+                            <option value="STAFF" {% if staff.type == "STAFF" %} selected {% endif %}>Staff</option>
+                            <option value='HOHR' {% if staff.type == 'HOHR' %} selected {% endif %}>Admin</option>
+                            <option value="HOD" {% if staff.type == "HOD" %} selected {% endif %}>Head of Department</option>
+                            <option value='RECTOR' {% if staff.type == 'RECTOR' %} selected {% endif %}>Super Admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="position">Position</label>
+                        <input type="text" id="position" name="position" value="{{ staff.position }}" required>
+                    </div>
+                    <div>
+                        <label for="leave_status">Leave Status</label>
+                        <select name="leave_status" id="leave_status" required>
+                            <option value="NOT_ON_LEAVE" {% if staff.leave_status == "NOT ON LEAVE" %} selected {% endif %}>Not On Leave</option>
+                            <option value="ON_LEAVE" {% if staff.leave_status == "ON LEAVE" %} selected {% endif %}>On Leave</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="email">Email</label>
+                        <input type="email" name="email" id="email" value="{{ staff.email }}" required>
+                    </div>
+                    
+                </div>
+                <div class="leave">
+                    <div>
+                        <label for="days_entitled">Days Entitled</label>
+                        <select name="days_entitled" id="days_entitled" onchange="setDaysEligible(value, '{{ leave_details.days_eligible }}')" required>
+                            {% for x in days_entitled %}
+                            <option value="{{ x }}" {% if x == leave_details.days_entitled %} selected {% endif %}>{{ x }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="days_eligible">Days Eligible</label>
+                        <select name="days_eligible" id="days_eligible" required>
+                        {% for x in days_entitled %}
+                            <option value="{{ x }}" {% if x == leave_details.days_eligible %} selected {% endif %}>{{ x }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="buttons-wrapper">
+                    <button type="button" id="submit-button" onclick="loadConfirmer(1)">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="confirmer">
+        <div class="confirm-wrapper">
+            <div class="k4">
+                <img class="i1" src="{% static 'images/3776063.jpg' %}" width="300px" height="300px" alt="confirm" class="confirm-image">
+                <img class="i2" src="{% static 'images/3707915.jpg' %}" width="300px" height="300px" alt="">
+                <img class="i3" src="{% static 'images/5101874.jpg' %}" width="300px" height="300px" alt="">
+            </div>
+            <div class="k5">
+                <h2 id="topic"></h2>
+                <p id="confirm-message" class="confirm-message"></p>
+                <div class="confirm-buttons">
+                    <button type="button" id="yes-button">Yes</button>
+                    <button type="button" id="no-button">No</button>
+                </div>
+            </div>
+            
+        </div>
+
+    </div>
+</div>
+{% endblock %}
