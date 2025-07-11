@@ -137,7 +137,6 @@ def dashboard(request, slug):
     self_ack = Ack.objects.filter(staff_id=user.id, type=Ack.Type.SELF, status=Ack.Status.Pending).first()
     r_ack = Ack.objects.filter(staff_id=user.id, type=Ack.Type.RELIEF, status=Ack.Status.Pending).first()
     leaves_count = LeaveRequest.objects.filter(applicant_id=user.id).count()
-
     context = {
         "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
         'slug': slug,
@@ -508,6 +507,70 @@ def leave_request(request, slug):
     return response
 
 
+def confirm_leave_view(request, id, slug):
+    # Validate session
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=[id]))
+
+    # Fetch LeaveRequest and ensure applicant matches session
+    leave_request = get_object_or_404(
+        LeaveRequest.objects.select_related("applicant", "type"),
+        id=id,
+        is_active=True
+    )
+
+    if user_slug != leave_request.applicant.slug:
+        return redirect(reverse("login", args=[id]))
+
+    # Update session and LoginSession (optional)
+    session_updates = {
+        "prev_page": "not",
+        "message": "Please confirm your approval of the leave assignment.",
+        "button": "not",
+        "next_page": "leave_list",
+        "next_btn": "Back to Dashboard",
+    }
+    request.session.update(session_updates)
+    LoginSession.objects.filter(slug=user_slug).update(**session_updates)
+
+    # Handle submission
+    if request.method == "POST":
+        decision = request.POST.get("leave_response")
+        reason = request.POST.get("decline_reason", "").strip()
+
+        if decision == "ACCEPTED":
+            Ack.objects.create(
+                request=leave_request,
+                staff=leave_request.applicant,
+                type=Ack.Type.SELF,
+                status=Ack.Status.Approved,
+                is_active=True
+            )
+            
+        elif decision == "DECLINED":
+            Ack.objects.create(
+                request=leave_request,
+                staff=leave_request.applicant,
+                type=Ack.Type.SELF,
+                status=Ack.Status.Denied,
+                reason=reason,
+                is_active=True
+            )
+
+        response = redirect(reverse("dashboard", args=[slug]))
+        response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+        return response
+
+    # Render confirmation form
+    context = {
+        "leave_request": leave_request,
+        "slug": slug,
+        "date": timezone.now().date(),
+    }
+    response = render(request, "self_ack.html", context)
+    response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+    return response
 
 
 

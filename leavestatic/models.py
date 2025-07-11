@@ -68,6 +68,8 @@ class Staff(AbstractUser):
 
 class Leave(models.Model):
     class LeaveStatus(models.TextChoices):
+        Pending = "Pending", "pending"
+        Cancelled = "Cancelled", "cancelled"
         On_Leave = "On Leave", "on_leave"
         Completed = "Completed", "completed"
     name = models.CharField(max_length=255, null=True)
@@ -178,6 +180,13 @@ class Ack(models.Model):
     staff = models.ForeignKey("Staff", on_delete=models.CASCADE)
     status = models.CharField(max_length=13, choices=Status.choices, default=Status.Pending)
     is_active = models.BooleanField(default=True)
+
+class ApproverSwitch(models.Model):
+    old_approver = models.ForeignKey("Approver", on_delete=models.CASCADE, null=True, related_name="real_approver")
+    new_approver = models.ForeignKey("Approver", on_delete=models.CASCADE, null=True, related_name="auxiliary_approver")
+    date_created = models.DateField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
 
 class LeaveRequest(models.Model):
     class Status(models.TextChoices):

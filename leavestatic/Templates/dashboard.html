@@ -25,7 +25,7 @@
                 </div>
             </a>
             
-            {% if ack.count > 0 %}
+            {% if ack %}
             <a href="{% url 'relieve_ack' r_ack.id slug %}">
                 <div class="grid_item">
                     <img src="{% static 'images/like.png' %}" height="100px" width="100px" alt="">
@@ -34,8 +34,8 @@
             </a>
            {% endif %}
             
-           {% if self_ack.count > 0 %}
-            <a href="{% url 'staff_ack' slug %}">
+           {% if self_ack %}
+            <a href="{% url 'confirm_leave_view' self_ack.id slug %}">
                 <div class="grid_item">
                     <img src="{% static 'images/checkmark.png' %}"  height="100px" width="100px" alt="">
                     <p>Leave Acknowledgement</p>

@@ -1,0 +1,73 @@
+{% extends 'main.html' %}
+
+{% block title %}
+    Leave Confirmatio
+{% endblock %}
+
+{% block content %}
+<div class="leave-confirm-container">
+  <h2>Leave Acceptance Confirmation</h2>
+
+  <!-- Formal note -->
+  <div class="confirmation-note">
+    <p>
+      This notice confirms that your <strong>leave application</strong> for the period 
+      <strong>{{ leave_request.start_date }}</strong> to 
+      <strong>{{ leave_request.return_date }}</strong> has been <strong>approved</strong> by the relevant parties.
+      You are now required to formally <em>accept</em> this approved leave, confirming that you will proceed with
+      the leave as scheduled.
+    </p>
+    <p>
+      If, due to unforeseen circumstances, you are unable to proceed with the leave, kindly indicate so below 
+      and provide a brief explanation. This helps us plan accordingly and ensure operational continuity.
+    </p>
+    <p style="margin-top: 0.5rem; font-style: italic;">
+      By submitting your response, you acknowledge the responsibility to communicate changes promptly and
+      respectfully to management.
+    </p>
+  </div>
+
+  <!-- Staff leave summary -->
+  <div class="leave-info">
+    <p><strong>Employee Name:</strong> {{ leave_request.applicant.get_full_name }}</p>
+    <p><strong>Leave Type:</strong> {{ leave_request.type.name }}</p>
+    <p><strong>Scheduled Period:</strong> {{ leave_request.start_date }} to {{ leave_request.return_date }}</p>
+    <p><strong>Date Approved:</strong> {{ leave_request.application_date }}</p>
+  </div>
+
+  <!-- Confirmation form -->
+  <form method="post" action="{% url 'confirm_leave_view' leave_request.id slug %}">
+    {% csrf_token %}
+    <h4>Confirm Your Decision</h4>
+
+    <div class="decision-option">
+      <input type="radio" id="accept" name="leave_response" value="ACCEPTED" required onclick="toggleDecline(false)">
+      <label for="accept">✅ I accept the approved leave and confirm my availability.</label>
+    </div>
+
+    <div class="decision-option">
+      <input type="radio" id="decline" name="leave_response" value="DECLINED" required onclick="toggleDecline(true)">
+      <label for="decline">❌ I am unable to proceed with the leave due to:</label>
+    </div>
+
+    <div class="decline-wrapper" id="decline_wrapper">
+      <label for="decline_reason">Reason <span class="required_indi">*</span></label>
+      <textarea name="decline_reason" id="decline_reason" placeholder="Provide reason..." required></textarea>
+    </div>
+
+    <div class="button-wrapper">
+      <button type="submit">Submit Confirmation</button>
+    </div>
+  </form>
+</div>
+
+<script>
+function toggleDecline(show) {
+  const wrapper = document.getElementById("decline_wrapper");
+  const textarea = document.getElementById("decline_reason");
+  wrapper.style.display = show ? "block" : "none";
+  textarea.required = show;
+}
+document.getElementById("accept").addEventListener("click", () => toggleDecline(false));
+</script>
+{% endblock %}
