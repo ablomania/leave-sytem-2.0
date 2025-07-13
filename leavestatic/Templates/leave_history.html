@@ -19,6 +19,17 @@
           <p><strong>Applied:</strong> {{ req.application_date }}</p>
           <p><strong>Duration:</strong> {{ req.start_date }} to {{ req.return_date }}</p>
 
+          {% if req.leave_set.all %}
+            {% for leave in req.leave_set.all %}
+              {% if leave.status == "On Leave" and leave.is_active %}
+                <form method="post" action="{% url 'cancel_leave' leave.id slug %}">
+                  {% csrf_token %}
+                  <button type="submit" class="terminate-btn">Terminate Leave</button>
+                </form>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+
           <h4>Relieving Officer Acknowledgment</h4>
           {% for ack in req.ack_set.all %}
             <p>{{ ack.staff.first_name }}:
@@ -40,6 +51,33 @@
       {% endfor %}
     </div>
   {% endfor %}
+
+  <div class="terminated-leaves-section fade-in">
+  <h2>Terminated Leave Records</h2>
+  {% if terminated_leaves %}
+    <div class="leave-card-grid">
+      {% for cancelled in terminated_leaves %}
+        <div class="leave-card cancelled-card">
+          <h3>{{ cancelled.leave_request.type.name }} 
+            <span class="status-tag status-cancelled">Cancelled</span>
+          </h3>
+          <p><strong>Start:</strong> {{ cancelled.leave_request.start_date }}</p>
+          <p><strong>End:</strong> {{ cancelled.leave_request.end_date }}</p>
+          <p><strong>Cancelled On:</strong> {{ cancelled.date_cancelled|date:"D, jS M Y" }}</p>
+          <p><strong>Days Used:</strong> {{ cancelled.days_used }}</p>
+          <p><strong>Remaining at Cancellation:</strong> {{ cancelled.days_remaining_at_cancel }}</p>
+          {% if cancelled.reason %}
+          <p><strong>Reason:</strong> {{ cancelled.reason }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="empty">You have no cancelled leave records.</p>
+  {% endif %}
 </div>
+
+</div>
+
 
 {% endblock %}

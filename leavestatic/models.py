@@ -66,6 +66,31 @@ class Staff(AbstractUser):
 
 # Position model REMOVED
 
+class CancelledLeave(models.Model):
+    staff = models.ForeignKey("Staff", on_delete=models.CASCADE)
+    leave_request = models.ForeignKey("LeaveRequest", on_delete=models.SET_NULL, null=True)
+    original_leave = models.ForeignKey("Leave", on_delete=models.SET_NULL, null=True)
+    date_cancelled = models.DateTimeField(auto_now_add=True)
+    reason = models.TextField(null=True, blank=True)
+    days_used = models.IntegerField(null=True)
+    days_remaining_at_cancel = models.IntegerField(null=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.staff.get_full_name()} - {self.leave_request.type.name} cancelled on {self.date_cancelled.date()}"
+
+
+
+class Resumption(models.Model):
+    staff = models.ForeignKey("Staff", on_delete=models.CASCADE)
+    leave_request = models.ForeignKey("LeaveRequest", on_delete=models.CASCADE)
+    date_submitted = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(null=True, blank=True)
+    confirmed = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+
+
 class Leave(models.Model):
     class LeaveStatus(models.TextChoices):
         Pending = "Pending", "pending"
@@ -238,7 +263,7 @@ class LeaveRequest(models.Model):
                 self.return_date = self.end_date + datetime.timedelta(days=3)
         super().save(*args, **kwargs)
     def __str__(self):
-        return f"{self.applicant} - {self.start_date} - {self.end_date} - {self.status} - {self.type} -- {self.id}"
+        return f"{self.id} - {self.applicant} - {self.start_date} - {self.end_date} - {self.status} - {self.type} -- {self.id}"
 
 
 class Email(models.Model):

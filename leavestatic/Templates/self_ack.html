@@ -32,11 +32,11 @@
     <p><strong>Employee Name:</strong> {{ leave_request.applicant.get_full_name }}</p>
     <p><strong>Leave Type:</strong> {{ leave_request.type.name }}</p>
     <p><strong>Scheduled Period:</strong> {{ leave_request.start_date }} to {{ leave_request.return_date }}</p>
-    <p><strong>Date Approved:</strong> {{ leave_request.application_date }}</p>
+    <p><strong>This leave request was initiated:</strong> {{ leave_request.application_date }}</p>
   </div>
 
   <!-- Confirmation form -->
-  <form method="post" action="{% url 'confirm_leave_view' leave_request.id slug %}">
+  <form method="post" action="{% url 'confirm_leave_view' id slug %}">
     {% csrf_token %}
     <h4>Confirm Your Decision</h4>
 

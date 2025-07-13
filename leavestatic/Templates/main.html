@@ -12,6 +12,9 @@
     </head>
     <script src="{% static 'behavior.js' %}"></script>
     <body>
+         {% if form_status_message %}
+        <div class="form-status flash">{{ form_status_message }}</div>
+        {% endif %}
         {% if not login %}
         <div class="header">
             <div class="leftHeader">

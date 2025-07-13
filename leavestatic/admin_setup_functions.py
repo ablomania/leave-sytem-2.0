@@ -229,16 +229,53 @@ def add_approver(form_data):
             group_to_approve_id=approver_group_id,
             level_id=approver_level_id
         ).exists()
+
         if not exists:
-            Approver.objects.create(
+            # Create the approver
+            new_approver = Approver.objects.create(
                 staff_id=approver_id,
                 group_to_approve_id=approver_group_id,
                 level_id=approver_level_id
             )
-    except (KeyError, ValueError) as e:
-        # Optionally log or handle the error
+
+            # Fetch pending leave requests for the group and level
+            pending_requests = LeaveRequest.objects.filter(
+                applicant__group_id=approver_group_id,
+                applicant__level_id=approver_level_id,
+                status=LeaveRequest.Status.PENDING,
+                is_active=True
+            )
+
+            # Create approval objects for each pending request
+            for request in pending_requests:
+                Approval.objects.create(
+                    approver=new_approver,
+                    request=request,
+                    status=Approval.ApprovalStatus.Pending,
+                    is_active=True
+                )
+
+            # Send email notification to the approver
+            approver = Staff.objects.get(id=approver_id)
+            subject = "New Approver Assignment"
+            message = (
+                f"Dear {approver.first_name},\n\n"
+                f"You have been assigned as an approver for group '{approver.group.name}' "
+                f"at level '{approver.level.name}'.\n\n"
+                f"There are {pending_requests.count()} pending leave requests awaiting your review.\n"
+                f"Please log in to the system to view and take action.\n\n"
+                f"Regards,\nLeave Management System"
+            )
+            send_mail(
+                subject,
+                message,
+                settings.EMAIL_HOST_USER,
+                [approver.email],
+                fail_silently=False
+            )
+
+    except (KeyError, ValueError, Staff.DoesNotExist) as e:
         print(f"Error adding approver: {e}")
-    return
 
 
 #Edit Approver
@@ -296,22 +333,34 @@ def edit_approver(form_data):
 
 def del_approver(form_data):
     """
-    Deactivates all Approver objects for a given staff member by setting is_active=False.
+    Deactivates Approver objects and related Approval records for a given staff member(s).
     Expects:
-        - staff_id: the staff id whose approver assignments should be deactivated
+        - staff_id: single ID or list of IDs for approvers to deactivate
     """
     staff_id = form_data.get('staff_id')
     if not staff_id:
         return
 
-    # Accept both a single ID or a list of IDs
+    # Normalize to a list of integers
     if isinstance(staff_id, (list, tuple)):
         staff_ids = [int(sid) for sid in staff_id if str(sid).isdigit()]
     else:
         staff_ids = [int(staff_id)] if str(staff_id).isdigit() else []
 
     if staff_ids:
-        Approver.objects.filter(staff_id__in=staff_ids).update(is_active=False)
+        # Find active Approver records
+        approver_qs = Approver.objects.filter(staff_id__in=staff_ids, is_active=True)
+
+        # Collect approver IDs
+        approver_ids = list(approver_qs.values_list("id", flat=True))
+
+        # Deactivate approvers
+        approver_qs.update(is_active=False)
+
+        # Deactivate related approval records
+        if approver_ids:
+            Approval.objects.filter(approver_id__in=approver_ids).update(is_active=False)
+
     return
 
 
@@ -369,6 +418,17 @@ def add_leave_type(form_data):
         is_active = True
     )
     new_lvt.save()
+
+    # Create StaffLeaveDetail for matching staff
+    eligible_staff = Staff.objects.filter(seniority_id=seniority_id, is_active=True)
+    for staff in eligible_staff:
+        StaffLeaveDetail.objects.create(
+            staff=staff,
+            leave_type=new_lvt,
+            days_taken=0,
+            days_remaining=days,
+            is_active=True
+        )
     return
 
 
@@ -407,44 +467,150 @@ def edit_leave(form_data):
 
 
 def del_leave(form_data):
-    leave_ids = form_data['leave_type']
+    """
+    Deactivates selected leave types and cascades deactivation to related StaffLeaveDetail records.
+    Expects:
+        - leave_type: a list of LeaveType IDs to deactivate
+    """
+    leave_ids = form_data.get('leave_type', [])
     for id in leave_ids:
-        leave_type = LeaveType.objects.get(id=id)
-        leave_type.is_active = False
-        leave_type.save()
+        try:
+            leave_type = LeaveType.objects.get(id=id)
+            leave_type.is_active = False
+            leave_type.save()
+
+            # Deactivate related leave detail records
+            StaffLeaveDetail.objects.filter(leave_type=leave_type).update(is_active=False)
+
+        except LeaveType.DoesNotExist:
+            print(f"LeaveType with ID {id} does not exist.")
+
     return
 
+
+
 def res_leave(form_data):
-    leave_id = form_data['leave_id']
-    leave_type = LeaveType.objects.get(id=leave_id)
-    leave_type.is_active = True
-    leave_type.save()
+    """
+    Reactivates a LeaveType and updates related StaffLeaveDetail records to is_active=True.
+    Expects:
+        - leave_id: ID of the LeaveType to reactivate
+    """
+    leave_id = form_data.get('leave_id')
+    if not leave_id:
+        return
+
+    try:
+        leave_type = LeaveType.objects.get(id=leave_id)
+        leave_type.is_active = True
+        leave_type.save()
+
+        # Reactivate all associated leave detail records
+        StaffLeaveDetail.objects.filter(leave_type=leave_type).update(is_active=True)
+
+    except LeaveType.DoesNotExist:
+        print(f"LeaveType with ID {leave_id} does not exist.")
+
     return
+
 
 #Holidays
 def add_holiday(form_data):
-    return
+    """
+    Creates a new Holiday record from submitted form data.
+    Expects:
+        - name: str
+        - date: date string (YYYY-MM-DD)
+        - type: 'Fixed' or 'Variable'
+        - recur: 'true' or 'false' as string
+    """
+    try:
+        name = form_data.get("name", "").strip()
+        date = form_data.get("date")
+        holiday_type = form_data.get("type", "Fixed")
+        recur_raw = form_data.get("recur", "false")
+
+        if not name or not date:
+            print("Holiday name and date are required.")
+            return
+
+        recurs_annually = True if recur_raw.lower() == "true" else False
+
+        Holiday.objects.create(
+            name=name,
+            date=date,
+            type=holiday_type,
+            recurs_annually=recurs_annually,
+            is_active=True
+        )
+    except Exception as e:
+        print(f"Error creating holiday: {e}")
+
+
 
 def edit_holiday(form_data):
-    holiday_id = int(form_data['hol_id'])
-    name = form_data['name']
-    date = form_data['date']
-    type = form_data['type']
-    recur = True if form_data['recur'] =="True" else False
+    """
+    Updates an existing Holiday object with new values from a submitted form.
+    """
+    try:
+        holiday_id = int(form_data['hol_id'])
+        name = form_data.get('name', '').strip()
+        date = form_data.get('date')
+        holiday_type = form_data.get('type', 'Fixed')
+        recur_raw = form_data.get('recur', 'false')
+
+        recurs_annually = recur_raw == "True"
+
+        holiday = Holiday.objects.get(id=holiday_id)
+        holiday.name = name
+        holiday.date = date
+        holiday.type = holiday_type
+        holiday.recurs_annually = recurs_annually
+        holiday.save()
+
+    except (Holiday.DoesNotExist, ValueError, KeyError) as e:
+        print(f"Error editing holiday: {e}")
+
     
-    holiday = Holiday.objects.get(id=holiday_id)
-    holiday.name = name
-    holiday.date = date
-    holiday.type = type
-    holiday.recurs_annually = recur
-    holiday.save()
-    return
 
 def del_holiday(form_data):
+    """
+    Deactivates a Holiday object based on a single submitted ID.
+    Expects form_data to include:
+        - 'holiday': ID of the holiday to deactivate
+    """
+    hol_id = form_data.get("holiday")
+    if not hol_id or not str(hol_id).isdigit():
+        return
+
+    try:
+        holiday = Holiday.objects.get(id=int(hol_id))
+        holiday.is_active = False
+        holiday.save()
+    except Holiday.DoesNotExist:
+        print(f"Holiday with ID {hol_id} does not exist.")
+
     return
 
-def res_holiday(form_data):
-    return
+
+
+def del_holiday(form_data):
+    """
+    Deactivates a Holiday object based on a single submitted ID.
+    Expects form_data to include:
+        - 'holiday': ID of the holiday to deactivate
+    """
+    hol_id = form_data.get("holiday")
+    if not hol_id or not str(hol_id).isdigit():
+        return
+
+    try:
+        holiday = Holiday.objects.get(id=int(hol_id))
+        holiday.is_active = False
+        holiday.save()
+    except Holiday.DoesNotExist:
+        print(f"Holiday with ID {hol_id} does not exist.")
+
+    
 
 
 #Genders
@@ -498,13 +664,26 @@ def res_gender(form_data):
 
 #Categories
 def del_sen(form_data):
+    """
+    Deactivates a Seniority record and all related LeaveType and StaffLeaveDetail records.
+    Expects:
+        - 'sen_id': ID of the seniority to deactivate
+    """
     try:
-        sen = Seniority.objects.get(id=int(form_data.get('sen_id')))
-        sen.is_active = False
-        sen.save()
+        sen_id = int(form_data.get('sen_id'))
+        seniority = Seniority.objects.get(id=sen_id)
+        seniority.is_active = False
+        seniority.save()
+
+        # Deactivate related leave types
+        related_leave_types = LeaveType.objects.filter(seniority_id=sen_id)
+        related_leave_types.update(is_active=False)
+
+        # Deactivate staff leave details linked to those leave types
+        StaffLeaveDetail.objects.filter(leave_type__in=related_leave_types).update(is_active=False)
+
     except (Seniority.DoesNotExist, TypeError, ValueError) as e:
-        # Handle the error or log it
-        raise ValueError(f"Failed to deactivate category: {e}")
+        raise ValueError(f"Failed to deactivate seniority and related records: {e}")
     
 
 def add_sen(form_data):
@@ -534,24 +713,59 @@ def edit_sen(form_data):
 
 
 def res_sen(form_data):
+    """
+    Reactivates a Seniority and cascades reactivation to related LeaveType and StaffLeaveDetail records.
+    Expects:
+        - 'sen_id': ID of the seniority to reactivate
+    """
     try:
-        sen = Seniority.objects.get(id=int(form_data.get('sen_id')))
-        sen.is_active = True
-        sen.save()
+        sen_id = int(form_data.get('sen_id'))
+        seniority = Seniority.objects.get(id=sen_id)
+        seniority.is_active = True
+        seniority.save()
+
+        # Reactivate related leave types
+        related_leave_types = LeaveType.objects.filter(seniority_id=sen_id)
+        related_leave_types.update(is_active=True)
+
+        # Reactivate related staff leave details
+        StaffLeaveDetail.objects.filter(leave_type__in=related_leave_types).update(is_active=True)
+
     except (Seniority.DoesNotExist, TypeError, ValueError) as e:
-        # Handle the error or log it
         raise ValueError(f"Failed to activate seniority: {e}")
+
+
     
 
 # Levels
 def del_lvl(form_data):
+    """
+    Deactivates a Level and updates related Approvers to the next lower level.
+    """
     try:
-        lvl = Level.objects.get(id=int(form_data.get('level_id')))
-        lvl.is_active = False
-        lvl.save()
+        lvl_id = int(form_data.get('level_id'))
+        current_level = Level.objects.get(id=lvl_id)
+
+        # Deactivate the level
+        current_level.is_active = False
+        current_level.save()
+
+        # Find the next lower active level
+        lower_level = (
+            Level.objects
+            .filter(level__lt=current_level.level, is_active=True)
+            .order_by("-level")
+            .first()
+        )
+
+        if lower_level:
+            # Update all approvers from the deleted level to the new one
+            Approver.objects.filter(level_id=lvl_id).update(level=lower_level)
+        else:
+            print(f"No lower active level found. Approvers remain linked to inactive level {current_level.name}.")
+
     except (Level.DoesNotExist, TypeError, ValueError) as e:
-        # Handle the error or log it
-        raise ValueError(f"Failed to deactivate level: {e}")
+        raise ValueError(f"Failed to deactivate level and update approvers: {e}")
     
 
 def add_lvl(form_data):

@@ -1,0 +1,31 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block title %}
+    Cancel Leave
+{% endblock %}
+
+{% block content %}
+<div class="cancel-leave-wrapper fade-in">
+    <h1>Cancel Active Leave</h1>
+
+    <div class="leave-details">
+        <p><strong>Staff Name:</strong> {{ leave.request.applicant.first_name }} {{ leave.request.applicant.last_name }}</p>
+        <p><strong>Leave Type:</strong> {{ leave.request.type.name }}</p>
+        <p><strong>Start Date:</strong> {{ leave.request.start_date }}</p>
+        <p><strong>End Date:</strong> {{ leave.request.end_date }}</p>
+        <p><strong>Status:</strong> {{ leave.status }}</p>
+        <p><strong>Days Granted:</strong> {{ leave.days_granted }}</p>
+        <p><strong>Days Remaining:</strong> {{ leave.days_remaining }}</p>
+    </div>
+
+    <form method="post" class="cancel-leave-form">
+        {% csrf_token %}
+        <label for="reason">Reason for Cancellation:</label>
+        <textarea name="reason" id="reason" placeholder="Briefly explain why you're cancelling your leave..." required></textarea>
+
+        <button type="submit" class="submit-btn">Submit Cancellation</button>
+    </form>
+</div>
+
+{% endblock %}

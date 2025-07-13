@@ -1,0 +1,34 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block title %}
+    Resumption of Duty Form
+{% endblock %}
+
+{% block content %}
+<div class="resumption-wrapper">
+    <h1>Resumption of Duty Form</h1>
+
+    <div class="leave-summary">
+        <p><strong>Staff Name:</strong> {{ leave_request.applicant.first_name }} {{ leave_request.applicant.last_name }}</p>
+        <p><strong>Leave Type:</strong> {{ leave_request.type.name }}</p>
+        <p><strong>Period:</strong> {{ leave_request.start_date }} to {{ leave_request.end_date }}</p>
+        <p><strong>Resumption Date:</strong> {{ resumption_date }}</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-section">
+            <label for="notes">Optional Comments or Observations:</label>
+            <textarea name="notes" id="notes" placeholder="Add any comments or notes..."></textarea>
+        </div>
+
+        <div class="confirm-row">
+            <input type="checkbox" name="confirm" id="confirm">
+            <label for="confirm">I confirm I have resumed duty as scheduled.</label>
+        </div>
+
+        <button type="submit" class="submit-btn">Submit Resumption</button>
+    </form>
+</div>
+{% endblock %}

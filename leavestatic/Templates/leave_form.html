@@ -15,7 +15,9 @@
             loadLeave(select.value, window.leaveOptions, window.staffLeaveData);
             }
         };
+        const all_holidays = JSON.parse('{{ holiday_json|safe }}');
     </script>
+    
 
     <div class="leave-request-container">
         <div class="leave-request-header">

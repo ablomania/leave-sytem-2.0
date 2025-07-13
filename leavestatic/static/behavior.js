@@ -3,7 +3,7 @@ function dateReminder(startDate, daysRequested) {
     if(startDate == null || startDate == "" || startDate == undefined) {
         console.log("Start date is null or empty");
     } else {
-        calcEndDate(startDate, daysRequested);
+        calcEndDate(startDate, daysRequested, all_holidays);
     }
 }
 
@@ -16,14 +16,18 @@ function calcEndDate(startDate, daysRequested) {
     if (daysRequested <= 0) {
         return displayError("Please select a valid number of days.");
     }
-
+    console.log(all_holidays)
+    
+    console.log("dd", new Date(all_holidays[0]))
     let currentDate = new Date(startDate);
-    const statHdateList = [
-        new Date(2025, 0, 1), new Date(2025, 0, 7), new Date(2025, 2, 6),
-        new Date(2025, 3, 18), new Date(2025, 3, 21), new Date(2025, 4, 1),
-        new Date(2025, 4, 25), new Date(2025, 7, 4), new Date(2025, 8, 21),
-        new Date(2025, 11, 5), new Date(2025, 11, 25), new Date(2025, 11, 26)
-    ];
+    const statHdateList = all_holidays.map(dateStr => new Date(dateStr));
+
+    // const statHdateList = [
+    //     new Date(2025, 0, 1), new Date(2025, 0, 7), new Date(2025, 2, 6),
+    //     new Date(2025, 3, 18), new Date(2025, 3, 21), new Date(2025, 4, 1),
+    //     new Date(2025, 4, 25), new Date(2025, 7, 4), new Date(2025, 8, 21),
+    //     new Date(2025, 11, 5), new Date(2025, 11, 25), new Date(2025, 11, 26)
+    // ];
 
     if (!isValidStartDate(currentDate, statHdateList)) {
         return;

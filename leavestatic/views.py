@@ -20,9 +20,11 @@ import string
 from .admin_setup_functions import *
 from .functions import *
 from .formHandlers import *
+from .leaveModifyingFunctions import *
 from django.utils.safestring import mark_safe
 import json
 from collections import defaultdict
+from django.contrib import messages
 
 
 
@@ -112,16 +114,81 @@ def login_user(request, next_page):
     return response
 
 
-for staff in Staff.objects.filter(slug__isnull=True):
-    base_slug = slugify(f"{staff.first_name}-{staff.phone_number}")
-    slug = base_slug
-    counter = 1
-    while Staff.objects.filter(slug=slug).exists():
-        slug = f"{base_slug}-{counter}"
-        counter += 1
-    staff.slug = slug
-    staff.save()
-    print()
+# for staff in Staff.objects.filter(slug__isnull=True):
+#     base_slug = slugify(f"{staff.first_name}-{staff.phone_number}")
+#     slug = base_slug
+#     counter = 1
+#     while Staff.objects.filter(slug=slug).exists():
+#         slug = f"{base_slug}-{counter}"
+#         counter += 1
+#     staff.slug = slug
+#     staff.save()
+#     print()
+
+
+def trigger_leave_update(request):
+    """Manually run leave update logic and display feedback without a template."""
+
+    try:
+        update_leave_progress()
+        message = f"✅ Leave progress updated successfully at {timezone.now().strftime('%H:%M %p')}."
+        color = "#0077c0"
+    except Exception as e:
+        message = f"❌ Failed to update leave progress: {str(e)}"
+        color = "#d14343"
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Leave Update Result</title>
+        <style>
+            body {{
+                font-family: 'Segoe UI', sans-serif;
+                background-color: #f4f8fb;
+                padding: 50px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+            }}
+            .result-box {{
+                background-color: #fff;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                text-align: center;
+                max-width: 600px;
+            }}
+            .result-box h1 {{
+                color: {color};
+                font-size: 20px;
+                margin-bottom: 10px;
+            }}
+            .back-link {{
+                margin-top: 25px;
+                display: inline-block;
+                background-color: {color};
+                color: white;
+                padding: 10px 20px;
+                text-decoration: none;
+                border-radius: 6px;
+                transition: background-color 0.3s ease;
+            }}
+            .back-link:hover {{
+                background-color: #005fa3;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="result-box">
+            <h1>{message}</h1>
+        </div>
+    </body>
+    </html>
+    """
+
+    return HttpResponse(html)
 
 
 def dashboard(request, slug):
@@ -132,16 +199,18 @@ def dashboard(request, slug):
 
     user = Staff.objects.get(slug=user_slug)
     is_approver = True if Approver.objects.filter(staff_id=user.id, is_active=True).count() > 0 else False
-    print("pp ",is_approver)
     
     self_ack = Ack.objects.filter(staff_id=user.id, type=Ack.Type.SELF, status=Ack.Status.Pending).first()
     r_ack = Ack.objects.filter(staff_id=user.id, type=Ack.Type.RELIEF, status=Ack.Status.Pending).first()
     leaves_count = LeaveRequest.objects.filter(applicant_id=user.id).count()
+    on_leave = Leave.objects.filter(request__applicant_id=user.id, status=Leave.LeaveStatus.On_Leave).first()
+    
     context = {
         "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
         'slug': slug,
         'is_approver': is_approver, "self_ack": self_ack,
         "r_ack": r_ack, "leaves_count": leaves_count,
+        "on_leave": on_leave
     }
 
     response = render(request, "dashboard.html", context)
@@ -317,194 +386,85 @@ def sys_admin(request):
     return HttpResponse(template.render(context, request))
 
 
-# def sec_check(request, slug):
-#     template = loader.get_template("red.html")
-
-#     context = {
-
-#     }
-#     return HttpResponse(template.render(context, request))
-
-
-# def add_department(request, slug):
-#     """Handles department creation efficiently using session validation."""
-
-#     user_slug = request.session.get("user_slug") or change_session(slug)
-
-#     if not user_slug:
-#         return redirect(reverse("login", args=["add_department"]))
-    
-#     # Update session messages
-#     request.session.update({
-#         "prev_page": "add_department",
-#         "message": "Department created successfully",
-#         "button": "Add another department",
-#         "next_page": "all_staff",
-#         "next_btn": "Back to All Staff"
-#     })
-
-#     # Update LoginSession efficiently
-#     LoginSession.objects.filter(slug=user_slug).update(
-#         prev_page="add_department",
-#         button="Add another department",
-#         next_page="all_staff",
-#         next_btn="Back to All Staff",
-#         message="Department created successfully"
-#     )
-
-#     user = get_object_or_404(Staff.objects.select_related("department"), slug=user_slug)
-
-#     all_staff = Staff.objects.filter(is_superuser=False).exclude(type__in=["RECTOR", "HOHR", "STAFF"]).order_by("last_name", "first_name")
-
-#     if request.method == "POST":
-#         form_data = request.POST
-#         dept_head = get_object_or_404(Staff, slug=form_data["dept_head"])
-
-#         new_department = Department.objects.create(
-#             department_name=form_data["dept_name"],
-#             department_head=dept_head,
-#             department_head_email=dept_head.email,
-#             department_head_phone=dept_head.phone_number,
-#             department_image=request.FILES.get("dept_icon", "not")
-#         )
-
-#         return HttpResponseRedirect(reverse("all_staff", args=[slug]))
-
-#     context = {
-#         "all_staff": all_staff,
-#     }
-
-#     response = render(request, "add_department.html", context)
-#     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
-#     return response
-
-
 
 def leave_request(request, slug):
-    """Handles leave request submission with session validation."""
+    """Handles leave request submission with session validation and message feedback."""
 
     user_slug = request.session.get("user_slug") or change_session(slug)
-
     if not user_slug:
         return redirect(reverse("login", args=["leave_request"]))
 
-    request.session.update({
-        "prev_page": f"leave_request",
-        "message": "Leave Request successful. Pending approval. For more information, please contact your administrator.",
-        "button": "Request For Another Leave",
-        "next_page": f"leave_list",
-        "next_btn": "Back to Dashboard",
-    })
-
-    # Update LoginSession efficiently
+    # Update LoginSession context
     LoginSession.objects.filter(slug=user_slug).update(
         prev_page="leave_request",
         button="Request For Another Leave",
         next_page=f"leave_list",
         next_btn="Back to Dashboard",
-        message="Leave Request successful. Pending approval. For more information, please contact your administrator.",
+        message="Leave Request successful. Pending approval. For more information, please contact your administrator."
     )
 
     user = Staff.objects.get(slug=user_slug)
     allowed_leave_types = LeaveType.objects.filter(seniority_id=user.seniority_id, is_active=True)
-    leave_type_dict = {}
-    staffLeaveDetails = StaffLeaveDetail.objects.filter(staff_id=user.id)
-    allowed_leave_type_dict = {
-        lt.id: 
-        {"name": str(lt.name) or "N/A", "days": lt.days or "N/A", "paidLeave": str(lt.paid_leave) or "N/A", "i_date": str(lt.includes_date_of_occurence),
-        "i_institution": str(lt.includes_institution), "i_course": str(lt.includes_course), "i_note": str(lt.includes_med_note),
-        "i_letter": str(lt.includes_letter) } 
-        for lt in allowed_leave_types
-    }
     staff_leave_data = {
-        ld.leave_type_id:
-        {"taken": ld.days_taken or 0, "remaining": ld.days_remaining or 0, "leave_type": ld.leave_type.name or "N/A"}
-        for ld in staffLeaveDetails
+        ld.leave_type_id: {
+            "taken": ld.days_taken or 0,
+            "remaining": ld.days_remaining or 0,
+            "leave_type": ld.leave_type.name or "N/A"
+        } for ld in StaffLeaveDetail.objects.filter(staff_id=user.id)
     }
-    relieving_officers = Staff.objects.filter(is_active=True, group_id=user.group.id).exclude(id=user.id).order_by("first_name", "last_name")
 
-    for leave_type in allowed_leave_types:
-        leave_type_dict[leave_type.id] = leave_type.name
-    
+    holiday_data = {ah.id: ah.date.strftime('%Y-%m-%d') for ah in Holiday.objects.filter(is_active=True)}
+
+
+    leave_type_dict = {lt.id: lt.name for lt in allowed_leave_types}
+    allowed_leave_type_dict = {
+        lt.id: {
+            "name": lt.name or "N/A",
+            "days": lt.days or "N/A",
+            "paidLeave": str(lt.paid_leave),
+            "i_date": str(lt.includes_date_of_occurence),
+            "i_institution": str(lt.includes_institution),
+            "i_course": str(lt.includes_course),
+            "i_note": str(lt.includes_med_note),
+            "i_letter": str(lt.includes_letter)
+        } for lt in allowed_leave_types
+    }
+
+    relieving_officers = Staff.objects.filter(
+        is_active=True, group_id=user.group.id
+    ).exclude(id=user.id).order_by("first_name", "last_name")
+
+    form_status_message = ""
+
     if request.method == "POST":
         form_data = request.POST
         result = leaveRequestHandler(form_data, user, request, slug)
 
-    # if request.method == "POST":
-    #     form_data = request.POST
-    #     relieving_officer = get_object_or_404(Staff, slug=form_data["relieving_officer"])
+        # You can refine how result is structured if needed
+        if result:
+            form_status_message = "✅ Leave request submitted successfully."
+        else:
+            form_status_message = result.get("error", "❌ There was an issue submitting your request.")
 
-    #     leave_request = Leave_Request.objects.create(
-    #         applicant=user,
-    #         leave_days_requested=form_data["days_requested"],
-    #         leave_start_date=form_data["start_date"],
-    #         leave_end_date=form_data["end_date"],
-    #         resumption_date=form_data["resumption_date"],
-    #         reason=form_data.get("reason", None),            
-    #         type=form_data["leave_type"],
-    #         relieving_officer=relieving_officer,
-    #         med_note=request.FILES["med_note"] if form_data["med_note"] != "" else None,
-    #         letter=request.FILES["letter"] if form_data["letter"] != "" else None,
-    #         disembarkation_date=form_data["disembarkation"] if form_data["disembarkation"] != "" else None,
-    #         due_date=form_data["due-date"] if form_data["due-date"] != "" else None,
-    #         institution=form_data["institution"] if form_data["institution"] != "" else None,
-    #         course=form_data["course"] if form_data["course"] != "" else None,
-    #     )
-    #     approval_mapping = {
-    #         "HOD": [("department_head_approval", "APPROVED"), ("department_head_approval_date", timezone.now())],
-    #         "HOHR": [
-    #             ("department_head_approval", "APPROVED"), ("department_head_approval_date", timezone.now()),
-    #             ("HOHR_approval", "APPROVED"), ("HOHR_approval_date", timezone.now())
-    #         ],
-    #         "RECTOR": [("final_approval", "APPROVED"), ("final_approval_date", timezone.now())]
-    #     }
-
-    #     if user.type in approval_mapping:
-    #         for field, value in approval_mapping[user.type]:
-    #             setattr(leave_request, field, value)
-
-    #     leave_request.save()
-
-
-    #     # Email Notification
-    #     subject = f"Notification of Relief Assignment During {user.first_name} {user.last_name}’s Leave"
-    #     message = (
-    #         f"Dear {relieving_officer.first_name},\n\n"
-    #         f"I hope this email finds you well.\n\n"
-    #         f"As part of our operational planning, I would like to formally notify you that "
-    #         f"you will be temporarily relieving {user.first_name} {user.last_name}, {user.other_names} "
-    #         f"during their {leave_request.type.lower()} leave from {leave_request.leave_start_date} to {leave_request.leave_end_date}.\n\n"
-    #         f"Your responsibilities will include {user.first_name}’s duties during this period. "
-    #         f"Please let me know if you require any additional support or resources to ensure a smooth transition. "
-    #         f"Your cooperation and professionalism are greatly appreciated.\n\n"
-    #         f"Kindly confirm your understanding of this arrangement at your earliest convenience. "
-    #         f"Should you have any questions, please feel free to reach out.\n\n"
-    #         f"Thank you for your dedication and support.\n\n"
-    #         f"Click on this link to acknowledge this email:\n\n"
-    #         f"{request.build_absolute_uri(reverse('relieve_ack', args=[leave_request.id, slug]))}"
-    #     )
-        
-    #     Email.objects.create(subject=subject, message=message, receiver=relieving_officer.email)
-
-    #     response = HttpResponseRedirect(reverse("success_page", args=[slug]))
-    #     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-    #     return response
-
-    # Prepare response context
     context = {
         "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
-        "user_id": user.id, "user": user,
+        "user_id": user.id,
+        "user": user,
         "allowed_leave_types": allowed_leave_types,
-        'leave_type_dict': leave_type_dict,
-        'allowed_leave_types_dict': allowed_leave_type_dict,
-        'staff_leave_data': staff_leave_data, "officers": relieving_officers,
+        "leave_type_dict": leave_type_dict,
+        "allowed_leave_types_dict": allowed_leave_type_dict,
+        "staff_leave_data": staff_leave_data,
+        "officers": relieving_officers,
+        "form_status_message": form_status_message,
+        "slug": slug,
+        "holiday_json": json.dumps(list(holiday_data.values()))  # just the date list
     }
 
     response = render(request, "leave_form.html", context)
     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
 
     return response
+
 
 
 def confirm_leave_view(request, id, slug):
@@ -514,11 +474,15 @@ def confirm_leave_view(request, id, slug):
         return redirect(reverse("login", args=[id]))
 
     # Fetch LeaveRequest and ensure applicant matches session
-    leave_request = get_object_or_404(
-        LeaveRequest.objects.select_related("applicant", "type"),
+    ack_obj = get_object_or_404(
+    Ack.objects.select_related("request__applicant", "request__type"),
         id=id,
+        type=Ack.Type.SELF,
         is_active=True
     )
+    leave_request = ack_obj.request
+
+
 
     if user_slug != leave_request.applicant.slug:
         return redirect(reverse("login", args=[id]))
@@ -540,22 +504,28 @@ def confirm_leave_view(request, id, slug):
         reason = request.POST.get("decline_reason", "").strip()
 
         if decision == "ACCEPTED":
-            Ack.objects.create(
+            Ack.objects.update_or_create(
+                id=ack_obj.id,
                 request=leave_request,
                 staff=leave_request.applicant,
                 type=Ack.Type.SELF,
-                status=Ack.Status.Approved,
-                is_active=True
+                defaults={
+                    "status": Ack.Status.Approved,
+                    "is_active": True
+                }
             )
+            createLeave(leave_request.applicant, leave_request, ack_obj.id)
             
         elif decision == "DECLINED":
-            Ack.objects.create(
+            Ack.objects.update_or_create(
                 request=leave_request,
                 staff=leave_request.applicant,
                 type=Ack.Type.SELF,
-                status=Ack.Status.Denied,
-                reason=reason,
-                is_active=True
+                defaults={
+                    "status": Ack.Status.Denied,
+                    "reason": reason,
+                    "is_active": True
+                }
             )
 
         response = redirect(reverse("dashboard", args=[slug]))
@@ -567,11 +537,82 @@ def confirm_leave_view(request, id, slug):
         "leave_request": leave_request,
         "slug": slug,
         "date": timezone.now().date(),
+        "id": id
     }
     response = render(request, "self_ack.html", context)
     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
     return response
 
+
+
+def cancelLeave(request, id, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["cancel_leave"]))
+
+    staff = get_object_or_404(Staff, slug=user_slug)
+    leave = get_object_or_404(
+        Leave.objects.select_related("request", "request__type", "request__applicant"),
+        id=id,
+        request__applicant=staff,
+        is_active=True,
+        status=Leave.LeaveStatus.On_Leave
+    )
+    
+
+    if request.method == "POST":
+        reason = request.POST.get("reason", "").strip()
+        handle_leave_cancellation(leave, staff, reason)
+        messages.success(request, "Your leave cancellation has been logged and your balance updated.")
+        return redirect(reverse("dashboard", args=[slug]))
+
+    context = {
+        "leave_request": leave.request,
+        "leave": leave,
+        "slug": slug,
+    }
+
+    return render(request, "cancel_leave.html", context)
+
+
+def leaveComplete(request, id, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["leave_complete"]))
+
+    user = get_object_or_404(Staff, slug=user_slug)
+    leave_request = get_object_or_404(
+        LeaveRequest.objects.select_related("applicant"),
+        id=id,
+        applicant=user,
+        is_active=True,
+        status=LeaveRequest.Status.APPROVED
+    )
+
+    if request.method == "POST":
+        notes = request.POST.get("notes", "").strip()
+        confirmed = request.POST.get("confirm") == "on"
+
+        # Save resumption record
+        Resumption.objects.create(
+            staff=user,
+            leave_request=leave_request,
+            notes=notes,
+            confirmed=confirmed,
+            is_active=True
+        )
+
+        messages.success(request, "Resumption form submitted successfully.")
+        return redirect(reverse("dashboard", args=[slug]))
+
+    context = {
+        "leave_request": leave_request,
+        "slug": slug,
+        "resumption_date": leave_request.return_date
+    }
+
+    return render(request, "leave_complete_form.html", context)
+    
 
 
 def relieve_ack(request, id, slug):
@@ -606,7 +647,7 @@ def relieve_ack(request, id, slug):
     # 6. Handle POST submission
     if request.method == "POST":
         form_data = request.POST
-        if form_data['form_meta'] == "approve": approve_ack(form_data, request)
+        if form_data['form_meta'] == "approve": approve_ack(form_data, ack.request)
         elif form_data['form_meta'] == "deny": deny_ack(form_data, request)
         response = HttpResponseRedirect(reverse("dashboard", args=[slug]))
         response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
@@ -653,10 +694,23 @@ def leave_history(request, slug):
         year = lr.application_date.year
         grouped_leave.setdefault(year, []).append(lr)
 
+    # Cancelled leaves
+    terminated_leaves = (
+        CancelledLeave.objects
+        .filter(staff=user, is_active=True)
+        .select_related("leave_request__type", "original_leave")
+        .order_by("-date_cancelled")
+    )
+
+    if request.method == "POST":
+        form_data = request.POST
+
+
     context = {
         "leave_requests": leave_requests,
         "grouped_leave": grouped_leave,
         "slug": slug,
+        "terminated_leaves": terminated_leaves,
     }
 
     response = render(request, "leave_history.html", context)
@@ -685,321 +739,6 @@ def user_logout(request, slug):
 
     return response
 
-
-
-
-# def signup_user(request, slug):
-#     """Handles user signup efficiently using session validation."""
-
-#     user_slug = request.session.get("user_slug") or change_session(slug)
-    
-#     if not user_slug: 
-#         return redirect(reverse("login", args=["signup"]))
-
-#     request.session.update({
-#         "prev_page": f"/signup/{slug}",
-#         "next_page": f"/leaveapplications/{slug}",
-#         "next_btn": "Back to Dashboard",
-#         "button": "Add another User",
-#     })
-    
-#     current_user = get_object_or_404(Staff.objects.select_related("department"), slug=user_slug)
-
-#     # Allow only authorized roles
-#     allowed_roles = {"HOD", "HOHR", "RECTOR"}
-#     if current_user.type not in allowed_roles:
-#         return HttpResponse("Sorry, you are not allowed to view this page", status=403)
-
-#     # Fetch emails efficiently
-#     emails = list(Staff.objects.all().values_list("email", flat=True))
-#     print(len(Staff.objects.all()))
-#     print("ee  ", emails)
-#     all_departments = Department.objects.all()
-
-#     if request.method == "POST":
-#         form_data = request.POST
-#         user = Staff(
-#             first_name = form_data['first_name'],
-#             last_name = form_data['last_name'],
-#             other_names = form_data['other_names'],
-#             phone_number = form_data['phone_number'],
-#             email = form_data['email'],
-#             department_id = int(form_data['department']),
-#             type = form_data['type'],
-#             position = form_data['position'],
-#             sex = form_data['sex'],
-#         )
-#         user.username = f"{user.first_name}{user.last_name[0]}{user.other_names[0]}{Staff.objects.count()}"
-#         user.save()
-
-#         subject = "Account Created Successfully"
-#         message = (
-#             f"Dear {user.first_name},\n"
-#             f"Your account was created successfully.\n"
-#             f"Your email is {user.email}\n\n"
-#             f"Click on the link below to set your password:\n\n"
-#             f"{request.build_absolute_uri(reverse('password_reset'))}\n\n"
-#             "Best regards, \nGCPS Leave System"
-#         )
-#         Email.objects.create(subject=subject, message=message, receiver=user.email)
-
-#         # Handle HOD role department assignment
-#         if user.type == "HOD":
-#             Department.objects.filter(id=user.department_id).update(
-#                 department_head_id=user.id,
-#                 department_head_email=user.email,
-#                 acting_department_head_phone=user.phone_number,
-#             )
-
-#         if request.POST.get("leave_details"):
-#             leave_details = Leave_Details.objects.create(
-#                 days_entitled=36, days_eligible=36, days_taken=0, days_remaining=36, staff=user
-#             )
-#             LoginSession.objects.filter(slug=slug).update(
-#                 prev_page="signup",
-#                 button="Add another User",
-#                 next_page=f"admin_dashboard",
-#                 next_btn="Back to Dashboard",
-#                 message= request.session.get("message", None)
-#             )
-
-#             response = HttpResponseRedirect(reverse("success_page", args=[slug,]))
-#             response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-#             return response
-
-#         request.session["message"] = (
-#             f"User created successfully.\n\tName:\t{user.first_name} {user.last_name}, {user.other_names}\n"
-#             f"\tEmail:\t{user.email}\n\tDepartment:\t{user.department.department_name}\n"
-#             f"\tPosition:\t{user.position}"
-#         )
-#         LoginSession.objects.filter(slug=slug).update(
-#             prev_page="signup",
-#             button="Add another User",
-#             next_page="leave_list",
-#             next_btn="Back to Dashboard",
-#             message= request.session.get("message", None)
-#             )
-#         response = HttpResponseRedirect(reverse("leave_details_view", args=[user.slug, slug]))
-#         response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-#         return response
-
-#     return render(request, "signup.html", {"emails": emails, "all_departments": all_departments, "current_user": current_user, "user_type": current_user.type, 'slug': slug})
-
-
-
-
-# def success_page(request, slug):
-#     """Handles the success page efficiently using session validation with change_session()."""
-
-#     user_slug = request.session.get("user_slug") or change_session(slug)
-
-#     if not user_slug:
-#         return redirect(reverse("login", args=["success_page"]))
-
-#     current_session = get_object_or_404(LoginSession.objects.select_related("user"), slug=slug)
-#     prev_page = current_session.prev_page
-#     page_ref = {
-#         'leave_request': f'/leave_request/{slug}'
-#     }
-#     # Retrieve session values with default fallbacks
-#     context = {
-#         "prev_page": request.session.get("prev_page", current_session.prev_page or "login/0"),
-#         "message": request.session.get("message", current_session.message or ""),
-#         "button": request.session.get("button", current_session.button or ""),
-#         "next_page": request.session.get("next_page", current_session.next_page or ""),
-#         "next_btn": request.session.get("next_btn", current_session.next_btn or ""),
-#     }
-
-#     response = render(request, "success_page.html", context)
-#     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
-#     return response
-
-
-
-def staff_ack(request, slug):
-    """Handles staff leave request acknowledgements with session validation."""
-
-    user_slug = request.session.get("user_slug") or change_session(slug)
-
-    if not user_slug:
-        return redirect(reverse("login", args=["leave_details_view"]))
-
-    user = get_object_or_404(Staff.objects.select_related("department"), slug=user_slug)
-    
-    # Prepare session messages
-    request.session.update({
-        "prev_page": "not",
-        "message": "Leave Request acknowledgement successful. For more information, please contact your administrator",
-        "button": "not",
-        "next_page": f"/leaveapplications/{slug}",
-        "next_btn": "Back to Dashboard",
-    })
-    LoginSession.objects.filter(slug=slug).update(
-        prev_page="not",
-        button="not",
-        next_page=f"leave_list",
-        next_btn="Back to Dashboard",
-        message="Leave Request acknowledgement successful. For more information, please contact your administrator"
-            )
-    # Retrieve leave request efficiently
-    leave_request = Leave_Request.objects.filter(applicant=user, status="APPROVED").first()
-
-    if not leave_request:
-        return HttpResponseRedirect(reverse("success_page", args=[slug,]))
-
-    department_head = get_object_or_404(Staff, department=user.department, type="HOD")
-    HOHR = get_object_or_404(Staff, type="HOHR")
-
-    if request.method == "POST":
-        form_data = request.POST
-        leave_request.applicant_approval = form_data.get("staff_ack")
-        leave_request.applicant_approval_date = timezone.now()
-        leave_request.save()
-
-        if leave_request.applicant_approval == "REJECTED":
-            leave_request.status = "CANCELLED"
-            notify_staff_rejection(leave_request, department_head)
-
-        elif leave_request.applicant_approval == "APPROVED":
-            leave_request.status = "APPROVED"
-            notify_staff_approval(leave_request, department_head)
-
-        response = HttpResponseRedirect(reverse("success_page", args=[slug,]))
-        response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-        return response
-
-    # Prepare response context
-    context = {
-        "leave_request": leave_request,
-        "department_head_name": f"{department_head.first_name} {department_head.last_name} {department_head.other_names}",
-        "HOHR_name": f"{HOHR.first_name} {HOHR.last_name} {HOHR.other_names}",
-    }
-
-    response = render(request, "staff_ack.html", context)
-    response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-    return response
-
-# def notify_staff_rejection(leave_request, department_head):
-#     """Send notifications upon leave request rejection."""
-#     subject = "Notification of Leave Request Cancellation"
-#     message = (
-#         f"Dear {department_head.first_name},\n\n"
-#         f"I hope this email finds you well.\n\n"
-#         f"The leave application submitted on {leave_request.application_date} "
-#         f"by {leave_request.applicant.first_name} {leave_request.applicant.last_name} has been cancelled.\n\n"
-#         f"If further clarification is required, please reach out.\n\n"
-#         f"Yours sincerely,\nGCPS Leave System"
-#     )
-#     Email.objects.create(subject=subject, message=message, receiver=department_head.email)
-
-#     subject = "Acknowledgment of Leave Request Terms Denial"
-#     message = (
-#         f"Dear {leave_request.applicant.first_name},\n\n"
-#         f"We acknowledge your response regarding the approved leave request.\n\n"
-#         f"If additional clarifications are required, kindly notify your Administrator.\n\n"
-#         f"Yours sincerely,\nGCPS Leave System"
-#     )
-#     Email.objects.create(subject=subject, message=message, receiver=leave_request.applicant.email)
-
-# def notify_staff_approval(leave_request, department_head):
-#     """Send notifications upon leave request approval."""
-#     subject = "Leave Request Acknowledgement"
-#     message = (
-#         f"Dear {department_head.first_name},\n\n"
-#         f"The leave application submitted by {leave_request.applicant.first_name} {leave_request.applicant.last_name} "
-#         f"on {leave_request.application_date:%B %d, %Y} has been approved.\n\n"
-#         f"If further clarification is required, please reach out.\n\n"
-#         f"Yours sincerely,\nGCPS Leave System"
-#     )
-#     Email.objects.create(subject=subject, message=message, receiver=department_head.email)
-
-#     subject = "Confirmation of Leave Request Terms Acceptance"
-#     message = (
-#         f"Dear {leave_request.applicant.first_name},\n\n"
-#         f"Your leave request submitted on {leave_request.application_date} has been approved.\n\n"
-#         f"If you require any further clarification, please contact our support team.\n\n"
-#         f"Yours sincerely,\nGCPS Leave System"
-#     )
-#     Email.objects.create(subject=subject, message=message, receiver=leave_request.applicant.email)
-
-
-
-# def leave_details_view(request, staff_slug, slug):
-#     """Handles staff leave details efficiently using session validation."""
-    
-#     user_slug = request.session.get("user_slug") or change_session(slug)
-    
-#     if not user_slug:
-#         return redirect(reverse("login", args=["leave_details_view"]))
-
-#     request.session.update({"prev_page": "signup"})
-
-#     user = get_object_or_404(Staff.objects.select_related("department"), slug=user_slug)
-#     staff = get_object_or_404(Staff.objects.select_related("department"), slug=staff_slug)
-
-#     if request.method == "POST":
-#         form = LeaveDetailsForm(request.POST)
-
-#         if form.is_valid():
-#             new_leave_details = Leave_Details.objects.create(
-#                 staff=staff,
-#                 days_entitled=form.cleaned_data["days_entitled"],
-#                 days_eligible=form.cleaned_data["days_eligible"],
-#                 days_taken=form.cleaned_data["days_taken"],
-#                 days_remaining=form.cleaned_data["days_entitled"] - form.cleaned_data["days_taken"]
-#             )
-
-#             # Update session messages
-#             request.session.update({
-#                 "prev_page": f"/signup/{slug}",
-#                 "button": "Add another User",
-#                 "message": (
-#                     f"User created successfully.\n\tName:\t{staff.first_name} {staff.last_name}, {staff.other_names}\n"
-#                     f"\tEmail:\t{staff.email}\n\tDepartment:\t{staff.department.department_name}\n"
-#                     f"\tPosition:\t{staff.position}\n\nLeave Details\n\tDays Entitled:\t{new_leave_details.days_entitled}\n"
-#                     f"\tDays Eligible:\t{new_leave_details.days_eligible}\n\tDays Taken:\t{new_leave_details.days_taken}\n"
-#                     f"\tDays Remaining:\t{new_leave_details.days_remaining}"
-#                 ),
-#                 "next_page": f"/leaveapplications/{slug}",
-#                 "next_btn": "Back to Dashboard"
-#             })
-
-#             # Update LoginSession efficiently
-#             LoginSession.objects.filter(slug=staff_slug).update(
-#                 prev_page=f"signup",
-#                 button="Add another User",
-#                 next_page=f"leave_list",
-#                 next_btn="Back to Dashboard",
-#                 message=request.session.get("message", None)
-#             )
-
-#             response = HttpResponseRedirect(reverse("success_page", args=[slug,]))
-#             response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-#             return response
-
-#     else:
-#         form = LeaveDetailsForm()
-
-#     context = {
-#         "form": form,
-#         "user_name": f"{staff.last_name}, {staff.first_name} {staff.other_names}",
-#         "staff_slug": staff_slug, 'slug': slug,
-#     }
-
-#     response = render(request, "leave_details_form.html", context)
-#     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
-#     return response
-
-
-
-# def is_not_integer(s):
-#     try:
-#         int(s)  # Try converting the string to an integer
-#         return False  # If successful, it's a valid integer
-#     except ValueError:
-#         return True  # If an error occurs, it's not an integer
 
 
 
@@ -1041,232 +780,6 @@ def users_on_leave(request, slug):
     return response
 
 
-
-
-
-# def all_staff(request, slug):
-#     """Handles the staff list view efficiently using session validation."""
-
-#     user_slug = request.session.get("user_slug") or change_session(slug)
-    
-#     if not user_slug:  # Redirect if no session is found
-#         return redirect(reverse("login", args=["all_staff"]))
-
-#     user = get_object_or_404(Staff.objects.select_related("department"), slug=user_slug)
-
-#     grouped_staff = {}  # Dictionary to hold department-wise staff mapping
-#     department_name = user.department.department_name if user.department else ""
-    
-#     if user.type == "HOD":
-#         departments = (Department.objects.filter(department_head=user) | Department.objects.filter(acting_department_head=user)).order_by("department_name")
-#         members = {}
-#         for department in departments:
-#             temp = Staff.objects.filter(department_id=department.id).order_by('last_name')
-#             members[department] = temp
-#         context = {
-#             "user_type": user.type,
-#             "members": members,
-#             "department_name": department_name,
-#             "slug2": user.slug,
-#         }
-    
-#     elif user.type in {"HOHR", "RECTOR"}:
-#         departments = Department.objects.all()
-#         unassigned_staff_exists = Staff.objects.filter(department=None).exists()
-
-#         for department in departments:
-#             staff = Staff.objects.filter(department=department, is_superuser=False).order_by("last_name")
-#             grouped_staff[department] = staff
-        
-#         context = {
-#             "user_type": user.type,
-#             "department_name": department_name,
-#             "slug": slug,
-#             "group": grouped_staff,
-#             "ustaff": unassigned_staff_exists,
-#             "slug2": slug,
-#         }
-
-#     response = render(request, "all_staff.html", context)
-#     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
-#     return response
-
-
-
-
-
-# def department_details(request, department_id, slug):
-#     """Handles department details efficiently using session validation."""
-#     user_slug = request.session.get("user_slug") or change_session(slug)
-#     if not user_slug:
-#         print("goin back") 
-#         return redirect(reverse("login", args=["department_details"]))
-
-#     user = get_object_or_404(Staff.objects.select_related("department"), slug=user_slug)
-
-#     # Only allow HOHR and RECTOR roles
-#     if user.type not in {"HOHR", "RECTOR"}:
-#         return HttpResponse("Please sign in", status=403)
-
-#     department = get_object_or_404(Department, id=int(department_id))
-
-#     # Retrieve related staff and departments efficiently
-#     all_staff = Staff.objects.order_by("department_id")
-#     members = Staff.objects.filter(department=department)
-#     all_departments = Department.objects.exclude(id=department_id).order_by("department_name")
-
-#     # Handle POST request
-#     if request.method == "POST":
-#         form_data = request.POST
-
-#         if "department_head" in form_data:
-#             # Update department details
-#             former_head = Staff.objects.get(id=department.department_head_id)
-#             former_head.type = "STAFF"
-#             former_head.position = "Unknown"
-#             former_head.save()
-#             department.department_name = form_data.get("department_name", department.department_name)
-#             department.department_head_id = int(form_data.get("department_head", department.department_head_id))
-#             department.department_image = form_data.get("department_image") if "department_image" in form_data != '' else department.department_image
-            
-#             staff = Staff.objects.get(id=department.department_head_id)
-#             staff.department_id = department.id if staff.department_id != department.id and staff.type == "STAFF" else staff.department_id
-#             staff.type = "HOD"
-#             staff.position = f"Head of {department.department_name}"
-#             department.department_head_email = staff.email
-#             department.save()
-#             staff.save()
-
-#         elif "delete-option" in form_data:
-#             delete_option = form_data["delete-option"]
-
-#             if delete_option == "reassign":
-#                 for index, member in enumerate(members, start=1):
-#                     new_department_id = int(form_data.get(f"member_name{index}", member.department_id))
-#                     member.department_id = new_department_id
-#                     member.save()
-#                 department.delete()
-
-#             elif delete_option == "set_to_none":
-#                 members.update(department=None)
-#                 department.delete()
-
-#             elif delete_option == "delete_all":
-#                 members.delete()
-#                 department.delete()
-
-#             else:
-#                 department.delete()
-
-#             request.session.update({
-#                 "prev_page": "not",
-#                 "button": "not",
-#                 "next_page": f"all_staff",
-#                 "next_btn": "View All Staff",
-#                 "message": "Department deleted successfully."
-#             })
-#            # Update LoginSession efficiently
-#             LoginSession.objects.filter(slug=slug).update(
-#                 prev_page="not",
-#                 button="not",
-#                 next_page=f"all_staff",
-#                 next_btn="View All Staff",
-#                 message="Department deleted successfully.",
-#                 last_activity=timezone.now(),
-#                 date_to_expire=timezone.now() + timezone.timedelta(days=1)
-#             )
-
-#             return HttpResponseRedirect(reverse("success_page", args=[slug,]))
-
-#     # Render response
-#     context = {
-#         "department": department,
-#         "all_staff": all_staff,
-#         "members": members,
-#         "all_departments": all_departments,
-#         "slug": slug
-#     }
-    
-#     response = render(request, "department_details.html", context)
-#     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
-#     return response
-
-
-
-# def staff_delete(request, slug):
-#     """Handles staff deletion securely with optimized session validation."""
-
-#     user_slug = request.session.get("user_slug") or change_session(slug)
-
-#     if not user_slug:
-#         return redirect(reverse("login", args=["staff_delete"]))
-
-#     request.session.update({
-#         "prev_page": "admin_dashboard",
-#         "message": "Staff deleted successfully.",
-#         "button": "Back to dashboard",
-#         "next_page": "all_staff",
-#         "next_btn": "Back to all staff",
-#     })
-
-#     # Update LoginSession efficiently
-#     LoginSession.objects.filter(slug=user_slug).update(
-#         prev_page="admin_dashboard",
-#         button="Back to dashboard",
-#         next_page="all_staff",
-#         next_btn="Back to all staff",
-#         message="Staff deleted successfully.",
-#         last_activity=timezone.now(),
-#         date_to_expire=timezone.now() + timezone.timedelta(days=1),
-#     )
-
-#     if request.method == "POST":
-#         staff_id = request.POST.get("staff_id")
-#         staff = get_object_or_404(Staff, id=staff_id)
-#         staff.delete()
-
-#         response = HttpResponseRedirect(reverse("all_staff", args=[slug,]))
-#         response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
-#     return response
-
-
-
-
-
-# def staff_password_reset(request, slug):
-#     """Handles staff password reset requests securely with session validation."""
-
-#     user_slug = request.session.get("user_slug") or change_session(slug)
-
-#     if not user_slug:
-#         return redirect(reverse("login", args=["staff_password_reset"]))
-
-#     if request.method == "POST":
-#         staff_id = request.POST.get("staff_id")
-#         staff = get_object_or_404(Staff, id=staff_id)
-
-#         message = (
-#             f"Dear {staff.first_name}, \n\n"
-#             f"Your administrator has initiated a password reset for your account. \n\n"
-#             f"Please use the following link to reset your password: \n\n"
-#             f"{request.build_absolute_uri(reverse('password_reset'))}"
-#             f"\n\nIf you did not request this change, please contact your administrator immediately.\n\n"
-#             f"Best regards,\nGCPS Leave System"
-#         )
-
-#         Email.objects.create(
-#             subject="Password Reset Request",
-#             message=message,
-#             receiver=staff.email
-#         )
-
-#         response = HttpResponseRedirect(reverse("all_staff", args=[slug]))
-#         response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
-#         return response
 
 
 
@@ -1327,99 +840,6 @@ def profile(request, slug):
     return response
 
 
-
-# def staff_details(request, staff_slug, slug):
-#     """Handles staff details with optimized session validation and form processing."""
-#     user_slug = request.session.get("user_slug") or change_session(slug)
-#     if not user_slug:
-#         return redirect(reverse("login", args=["0",]))
-
-#     user = get_object_or_404(Staff.objects.select_related("department"), slug=user_slug)
-#     staff = get_object_or_404(Staff.objects.select_related("department"), slug=staff_slug)
-#     leave_details = get_object_or_404(Leave_Details, staff=staff)
-#     leave_requests = Leave_Request.objects.filter(applicant=staff).order_by("-application_date")
-
-#     request.session.update({
-#         "prev_page": "all_staff",
-#         "message": "Details updated successfully",
-#         "button": "Back to All Staff",
-#         "next_page": "admin_dashboard",
-#         "next_btn": "Back to Dashboard",
-#     })
-
-#     LoginSession.objects.filter(slug=user_slug).update(
-#         prev_page="all_staff",
-#         button="Back to All Staff",
-#         next_page="admin_dashboard",
-#         next_btn="Back to Dashboard",
-#         message="Details updated successfully",
-#         last_activity=timezone.now(),
-#         date_to_expire=timezone.now() + timezone.timedelta(days=1),
-#     )
-
-#     # Determine accessible departments
-#     departments = Department.objects.all() if user.type in {"HOHR", "RECTOR"} else Department.objects.filter(id=user.department.id)
-
-#     if request.method == "POST":
-#         form_data = request.POST
-#         staff.first_name = form_data.get("first_name", staff.first_name)
-#         staff.last_name = form_data.get("last_name", staff.last_name)
-#         staff.other_names = form_data.get("other_names", staff.other_names)
-#         staff.phone_number = form_data.get("phone", staff.phone_number)
-#         staff.department_id = form_data.get("department", staff.department_id)
-#         staff.position = form_data.get("position", staff.position)
-#         staff.leave_status = form_data.get("leave_status", staff.leave_status)
-#         staff.email = form_data.get("email", staff.email)
-#         staff.type = form_data.get("staff_type", staff.type)
-#         staff.save()
-#         leave_details.days_entitled = int(form_data.get("days_entitled", leave_details.days_entitled))
-#         leave_details.days_eligible = int(form_data.get("days_eligible", leave_details.days_eligible))
-#         leave_details.save()
-#         print("bob is gone")
-#         response = HttpResponseRedirect(reverse("success_page", args=[slug,]))
-#         return response
-
-#     context = {
-#         "slug": slug,
-#         "staff": staff,
-#         "departments": departments,
-#         "leave_details": leave_details,
-#         "leave_requests": leave_requests,
-#         "days_entitled": range(1, 101),
-#         "user_type": user.type,
-#     }
-
-#     response = render(request, "staff_details.html", context)
-#     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
-#     return response
-
-
-
-
-
-# def leave_details(request, leave_id, slug):
-#     """Handles leave request details with optimized session validation."""
-
-#     user_slug = request.session.get("user_slug") or change_session(slug)
-
-#     if not user_slug:
-#         return redirect(reverse("login", args=["leave_list"]))
-
-#     user = get_object_or_404(Staff.objects.select_related("department"), slug=user_slug)
-#     leave_request = get_object_or_404(Leave_Request, id=leave_id)
-#     user_leave_details = get_object_or_404(Leave_Details, staff=user)
-
-#     context = {
-#         "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
-#         "leave_request": leave_request,
-#         "user_leave_details": user_leave_details,
-#     }
-
-#     response = render(request, "leave_details.html", context)
-#     response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-
-#     return response
 
 
 
