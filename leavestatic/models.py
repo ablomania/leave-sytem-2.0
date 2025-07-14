@@ -16,8 +16,12 @@ class Group(models.Model):
         return f"{self.name}"
 
 class SystemAdmin(models.Model):
-    staff = models.ForeignKey("Staff", on_delete=models.CASCADE, null=True)
+    staff = models.OneToOneField("Staff", on_delete=models.CASCADE, related_name="admin_profile")
     is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.staff.get_full_name()} (Admin)"
+
 
 class Seniority(models.Model):
     name = models.CharField(max_length=255)
@@ -105,6 +109,17 @@ class Leave(models.Model):
     status = models.CharField(max_length=20, choices=LeaveStatus.choices, default=LeaveStatus.On_Leave)
     def __str__(self):
         return f"{self.name}"
+
+
+class LeaveBalanceReset(models.Model):
+    staff = models.ForeignKey("Staff", on_delete=models.CASCADE)
+    leave_type = models.ForeignKey("LeaveType", on_delete=models.CASCADE)
+    reset_date = models.DateField(auto_now_add=True)
+    previous_remaining = models.IntegerField(null=True)
+    new_entitlement = models.IntegerField(null=True)
+    days_carried_forward = models.IntegerField(null=True)
+    was_on_leave = models.BooleanField(default=False)
+    note = models.TextField(null=True, blank=True)
 
 
 
@@ -209,6 +224,7 @@ class Ack(models.Model):
 class ApproverSwitch(models.Model):
     old_approver = models.ForeignKey("Approver", on_delete=models.CASCADE, null=True, related_name="real_approver")
     new_approver = models.ForeignKey("Approver", on_delete=models.CASCADE, null=True, related_name="auxiliary_approver")
+    leave_obj = models.ForeignKey("Leave", on_delete=models.CASCADE, null=True)
     date_created = models.DateField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
 

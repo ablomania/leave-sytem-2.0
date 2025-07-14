@@ -28,18 +28,6 @@ from django.contrib import messages
 
 
 
-# # for leave_request in Leave_Request.objects.all():
-# #     if leave_request.leave_end_date < datetime.date.today() and leave_request.status != Leave_Request.Status.COMPLETED:
-# #         if leave_request.status != Leave_Request.Status.APPROVED:
-# #             print(f"Leave request {leave_request.id} has an end date in the past and is not completed. Updating status to REJECTED.")
-# #             leave_request.status = Leave_Request.Status.REJECTED
-# #         else: leave_request.status = Leave_Request.Status.COMPLETED
-# #         leave_request.save()
-# #         print(f"Updated leave request {leave_request.id} to REJECTED due to end date being in the past.")
-
-# # # for leave_details in Leave_Details.objects.all():
-# # #     if 
-
 
 def index(request):
     template = loader.get_template('index.html')
@@ -50,65 +38,60 @@ def index(request):
     return HttpResponse(template.render(context, request))
 
 
-def login_user(request, next_page):
-    next_page = next_page if next_page else '0'  # Default to '0' if empty
-    template = loader.get_template('login.html')
+def login_user(request, next_page=None):
+    next_page = next_page or '0'
+    form = LoginForm(request.POST or None)
 
-    if request.method == 'POST':
-        form = LoginForm(request.POST)
-        if form.is_valid():
-            email = form.cleaned_data['username']
-            password = form.cleaned_data['password']
+    if request.method == 'POST' and form.is_valid():
+        email = form.cleaned_data['username']
+        password = form.cleaned_data['password']
+        staff = Staff.objects.filter(email=email).first()
 
-            # Fetch staff object efficiently
-            staff = Staff.objects.filter(email=email).first()
-            if not staff:
-                return redirect(reverse('login', args=['0',]))
-
+        if not staff:
+            form.add_error(None, "Invalid username or password")
+        else:
             user = authenticate(request, username=staff.username, password=password)
             if user:
                 login(request, user)
-                
-                temp_session = LoginSession.objects.filter(user=user)
-                if len(temp_session) > 0:
-                    # Delete previous sessions for the user
-                    print("Deleting previous sessions for user:", user.username)
-                    for session in temp_session:
-                        session.delete()
-                slug=random_string(50)
-                other_sessions = LoginSession.objects.filter(slug=slug)
-                while len(other_sessions) > 0:
+
+                # Remove old login sessions in bulk
+                LoginSession.objects.filter(user=user).delete()
+
+                # Ensure unique slug
+                slug = random_string(50)
+                while LoginSession.objects.filter(slug=slug).exists():
                     slug = random_string(50)
-                    other_sessions = LoginSession.objects.filter(slug=slug)
-                new_session = LoginSession(
+
+                LoginSession.objects.create(
                     user=user,
                     session_key=request.session.session_key,
-                    status='ACTIVE',
+                    status=LoginSession.Status.ACTIVE,
                     slug=slug,
                 )
-                new_session.save()
 
-                request.session.modified = True  # Ensure session persistence
-                
-                print("Session user_slug:", request.session.get('user_slug'))
-                if next_page.isdigit() and int(next_page) > 0:
-                    response = HttpResponseRedirect(reverse('relieve_ack', args=[next_page, slug]))
-                elif next_page != '0':
-                    response = HttpResponseRedirect(reverse(next_page, args=[slug,]))
-                else:
-                    response = HttpResponseRedirect(reverse('dashboard', args=[slug]))
                 request.session.update({
                     'user_slug': user.slug,
                     'user_email': user.email
                 })
+
+                # Check if user is an active admin
+                if hasattr(user, 'admin_profile') and user.admin_profile.is_active:
+                    redirect_path = reverse('setup', args=[slug])
+                elif next_page.isdigit() and int(next_page) > 0:
+                    redirect_path = reverse('relieve_ack', args=[next_page, slug])
+                elif next_page != '0':
+                    redirect_path = reverse(next_page, args=[slug])
+                else:
+                    redirect_path = reverse('dashboard', args=[slug])
+
+                response = redirect(redirect_path)
                 response.set_cookie('session_id', request.session.session_key, max_age=86400, secure=True, httponly=True)
                 return response
             else:
                 form.add_error(None, "Invalid username or password")
 
-    else:
-        form = LoginForm()
     context = {'form': form, 'login': True, 'next_page': next_page}
+    template = loader.get_template('login.html')
     response = HttpResponse(template.render(context, request))
     response.set_cookie('session_id', request.session.session_key, max_age=86400, secure=True, httponly=True)
     return response
@@ -131,6 +114,7 @@ def trigger_leave_update(request):
 
     try:
         update_leave_progress()
+        restore_original_approvers()
         message = f"✅ Leave progress updated successfully at {timezone.now().strftime('%H:%M %p')}."
         color = "#0077c0"
     except Exception as e:
@@ -204,13 +188,14 @@ def dashboard(request, slug):
     r_ack = Ack.objects.filter(staff_id=user.id, type=Ack.Type.RELIEF, status=Ack.Status.Pending).first()
     leaves_count = LeaveRequest.objects.filter(applicant_id=user.id).count()
     on_leave = Leave.objects.filter(request__applicant_id=user.id, status=Leave.LeaveStatus.On_Leave).first()
-    
+    resume_obj = Resumption.objects.filter(staff_id=user.id, is_active=True, confirmed=False).first()
+
     context = {
         "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
         'slug': slug,
         'is_approver': is_approver, "self_ack": self_ack,
         "r_ack": r_ack, "leaves_count": leaves_count,
-        "on_leave": on_leave
+        "on_leave": on_leave, "resume_obj": resume_obj
     }
 
     response = render(request, "dashboard.html", context)
@@ -272,19 +257,12 @@ def password_reset(request):
 
 
 
-def sys_admin_login(request):
-    template = loader.get_template("login.html")
-    if request.method == "POST":
-        form = LoginForm(request.POST)
-    else: form = LoginForm()
-    context = {
-        'is_sys_admin' : True, "form" : form,
-    }
-    return HttpResponse(template.render(context, request))
 
-
-
-def setup(request):
+def setup(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["leave_request"]))
+    
     template = loader.get_template("setup.html")
     groups = Group.objects.filter(is_active=True)
     levels = Level.objects.all()
@@ -361,7 +339,7 @@ def setup(request):
         elif form_data['form_meta'] == "add_level": add_lvl(form_data)
         elif form_data['form_meta'] == "edit_level": edit_lvl(form_data)
         print(form_data)
-        return redirect(setup)
+        return redirect(reverse('setup', args=[slug,]))
 
     context = {
         'first_time': False, 'groups_list': groups_list,
@@ -391,6 +369,7 @@ def leave_request(request, slug):
     """Handles leave request submission with session validation and message feedback."""
 
     user_slug = request.session.get("user_slug") or change_session(slug)
+
     if not user_slug:
         return redirect(reverse("login", args=["leave_request"]))
 
@@ -594,7 +573,7 @@ def leaveComplete(request, id, slug):
         confirmed = request.POST.get("confirm") == "on"
 
         # Save resumption record
-        Resumption.objects.create(
+        Resumption.objects.update_or_create(
             staff=user,
             leave_request=leave_request,
             notes=notes,

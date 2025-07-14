@@ -1,7 +1,7 @@
 from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
-from .models import Holiday, LeaveRequest, CancelledLeave, StaffLeaveDetail, Leave, Ack, Approval, Approver, Staff
+from .models import Holiday, Resumption, ApproverSwitch, LeaveRequest, CancelledLeave, StaffLeaveDetail, Leave, Ack, Approval, Approver, Staff
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.utils import timezone
@@ -11,7 +11,7 @@ from django.core.mail import EmailMessage
 def handle_leave_cancellation(leave, staff, reason):
     """
     Cancels an approved leave, logs details, updates balances,
-    and sends notification to staff, approvers, and relieving officer.
+    restores approvers, creates resumption, and sends notification.
     """
 
     leave_request = leave.request
@@ -28,7 +28,7 @@ def handle_leave_cancellation(leave, staff, reason):
             elapsed_days += 1
         current += timezone.timedelta(days=1)
 
-    # ✏️ Update Leave record
+    # ✏️ Update Leave object
     leave.days_remaining = max(leave.days_granted - elapsed_days, 0)
     leave.status = Leave.LeaveStatus.Cancelled
     leave.is_active = False
@@ -38,31 +38,61 @@ def handle_leave_cancellation(leave, staff, reason):
     detail = StaffLeaveDetail.objects.filter(staff=staff, leave_type=leave_request.type).first()
     if detail:
         detail.days_taken += leave.days_remaining
-        detail.save()
+        detail.save(update_fields=["days_taken"])
 
-    # 🗂️ Log to CancelledLeave
+    # 🗂️ Log CancelledLeave record
     CancelledLeave.objects.create(
         staff=staff,
         leave_request=leave_request,
         original_leave=leave,
         reason=reason,
         days_used=elapsed_days,
-        days_remaining_at_cancel=leave.days_remaining
+        days_remaining_at_cancel=leave.days_remaining,
+        is_active=True
     )
 
-    # 📩 Collect email recipients
+    # ✅ Mark LeaveRequest as Completed
+    leave_request.status = LeaveRequest.Status.COMPLETED
+    leave_request.save(update_fields=["status"])
+
+    # 🟢 Create a Resumption record
+    Resumption.objects.create(
+        staff=staff,
+        leave_request=leave_request,
+        confirmed=True,
+        notes=f"System-generated resumption due to cancellation on {today}.",
+        is_active=True
+    )
+
+    # ❌ Deactivate pending approvals
+    Approval.objects.filter(request=leave_request, status=Approval.ApprovalStatus.Pending, is_active=True)\
+        .update(is_active=False)
+
+    # 🔁 Restore original approvers if switches were made
+    switches = ApproverSwitch.objects.filter(leave_obj=leave, is_active=True)
+    for switch in switches:
+        old = switch.old_approver
+        new = switch.new_approver
+
+        old.is_active = True
+        new.is_active = False
+        old.save(update_fields=["is_active"])
+        new.save(update_fields=["is_active"])
+        switch.is_active = False
+        switch.save(update_fields=["is_active"])
+
+    # 📩 Compile notification recipients
     cc_emails = [
         a.approver.staff.email
         for a in Approval.objects.filter(request=leave_request, is_active=True)
         if a.approver.staff.email
     ]
 
-    # Add relieving officer if available
     relief_ack = Ack.objects.filter(request=leave_request, type=Ack.Type.RELIEF, is_active=True).first()
     if relief_ack and relief_ack.staff.email:
         cc_emails.append(relief_ack.staff.email)
 
-    # 📝 Email content
+    # ✉️ Compose and send cancellation email
     subject = f"Leave Cancellation Notice: {leave_request.type.name}"
     message = (
         f"Dear {staff.first_name},\n\n"
@@ -71,22 +101,14 @@ def handle_leave_cancellation(leave, staff, reason):
         f"Days remaining at cancellation: {leave.days_remaining}\n\n"
         f"Reason provided: {reason or 'No reason specified.'}\n\n"
         f"Your leave balance has been updated accordingly.\n\n"
-        f"**Additional Notes:**\n"
-        f"• Ensure handovers and transitional arrangements are handled promptly.\n"
-        f"• Relieving officers will be notified accordingly.\n"
-        f"• For any concerns, feel free to contact the HR department.\n\n"
+        f"— A system-generated resumption has been logged.\n"
+        f"— Your approving responsibilities have been restored.\n"
+        f"— Relieving officers have been notified.\n\n"
+        f"For questions, contact HR.\n\n"
         f"Sincerely,\nGCPS Leave System"
     )
 
-    # 🚀 Send notification
-    email = EmailMessage(
-        subject=subject,
-        body=message,
-        from_email=settings.EMAIL_HOST_USER,
-        to=[staff.email],
-        cc=cc_emails
-    )
-    email.send(fail_silently=False)
+    EmailMessage(subject, message, settings.EMAIL_HOST_USER, [staff.email], cc=cc_emails).send(fail_silently=False)
 
 
 

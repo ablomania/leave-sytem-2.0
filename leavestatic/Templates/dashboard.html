@@ -16,8 +16,17 @@
                 <img src="{% static 'images/power-button.png' %}" width="20px" height="20px" alt="logout" title="Log out">
             </a>
         </div>
-                
+        
         <div class="grid_main">
+            {% if resume_obj %}
+            <a href="{% url 'leaveComplete' resume_obj.id slug %}">
+                <div class="grid_item">
+                    <img src="{% static 'images/job-seeker.png' %}" height="100px" width="100px" alt="icon">
+                    <p>Confirm Resumption Of Duty</p>
+                </div>
+            </a>
+            {% endif %}
+
             <a href="{% url 'leave_request' slug %}">
                 <div class="grid_item">
                     <img src="{% static 'images/ask.png' %}" height="100px" width="100px" alt="icon">
@@ -71,7 +80,7 @@
             {% if on_leave %}
             <a href="{% url 'cancel_leave' on_leave.id slug %}">
                 <div class="grid_item">
-                    <img src="{% static 'images/past.png' %}"  height="100px" width="100px" alt="">
+                    <img src="{% static 'images/cncl.gif' %}"  height="100px" width="100px" alt="">
                     <p>Cancel Leave</p>
                 </div>
             </a>

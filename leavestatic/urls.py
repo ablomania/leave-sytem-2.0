@@ -3,7 +3,6 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    path('leave_system_admin_login', views.sys_admin_login, name = 'sys_admin_login'),
     path('leave_request/<str:slug>', views.leave_request, name='leave_request'),
     path('login/<str:next_page>', views.login_user, name='login'),
     path('dashboard/<str:slug>', views.dashboard, name="dashboard"),
@@ -30,6 +29,6 @@ urlpatterns = [
     path('update_leave', views.trigger_leave_update, name="update_leave"),
     # path('success/<str:slug>', views.success_page, name='success_page'),
     # path('device_info/<str:slug>', views.sec_check, name="sec_check"),
-    path('system_admin', views.sys_admin, name='sys_admin'),
-    path('system_setup', views.setup, name='setup'),
+    # path('system_admin', views.sys_admin, name='sys_admin'),
+    path('system_setup/<str:slug>', views.setup, name='setup'),
 ]
