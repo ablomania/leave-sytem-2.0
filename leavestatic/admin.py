@@ -1,5 +1,7 @@
 from django.contrib import admin
 from .models import *
+from django_celery_beat.models import PeriodicTask, CrontabSchedule
+
 # Register your models here.
 admin.site.register(Staff)
 # admin.site.register(Position)
@@ -20,3 +22,4 @@ admin.site.register(Seniority)
 admin.site.register(Holiday)
 admin.site.register(CancelledLeave)
 admin.site.register(Resumption)
+

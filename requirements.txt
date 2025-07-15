@@ -1,5 +1,9 @@
 Django
 python-decouple
-psycopg2
+psycopg2-binary
 whitenoise
 pillow
+celery
+django-celery-beat
+redis
+gunicorn

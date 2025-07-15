@@ -1,5 +1,7 @@
 from .models import *
 from django.urls import reverse
+from django.contrib.auth import get_user_model
+
 #Staff
 def add_staff(form_data, request):
     def get_instance(model, key):
@@ -256,11 +258,11 @@ def add_approver(form_data):
                 )
 
             # Send email notification to the approver
-            approver = Staff.objects.get(id=approver_id)
+            approver = new_approver
             subject = "New Approver Assignment"
             message = (
-                f"Dear {approver.first_name},\n\n"
-                f"You have been assigned as an approver for group '{approver.group.name}' "
+                f"Dear {approver.staff.first_name},\n\n"
+                f"You have been assigned as an approver for group '{approver.group_to_approve.name}' "
                 f"at level '{approver.level.name}'.\n\n"
                 f"There are {pending_requests.count()} pending leave requests awaiting your review.\n"
                 f"Please log in to the system to view and take action.\n\n"
@@ -281,41 +283,28 @@ def add_approver(form_data):
 #Edit Approver
 def edit_approver(form_data):
     """
-    Updates the approver assignments for a staff member.
-    Expects:
-        - approver_staff: staff id
-        - groups: list of group ids (or a single id)
-        - levels: list of level ids (or a single id)
-      Only pairs up to the length of the shorter list.
+    Updates the approver assignments and sends email listing assigned group & level names.
     """
     try:
-        # Accept both list and single value for staff_id
         staff_id_val = form_data['approver_staff']
-        if isinstance(staff_id_val, (list, tuple)):
-            staff_id = int(staff_id_val[0])
-        else:
-            staff_id = int(staff_id_val)
+        staff_id = int(staff_id_val[0]) if isinstance(staff_id_val, (list, tuple)) else int(staff_id_val)
 
-        # Get group_ids and level_ids as lists
         if hasattr(form_data, 'getlist'):
             group_ids = form_data.getlist('groups')
             level_ids = form_data.getlist('levels')
         else:
             group_ids = form_data.get('groups')
             level_ids = form_data.get('levels')
-            if isinstance(group_ids, str):
-                group_ids = [group_ids]
-            if isinstance(level_ids, str):
-                level_ids = [level_ids]
+            group_ids = [group_ids] if isinstance(group_ids, str) else group_ids
+            level_ids = [level_ids] if isinstance(level_ids, str) else level_ids
 
-        # Remove empty strings
         group_ids = [gid for gid in group_ids if gid]
         level_ids = [lid for lid in level_ids if lid]
 
-        # Remove all current approvers for this staff
         Approver.objects.filter(staff_id=staff_id).delete()
 
-        # Only create as many pairs as the shorter list
+        assigned_pairs = []
+
         for group_id, level_id in zip(group_ids, level_ids):
             try:
                 Approver.objects.create(
@@ -323,8 +312,29 @@ def edit_approver(form_data):
                     group_to_approve_id=int(group_id),
                     level_id=int(level_id)
                 )
+
+                # Fetch readable names
+                group_name = Group.objects.get(id=int(group_id)).name
+                level_name = Level.objects.get(id=int(level_id)).name
+                assigned_pairs.append(f"• {group_name} (Level: {level_name})")
+
             except Exception as e:
                 print(f"Error creating approver for group {group_id} and level {level_id}: {e}")
+
+        # Send email with assignment details
+        User = get_user_model()
+        approver = User.objects.get(id=staff_id)
+
+        subject = "Approver Assignment Updated"
+        message = (
+            f"Dear {approver.first_name},\n\n"
+            f"You have been assigned as an approver for the following:\n\n" +
+            "\n".join(assigned_pairs) +
+            "\n\nPlease log in to review your responsibilities.\n\nRegards,\nGCPS Leave System"
+        )
+
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [approver.email])
+
     except Exception as e:
         print(f"Error editing approver: {e}")
     return
@@ -333,47 +343,60 @@ def edit_approver(form_data):
 
 def del_approver(form_data):
     """
-    Deactivates Approver objects and related Approval records for a given staff member(s).
-    Expects:
-        - staff_id: single ID or list of IDs for approvers to deactivate
+    Deactivates Approver objects and related Approval records for a given staff member(s),
+    and sends a notification email to each affected approver.
     """
     staff_id = form_data.get('staff_id')
     if not staff_id:
         return
 
-    # Normalize to a list of integers
+    # Normalize to list of integers
     if isinstance(staff_id, (list, tuple)):
         staff_ids = [int(sid) for sid in staff_id if str(sid).isdigit()]
     else:
         staff_ids = [int(staff_id)] if str(staff_id).isdigit() else []
 
     if staff_ids:
-        # Find active Approver records
         approver_qs = Approver.objects.filter(staff_id__in=staff_ids, is_active=True)
-
-        # Collect approver IDs
         approver_ids = list(approver_qs.values_list("id", flat=True))
 
         # Deactivate approvers
         approver_qs.update(is_active=False)
 
-        # Deactivate related approval records
+        # Deactivate approval records
         if approver_ids:
             Approval.objects.filter(approver_id__in=approver_ids).update(is_active=False)
 
+        # Notify users
+        User = get_user_model()
+        for sid in staff_ids:
+            try:
+                user = User.objects.get(id=sid)
+                subject = "Approver Assignment Removed"
+                message = (
+                    f"Dear {user.first_name},\n\n"
+                    "You have been removed as an approver in the leave management system.\n"
+                    "If this change was unexpected, please contact your HR administrator.\n\n"
+                    "Regards,\nGCPS Leave System"
+                )
+                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+            except User.DoesNotExist:
+                print(f"User with ID {sid} not found.")
+            except Exception as e:
+                print(f"Error sending notification to user {sid}: {e}")
     return
 
 
 def res_approver(form_data):
     """
-    Restores an Approver object by setting is_active=True.
+    Restores Approver objects by setting is_active=True and sends email notification.
     Expects:
-        - approver_id: the id of the Approver object to restore
+        - approver_id: single ID or list of IDs
     """
     approver_id = form_data.get('approver_id')
     if not approver_id:
         return
-    # Accept both a single ID or a list of IDs
+
     if isinstance(approver_id, (list, tuple)):
         ids = [int(aid) for aid in approver_id if str(aid).isdigit()]
     else:
@@ -381,7 +404,26 @@ def res_approver(form_data):
 
     if ids:
         Approver.objects.filter(id__in=ids).update(is_active=True)
+
+        User = get_user_model()
+        for approver in Approver.objects.filter(id__in=ids).select_related('staff'):
+            try:
+                user = User.objects.get(id=approver.staff_id)
+                subject = "Approver Role Restored"
+                message = (
+                    f"Dear {user.first_name},\n\n"
+                    "Your approver role has been reactivated in the system.\n"
+                    "You may now resume approval duties for your assigned groups.\n\n"
+                    "Regards,\nGCPS Leave System"
+                )
+                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+            except User.DoesNotExist:
+                print(f"User with staff_id {approver.staff_id} not found.")
+            except Exception as e:
+                print(f"Error notifying user {approver.staff_id}: {e}")
+
     return
+
 
 
 #Leave type
