@@ -1,6 +1,7 @@
 from .models import *
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from .tasks import *
 
 #Staff
 def add_staff(form_data, request):
@@ -8,7 +9,7 @@ def add_staff(form_data, request):
         return model.objects.get(id=int(form_data[key]))
 
     try:
-        # Create the staff object without username initially
+        # 🚀 Create Staff object without username
         new_staff = Staff(
             first_name=form_data['first_name'],
             last_name=form_data['last_name'],
@@ -19,13 +20,13 @@ def add_staff(form_data, request):
             group=get_instance(Group, 'group'),
             seniority=get_instance(Seniority, 'seniority')
         )
-        new_staff.save()  # Assigns ID
+        new_staff.save()
 
-        # Generate username using staff ID
+        # 🧮 Generate username
         new_staff.username = f"{new_staff.first_name}{new_staff.phone_number}{new_staff.id}"
         new_staff.save(update_fields=["username"])
 
-        # Prepare leave detail records in bulk
+        # 📊 Create leave detail records
         allowed_leave_types = LeaveType.objects.filter(seniority=new_staff.seniority)
         leave_details = [
             StaffLeaveDetail(
@@ -38,8 +39,7 @@ def add_staff(form_data, request):
         ]
         StaffLeaveDetail.objects.bulk_create(leave_details)
 
-
-        # Send email notification to user
+        # ✉️ Compose email message
         subject = "Account Created Successfully"
         message = (
             f"Dear {new_staff.first_name},\n"
@@ -47,15 +47,16 @@ def add_staff(form_data, request):
             f"Your email is {new_staff.email}\n\n"
             f"Click on the link below to set your password:\n\n"
             f"{request.build_absolute_uri(reverse('password_reset'))}\n\n"
-            "Best regards, \nGCPS Leave System"
+            f"Best regards,\nGCPS Leave System"
         )
-        receiver = new_staff.email
-        send_mail( subject, message, settings.EMAIL_HOST_USER, [receiver], fail_silently=False)
+
+        # 📮 Send email asynchronously
+        send_leave_email.delay(subject, message, [new_staff.email])
 
         print("staff saved")
+
     except (KeyError, ValueError, Gender.DoesNotExist, Group.DoesNotExist, Seniority.DoesNotExist) as e:
         raise ValueError(f"Error adding staff: {e}")
-
 
     
 
@@ -63,11 +64,15 @@ def add_staff(form_data, request):
 def edit_staff(form_data):
     try:
         staff = Staff.objects.get(id=int(form_data['staff_id']))
-
-        # Track original seniority before update
         original_seniority_id = staff.seniority_id
+        original_group_id = staff.group_id
+        original_leave_types = list(
+            StaffLeaveDetail.objects.filter(staff=staff)
+            .select_related("leave_type")
+            .values_list("leave_type__name", flat=True)
+        )
 
-        # Update basic fields
+        # Update core fields
         for field in ['first_name', 'last_name', 'other_names', 'phone_number', 'email']:
             setattr(staff, field, form_data[field])
 
@@ -75,26 +80,56 @@ def edit_staff(form_data):
         staff.group = Group.objects.get(id=int(form_data['group']))
         new_seniority = Seniority.objects.get(id=int(form_data['seniority']))
         staff.seniority = new_seniority
-
         staff.save()
 
-        # If seniority has changed, reset leave entitlements
+        # 🎯 Leave entitlements reset + audit if seniority changed
         if original_seniority_id != new_seniority.id:
-            # Delete old leave details
             StaffLeaveDetail.objects.filter(staff=staff).delete()
-
-            # Create new leave details based on new seniority
             allowed_leave_types = LeaveType.objects.filter(seniority=new_seniority)
-            leave_details = [
+
+            # Log old vs. new entitlements
+            new_leave_names = list(allowed_leave_types.values_list("name", flat=True))
+            LeaveTypeAuditLog.objects.create(
+                staff=staff,
+                old_leave_types=" | ".join(original_leave_types),
+                new_leave_types=" | ".join(new_leave_names),
+                changed_by="System",
+                notes=f"Seniority changed from ID {original_seniority_id} to {new_seniority.id}"
+            )
+
+            StaffLeaveDetail.objects.bulk_create([
                 StaffLeaveDetail(
                     staff=staff,
-                    leave_type=leave_type,
+                    leave_type=lt,
                     days_taken=0,
-                    days_remaining=leave_type.days if leave_type.days is not None else None
+                    days_remaining=lt.days if lt.days is not None else None
                 )
-                for leave_type in allowed_leave_types
-            ]
-            StaffLeaveDetail.objects.bulk_create(leave_details)
+                for lt in allowed_leave_types
+            ])
+
+        # ✉️ Email staff confirmation
+        subject = "Staff Profile Updated"
+        message = (
+            f"Dear {staff.first_name},\n\n"
+            f"Your staff profile has been successfully updated in the GCPS Leave System.\n"
+            f"Please review your leave entitlements and confirm any changes with HR.\n\n"
+            f"Best regards,\nLeave Management System"
+        )
+        send_leave_email.delay(subject, message, [staff.email])
+
+        # 📣 Notify approvers if group changed
+        if original_group_id != staff.group_id:
+            approvers = Approver.objects.filter(group_to_approve_id=staff.group_id).select_related("staff")
+            notify_msg = (
+                f"Staff member {staff.get_full_name()} has been reassigned to your approval group.\n"
+                f"Please review their profile and update approval settings if needed."
+            )
+            for approver in approvers:
+                send_leave_email.delay(
+                    subject="Staff Group Reassignment",
+                    body=notify_msg,
+                    to=[approver.staff.email]
+                )
 
     except (Staff.DoesNotExist, Gender.DoesNotExist, Seniority.DoesNotExist, Group.DoesNotExist) as e:
         print(f"Update failed: {e}")
@@ -225,7 +260,7 @@ def add_approver(form_data):
         approver_group_id = int(form_data['approver_group'])
         approver_level_id = int(form_data['approver_level'])
 
-        # Prevent duplicate approvers for the same group and level
+        # Check for existing assignment
         exists = Approver.objects.filter(
             staff_id=approver_id,
             group_to_approve_id=approver_group_id,
@@ -233,14 +268,14 @@ def add_approver(form_data):
         ).exists()
 
         if not exists:
-            # Create the approver
+            # 🧩 Create new approver
             new_approver = Approver.objects.create(
                 staff_id=approver_id,
                 group_to_approve_id=approver_group_id,
                 level_id=approver_level_id
             )
 
-            # Fetch pending leave requests for the group and level
+            # 🔎 Fetch pending requests for matching group/level
             pending_requests = LeaveRequest.objects.filter(
                 applicant__group_id=approver_group_id,
                 applicant__level_id=approver_level_id,
@@ -248,16 +283,17 @@ def add_approver(form_data):
                 is_active=True
             )
 
-            # Create approval objects for each pending request
-            for request in pending_requests:
-                Approval.objects.create(
+            # 🚦 Add approvals for pending requests
+            Approval.objects.bulk_create([
+                Approval(
                     approver=new_approver,
                     request=request,
                     status=Approval.ApprovalStatus.Pending,
                     is_active=True
-                )
+                ) for request in pending_requests
+            ])
 
-            # Send email notification to the approver
+            # ✉️ Send notification email via Celery
             approver = new_approver
             subject = "New Approver Assignment"
             message = (
@@ -268,13 +304,17 @@ def add_approver(form_data):
                 f"Please log in to the system to view and take action.\n\n"
                 f"Regards,\nLeave Management System"
             )
-            send_mail(
-                subject,
-                message,
-                settings.EMAIL_HOST_USER,
-                [approver.email],
-                fail_silently=False
-            )
+
+            send_leave_email.delay(subject, message, [approver.staff.email])  # 🏃‍♂️ Run in background
+
+            # 📝 Optional: log assignment if you have an audit model
+            # ApproverAssignmentLog.objects.create(
+            #     staff=new_approver.staff,
+            #     group=new_approver.group_to_approve,
+            #     level=new_approver.level,
+            #     assigned_by=request.user,
+            #     notes="Auto-assigned via form submission."
+            # )
 
     except (KeyError, ValueError, Staff.DoesNotExist) as e:
         print(f"Error adding approver: {e}")
@@ -283,7 +323,7 @@ def add_approver(form_data):
 #Edit Approver
 def edit_approver(form_data):
     """
-    Updates the approver assignments and sends email listing assigned group & level names.
+    Updates approver assignments and sends email listing assigned group & level names.
     """
     try:
         staff_id_val = form_data['approver_staff']
@@ -302,7 +342,6 @@ def edit_approver(form_data):
         level_ids = [lid for lid in level_ids if lid]
 
         Approver.objects.filter(staff_id=staff_id).delete()
-
         assigned_pairs = []
 
         for group_id, level_id in zip(group_ids, level_ids):
@@ -312,16 +351,13 @@ def edit_approver(form_data):
                     group_to_approve_id=int(group_id),
                     level_id=int(level_id)
                 )
-
-                # Fetch readable names
                 group_name = Group.objects.get(id=int(group_id)).name
                 level_name = Level.objects.get(id=int(level_id)).name
                 assigned_pairs.append(f"• {group_name} (Level: {level_name})")
-
             except Exception as e:
                 print(f"Error creating approver for group {group_id} and level {level_id}: {e}")
 
-        # Send email with assignment details
+        # 📩 Send notification email via Celery
         User = get_user_model()
         approver = User.objects.get(id=staff_id)
 
@@ -333,18 +369,17 @@ def edit_approver(form_data):
             "\n\nPlease log in to review your responsibilities.\n\nRegards,\nGCPS Leave System"
         )
 
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [approver.email])
+        send_leave_email.delay(subject, message, [approver.email])
 
     except Exception as e:
         print(f"Error editing approver: {e}")
-    return
     
 
 
 def del_approver(form_data):
     """
     Deactivates Approver objects and related Approval records for a given staff member(s),
-    and sends a notification email to each affected approver.
+    and sends a notification email to each affected approver asynchronously.
     """
     staff_id = form_data.get('staff_id')
     if not staff_id:
@@ -367,7 +402,7 @@ def del_approver(form_data):
         if approver_ids:
             Approval.objects.filter(approver_id__in=approver_ids).update(is_active=False)
 
-        # Notify users
+        # 📩 Notify users asynchronously
         User = get_user_model()
         for sid in staff_ids:
             try:
@@ -379,17 +414,17 @@ def del_approver(form_data):
                     "If this change was unexpected, please contact your HR administrator.\n\n"
                     "Regards,\nGCPS Leave System"
                 )
-                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+                send_leave_email.delay(subject, message, [user.email])
             except User.DoesNotExist:
                 print(f"User with ID {sid} not found.")
             except Exception as e:
-                print(f"Error sending notification to user {sid}: {e}")
-    return
+                print(f"Error queuing notification for user {sid}: {e}")
+
 
 
 def res_approver(form_data):
     """
-    Restores Approver objects by setting is_active=True and sends email notification.
+    Restores Approver objects by setting is_active=True and sends email notification via Celery.
     Expects:
         - approver_id: single ID or list of IDs
     """
@@ -416,13 +451,12 @@ def res_approver(form_data):
                     "You may now resume approval duties for your assigned groups.\n\n"
                     "Regards,\nGCPS Leave System"
                 )
-                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+                send_leave_email.delay(subject, message, [user.email])  # 🔄 asynchronous
             except User.DoesNotExist:
                 print(f"User with staff_id {approver.staff_id} not found.")
             except Exception as e:
                 print(f"Error notifying user {approver.staff_id}: {e}")
 
-    return
 
 
 
@@ -433,46 +467,38 @@ def add_leave_type(form_data):
     days = int(form_data['days'])
     seniority_id = int(form_data['seniority'])
     reset_period = form_data['reset_period']
-    allow_multiple_applications = True if form_data['allow_multiple_applications']  == "True" else False
-    paid_leave = True if form_data['paid_leave'] == "True" else False
+    allow_multiple_applications = form_data['allow_multiple_applications'] == "True"
+    paid_leave = form_data['paid_leave'] == "True"
     eligibility = form_data.get('eligibilty', "")
-    
-    i_date = True if 'i_date' in form_data else False
-    i_institution = True if 'i_institution' in form_data else False
-    i_course = True if 'i_course' in form_data else False
-    i_note = True if 'i_note' in form_data else False
-    i_letter = True if 'i_letter' in form_data else False
 
-    new_lvt = LeaveType(
-        name = name,
-        code = code,
-        days = days,
-        seniority_id = seniority_id,
-        reset_period = reset_period,
-        allow_multiple_applications = allow_multiple_applications,
-        paid_leave = paid_leave,
-        eligibility = eligibility,
-        includes_date_of_occurence = i_date,
-        includes_institution = i_institution,
-        includes_course = i_course,
-        includes_med_note = i_note,
-        includes_letter = i_letter,
-        is_active = True
+    i_date = 'i_date' in form_data
+    i_institution = 'i_institution' in form_data
+    i_course = 'i_course' in form_data
+    i_note = 'i_note' in form_data
+    i_letter = 'i_letter' in form_data
+
+    # Create LeaveType instance
+    new_lvt = LeaveType.objects.create(
+        name=name,
+        code=code,
+        days=days,
+        seniority_id=seniority_id,
+        reset_period=reset_period,
+        allow_multiple_applications=allow_multiple_applications,
+        paid_leave=paid_leave,
+        eligibility=eligibility,
+        includes_date_of_occurence=i_date,
+        includes_institution=i_institution,
+        includes_course=i_course,
+        includes_med_note=i_note,
+        includes_letter=i_letter,
+        is_active=True
     )
-    new_lvt.save()
 
-    # Create StaffLeaveDetail for matching staff
-    eligible_staff = Staff.objects.filter(seniority_id=seniority_id, is_active=True)
-    for staff in eligible_staff:
-        StaffLeaveDetail.objects.create(
-            staff=staff,
-            leave_type=new_lvt,
-            days_taken=0,
-            days_remaining=days,
-            is_active=True
-        )
+    # 🏃‍♀️ Launch background task
+    assign_leave_type_to_staff.delay(new_lvt.id, seniority_id, days)
+
     return
-
 
 
 def edit_leave(form_data):
@@ -505,7 +531,7 @@ def edit_leave(form_data):
         setattr(leave, field, value)
 
     leave.save()
-    return
+
 
 
 def del_leave(form_data):

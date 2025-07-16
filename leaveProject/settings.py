@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_celery_beat',
-    'leavestatic'
+    "leavestatic.apps.LeavestaticConfig",
+    # 'leavestatic'
 ]
 
 AUTH_USER_MODEL = 'leavestatic.Staff'
@@ -105,17 +106,6 @@ WSGI_APPLICATION = 'leaveProject.wsgi.application'
 # }
 
 
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.{}'.format(
@@ -200,4 +190,6 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Keep session after browser closes
 
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
-CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_BEAT_SCHEDULER = "leavestatic.schedulers.NoSchemaCreateScheduler"
+
+# CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"

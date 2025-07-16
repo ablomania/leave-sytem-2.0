@@ -33,7 +33,7 @@ def index(request):
     template = loader.get_template('index.html')
 
     context = {
-
+        "index": True,
     }
     return HttpResponse(template.render(context, request))
 
@@ -90,7 +90,7 @@ def login_user(request, next_page=None):
             else:
                 form.add_error(None, "Invalid username or password")
 
-    context = {'form': form, 'login': True, 'next_page': next_page}
+    context = {'form': form, 'login': True, 'next_page': next_page, 'index': True}
     template = loader.get_template('login.html')
     response = HttpResponse(template.render(context, request))
     response.set_cookie('session_id', request.session.session_key, max_age=86400, secure=True, httponly=True)
@@ -195,7 +195,8 @@ def dashboard(request, slug):
         'slug': slug,
         'is_approver': is_approver, "self_ack": self_ack,
         "r_ack": r_ack, "leaves_count": leaves_count,
-        "on_leave": on_leave, "resume_obj": resume_obj
+        "on_leave": on_leave, "resume_obj": resume_obj,
+        "loc": "dashboard"
     }
 
     response = render(request, "dashboard.html", context)
@@ -212,46 +213,50 @@ def password_reset(request):
     email_input = ''
     username = ''
     context = {
-        'step': step, 'random_number': random_number, 'email': email, 
+        'step': step, 'random_number': random_number, 'email': email,
+        'index': True,
     }
+
     if request.method == 'POST':
         form_data = request.POST
         step = int(form_data['step'])
         username = form_data['usernameOriginal']
+
         if step == 1:
             email = form_data['email']
-            if(len(Staff.objects.filter(email=email)) > 0):
+            if Staff.objects.filter(email=email).exists():
                 user = Staff.objects.get(email=email)
                 username = user.username
-            else: return HttpResponse("Account not found")
-            context.update({'email': email, 'step':step, 'username':username})
-            random_number = random.randrange(12345, 999999)
-            subject="GCPS Leave System Verification Code"
-            message=f"{random_number} is your verification code. Don't share your code with anyone."
-            receiver = email
-            # new_email = Email(
-            #     subject = subject,
-            #     message = message,
-            #     receiver = receiver
-            # )
-            # new_email.save()
-            send_mail(subject=subject, message=message, from_email=settings.EMAIL_HOST_USER, recipient_list=[receiver])
-            step = step + 1
-            context.update({ 'random_number':random_number, 'step':step, 'username': username })
+            else:
+                return HttpResponse("Account not found")
+
+            context.update({'email': email, 'step': step, 'username': username})
+            random_number = str(random.randint(12345, 999999))
+
+            # ✉️ Send verification via Celery
+            subject = "GCPS Leave System Verification Code"
+            message = f"{random_number} is your verification code. Don't share your code with anyone."
+            send_verification_code.delay(subject, message, email)
+
+            step += 1
+            context.update({'random_number': random_number, 'step': step, 'username': username})
+
         elif step == 2:
             code = form_data['verification_code']
             random_number = form_data['random_number']
             if code == random_number:
-                step = step + 1
-            else: return HttpResponse("Code is incorrect")
-            context.update({'step':step, 'username': username})
+                step += 1
+            else:
+                return HttpResponse("Code is incorrect")
+            context.update({'step': step, 'username': username})
+
         elif step == 3:
             password = form_data['password2']
             user = Staff.objects.get(username=username)
             user.set_password(password)
             user.save()
-            return HttpResponseRedirect(reverse('login', args=['0',])) 
-               
+            return HttpResponseRedirect(reverse('login', args=['0',]))
+
     return HttpResponse(template.render(context, request))
 
 
@@ -351,7 +356,8 @@ def setup(request, slug):
         'all_genders': all_genders, 'all_levels': all_levels,
         'seniority': seniority, 'staff_dict': staff_dict,
         'active_groups': active_groups, 'i_seniority': i_seniority,
-        'a_seniority': a_seniority, "i_levels" : i_levels
+        'a_seniority': a_seniority, "i_levels" : i_levels,
+        'index': True,
     }
     return HttpResponse(template.render(context, request))
 
@@ -436,6 +442,7 @@ def leave_request(request, slug):
         "officers": relieving_officers,
         "form_status_message": form_status_message,
         "slug": slug,
+        'loc': 'request',
         "holiday_json": json.dumps(list(holiday_data.values()))  # just the date list
     }
 
@@ -690,6 +697,7 @@ def leave_history(request, slug):
         "grouped_leave": grouped_leave,
         "slug": slug,
         "terminated_leaves": terminated_leaves,
+        'loc': 'history'
     }
 
     response = render(request, "leave_history.html", context)
@@ -752,6 +760,7 @@ def users_on_leave(request, slug):
     context = {
         "slug": slug,
         "dept_group": dict(dept_group),
+        'loc': 'on_leave'
     }
 
     response = render(request, "on_leave.html", context)
@@ -812,6 +821,7 @@ def profile(request, slug):
         "leave_details": leave_details,
         "is_approver": is_approver,
         "slug": slug,
+        'loc': 'profile'
     }
 
     response = render(request, "profile.html", context)
@@ -877,6 +887,7 @@ def leave_requests(request, slug):
         "pending_approvals": pending_approvals,
         "approved_approvals": approved_approvals,
         "denied_approvals": denied_approvals,
+        "loc": "approvals"
     }
     response = render(request, "leave_requests.html", context)
 
@@ -889,269 +900,3 @@ def leave_requests(request, slug):
         httponly=True
     )
     return response
-
-
-
-
-# def send_email(leave_request_id, user_slug, reason):
-#     print("Sending email notifications for leave request ID:", leave_request_id)
-#     leave_request = Leave_Request.objects.get(id=leave_request_id)
-#     applicant = Staff.objects.get(id=leave_request.applicant_id)
-#     department_head = Department.objects.get(id=applicant.department_id).department_head
-#     leave_details = Leave_Details.objects.get(staff_id=applicant.id)
-#     department = Department.objects.get(id=applicant.department_id)
-#     department_head_email = department.department_head_email
-#     user = Staff.objects.get(slug=user_slug)
-#     subject = ''
-#     message = ''
-#     receiver = ''
-#     relieving_officer = leave_request.relieving_officer.first_name + ' ' + leave_request.relieving_officer.last_name + ', ' + leave_request.relieving_officer.other_names
-#     number_map = {
-#         0: "zero",
-#         1: "one",
-#         2: "two",
-#         3: "three",
-#         4: "four",
-#         5: "five",
-#         6: "six",
-#         7: "seven",
-#         8: "eight",
-#         9: "nine",
-#         10: "ten",
-#         11: "eleven",
-#         12: "twelve",
-#         13: "thirteen",
-#         14: "fourteen",
-#         15: "fifteen",
-#         16: "sixteen",
-#         17: "seventeen",
-#         18: "eighteen",
-#         19: "nineteen",
-#         20: "twenty",
-#     }
-
-#     # Adding multiples of ten
-#     tens = ["thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
-#     for i, word in enumerate(tens, start=3):
-#         number_map[i * 10] = word
-
-#     # Adding numbers between 21 and 99
-#     for tens in range(2, 10):
-#         for ones in range(1, 10):
-#             number_map[tens * 10 + ones] = number_map[tens * 10] + "-" + number_map[ones]
-
-#     # Finally, adding 100
-#     number_map[100] = "one hundred"
-    
-#     if(leave_request.department_head_approval == 'PENDING' and user.type == 'HOD' or user.type == 'STAFF'):
-#         print("HOD approval pending email notification")
-#         # Send email to applicant
-#         subject = 'Acknowledgment of Leave Application'
-#         message = f'Dear {applicant.first_name},\n\nI trust this email finds you well.\n\nThis email serves as formal acknowledgment of the receipt of your leave application, submitted on {leave_request.application_date}. We appreciate your diligence in adhering to the college\'s leave request procedures. Kindly note that your application is currently under review, and a formal response regarding its approval status will be communicated to you in due course.\n\nShould any additional information be required, we will reach out to you. In the meantime, please do not hesitate to your administrator if you have any queries or require further clarification.\n\nYours sincerely,\nLeave Management System'
-#         receiver = applicant.email
-#         send_mail( subject, message, settings.EMAIL_HOST_USER, [receiver], fail_silently=False)
-#         # Send email to department head
-#         subject = 'Leave Application Pending Approval'
-#         message = f"Dear {department_head.first_name},\n\nI hope this email finds you well.\n\nPlease be informed that a leave application has been submitted by {leave_request.applicant.first_name} {leave_request.applicant.last_name}, {leave_request.applicant.other_names} on {leave_request.application_date}. As per college protocol, the request is currently pending your approval. Kindly review the application at your earliest convenience and provide your decision accordingly.\n\nShould you require any additional details regarding this request, please do not hesitate to reach out.\n\nThank you for your time and consideration.\n\nYours sincerely,\nGCPS Leave System"
-#         receiver = department_head_email
-#     if(leave_request.department_head_approval == 'REJECTED' and user.type == 'HOD'):
-#         print("HOD rejection email notification to applicant")
-#         # Send email to applicant
-#         subject = 'Notification of Leave Request Decision'
-#         message = f"Dear {applicant.first_name},\n\nI hope this email finds you well.\n\nFollowing the review of your leave application submitted on {leave_request.application_date}, I regret to inform you that your request has not been approved by {department_head.first_name} {department_head.last_name}, {department_head.other_names} due to \n\"{reason.lower()}\".\n\nWe understand that this may be disappointing, and we appreciate your cooperation in adhering to the college\'s policies and operational requirements. Should you wish to discuss this further or explore alternative arrangements, please feel free to reach out.\n\nThank you for your understanding.\n\nYours sincerely,\nGCPS Leave System"
-#         receiver = applicant.email
-#     if(leave_request.department_head_approval == 'APPROVED' and leave_request.HOHR_approval == 'PENDING' and user.type == 'HOHR'):
-#         print("Admin head approval pending email notification")
-#         # Send email to admin head
-#         subject = 'Leave Application Pending Approval'
-#         message = f"Dear {user.first_name},\n\nI hope this email finds you well.\n\nPlease be informed that the leave application submitted by {leave_request.applicant.first_name} {leave_request.applicant.last_name}, {leave_request.applicant.other_names} on {leave_request.application_date} has been reviewed and approved by {department_head.first_name} {department_head.last_name}, {department_head.other_names} - Head of {department.department_name}. As part of our approval process, the request now requires further review, and your approval is one of the remaining steps.\n\nKindly review the application at your earliest convenience and provide your decision accordingly. If you require any additional details regarding this request, please do not hesitate to reach out.\n\nThank you for your time and consideration.\n\nYours sincerely,\nGCPS Leave System"
-#         receiver = Staff.objects.get(type='HOHR').email
-#     if(leave_request.HOHR_approval == 'REJECTED' and user.type == 'HOHR'):
-#         print("Admin rejection email notification to applicant")
-#         # Send email to applicant
-#         subject = 'Notification of Leave Request Decision'
-#         message = f"Dear {applicant.first_name},\n\nI hope you are doing well.\n\nFollowing the review of your leave application submitted on {leave_request.application_date}, I regret to inform you that the request has not been approved by {user.first_name} {user.last_name}, {user.other_names}. This decision has been made in consideration of '{reason.lower()}', in alignment with college policies and operational requirements.\n\nWe understand that this may not be the outcome you were hoping for, and we appreciate your cooperation and understanding. Should you wish to discuss this further or explore alternative arrangements, please feel free to reach out to your administrator.\n\nThank you for your time and dedication.\n\nYours sincerely,\nGCPS Leave System"
-#         receiver = applicant.email
-#     if(leave_request.HOHR_approval == 'APPROVED' and leave_request.final_approval == 'PENDING' and user.type == 'RECTOR'):
-#         print("Final approval pending email notification to super admin")
-#         # Send email to final approver
-#         admin = Staff.objects.get(type='HOHR')
-#         admin_name = admin.first_name + ' ' + admin.last_name + ', ' + admin.other_names
-#         subject = 'Leave Application Pending Final Approval'
-#         message = f"Dear {user.first_name},\n\nI hope this email finds you well.\n\nPlease be informed that the leave application submitted by {leave_request.applicant.first_name} {leave_request.applicant.last_name}, {leave_request.applicant.last_name} on {leave_request.application_date} has been reviewed and approved by {admin_name}. As part of our approval process, the request now requires your final review and decision.\n\nKindly review the application at your earliest convenience and provide your response accordingly. Should you require any additional details regarding this request, please do not hesitate to reach out.\n\nThank you for your time and consideration.\n\nYours sincerely,\nGCPS Leave System"
-#         receiver = Staff.objects.get(type='RECTOR').email
-#     if(leave_request.final_approval == 'APPROVED' and user.type == 'RECTOR'):
-#         print("Final approval email notification to applicant")
-#         # Send email to releiving officer
-#         subject = f"Confirmation of Acting Head of Department Appointment"
-#         message = (
-#             f"Dear {applicant.first_name},\n\n"
-#             f"\nThis communication serves to formally confirm your appointment as the Acting {applicant.position} for {applicant.department.department_name}. Your acceptance to serve as the relieving officer has been recorded, and your leadership during this period is highly valued."
-#             f"\nAppointment Details:"
-#             f"\n- Acceptance Date: {leave_request.relieving_officer_approval_date}"
-#             f"\n- Leave Start Date: {leave_request.leave_start_date}"
-#             f"\n- Leave Duration: {leave_request.leave_days_approved}"
-#             f"\n- Resumption Date: {leave_request.resumption_date}"
-#             f"\nDuring this time, you will oversee departmental operations, ensuring continuity and efficiency. Your cooperation and dedication are appreciated, and the team is encouraged to support you in fulfilling this role effectively."
-#             f"\nShould you require any assistance, please do not hesitate to reach out. Thank you for stepping into this responsibility."
-#             f"\nBest regards,"
-#             f"\nGCPS Leave System"
-#             )
-#         #send email to all members
-#         receiver = leave_request.relieving_officer.email
-#         send_mail(subject=subject, message=message, recipient_list=[receiver])
-#         subject = "Notification of Acting Head of Department Appointment"
-#         message = (
-#             f"Dear Team,\n"
-#             f"This is to formally inform you that {leave_request.relieving_officer.last_name}, {leave_request.relieving_officer.first_name} {leave_request.relieving_officer.other_names} has assumed the role of {applicant.position} for {applicant.department.department_name}, following their acceptance as the relieving officer."
-#             f"Appointment Details:"
-#             f"- Acceptance Date: {leave_request.relieving_officer_approval_date}"
-#             f"- Leave Start Date: {leave_request.leave_start_date}"
-#             f"- Leave Duration: {leave_request.leave_days_approved}"
-#             f"- Resumption Date: {leave_request.resumption_date}"
-#             f"During this period, {leave_request.relieving_officer.last_name}, {leave_request.relieving_officer.first_name} {leave_request.relieving_officer.other_names} assume all responsibilities of {applicant.last_name} {applicant.first_name}, {applicant.other_names} and ensure continuity in operations. Your support and collaboration are essential in facilitating a smooth transition and maintaining efficiency within the department."
-#             f"Please extend your full cooperation and assistance to {leave_request.relieving_officer.last_name}, {leave_request.relieving_officer.first_name} {leave_request.relieving_officer.other_names} as they undertake these responsibilities."
-#             f"Best regards,"
-#             f"GCPS Leave System"
-#         )
-#         receiver = Staff.objects.values_list("email", flat=True)
-#         send_mail(subject, message, list(receiver))
-#         subject = f'Approval of {leave_request.leave_days_approved} days {leave_request.type.lower()} Leave'
-#         message = f"Dear {applicant.first_name},\n\nApproval has been given for you to take {number_map[{leave_request.leave_days_approved}]} ({leave_request.leave_days_approved}) days {leave_request.type} Leave as follows: .\n\t•  Start date : {leave_request.leave_start_date}\n\t•  End date : {leave_request.leave_end_date}\n\nYou are required to resume work on {leave_request.resumption_date}.\nYou have {leave_details.days_remaining} annual leave days remaining.\nYour relieving officer will be {leave_request.relieving_officer}\nKindly complete a Resumption of Duty from Annual Leave Form upon your return from leave.\nBest Wishes during your Leave. \n\n\nLeave Management System"
-#         receiver = applicant.email
-#     if(leave_request.final_approval == 'REJECTED' and user.type == 'RECTOR'):
-#         print("Super admin rejection email notification to applicant")
-#         # Send email to applicant
-#         subject = 'Notification of Leave Request Decision'
-#         message = f"Dear {applicant.first_name},\n\nI hope this email finds you well.\n\nFollowing the review of your leave application submitted on {leave_request.application_date}, I regret to inform you that the request has not been approved by {user.first_name} {user.last_name}, {user.other_names}. This decision has been made in consideration of '{reason.lower()}', in alignment with college policies and operational requirements.\n\nWe understand that this may not be the outcome you were hoping for, and we appreciate your cooperation and understanding. Should you wish to discuss this further or explore alternative arrangements, please feel free to reach out to your administrator.\n\nThank you for your time and dedication.\n\nYours sincerely,\nGCPS Leave System"
-#         receiver = applicant.email
-#     new_email = Email(
-#         subject = subject,
-#         message = message,
-#         receiver = receiver
-#     )
-#     new_email.save()
-#     print("Email sent to:", receiver)
-#     return
-    
-
-
-# def leave_approval(request, applicant_slug, leave_id, slug):
-#     """Handles leave request approvals securely with session validation."""
-
-#     user_slug = request.session.get("user_slug") or change_session(slug)
-
-#     if not user_slug:
-#         return redirect(reverse("login", args=["admin_dashboard"]))
-
-#     request.session.update({
-#         "prev_page": "leave_requests",
-#         "message": "Leave Request approved successfully",
-#         "button": "Review other requests",
-#         "next_page": "admin_dashboard",
-#         "next_btn": "Back to Dashboard",
-#     })
-
-#     LoginSession.objects.filter(slug=user_slug).update(
-#         prev_page="leave_requests",
-#         message="Leave Request approved successfully",
-#         button="Review other requests",
-#         next_page="admin_dashboard",
-#         next_btn="Back to Dashboard",
-#         last_activity=timezone.now(),
-#         date_to_expire=timezone.now() + timezone.timedelta(days=1),
-#     )
-
-#     leave_request = get_object_or_404(
-#         Leave_Request.objects.select_related("applicant", "relieving_officer"), id=leave_id
-#     )
-#     user = get_object_or_404(Staff.objects.select_related("department"), slug=user_slug)
-#     applicant = get_object_or_404(Staff.objects.select_related("department"), slug=applicant_slug)
-#     leave_details = get_object_or_404(Leave_Details, staff=applicant)
-#     department = get_object_or_404(Department, id=applicant.department_id)
-#     HOHR = get_object_or_404(Staff, type="HOHR")
-
-#     if user.type not in {"HOHR", "RECTOR", "HOD"}:
-#         return HttpResponse("You are not authorized to view this page.", status=403)
-
-#     days_remaining = int(leave_details.days_remaining)
-#     days = list(range(1, days_remaining + 1))
-
-#     # File access handling
-#     medical_note_link = leave_request.med_note.url if leave_request.type == "SICK" and leave_request.med_note else None
-#     admission_letter_link = leave_request.letter.url if leave_request.type in {
-#         "STUDY_LEAVE_WITH_PAY", "STUDY_LEAVE_WITHOUT_PAY"
-#     } and leave_request.letter else None
-
-#     if request.method == "POST":
-#         form_data = request.POST
-
-#         approval_mapping = {
-#             "HOD": ("department_head_approval", "department_head_approval_date"),
-#             "HOHR": ("HOHR_approval", "HOHR_approval_date"),
-#             "RECTOR": ("final_approval", "final_approval_date"),
-#         }
-
-#         approval_field, approval_date_field = approval_mapping.get(user.type, (None, None))
-#         if approval_field and getattr(leave_request, approval_field) == "PENDING":
-#             setattr(leave_request, approval_field, form_data["approval"])
-#             if form_data["approval"] == "APPROVED":
-#                 setattr(leave_request, approval_date_field, timezone.now())
-
-#         leave_request.leave_days_approved = form_data.get("days_requested", leave_request.leave_days_requested)
-#         leave_request.leave_start_date = form_data["start_date"]
-#         leave_request.leave_end_date = form_data["end_date"]
-#         leave_request.save()
-
-#         print(form_data)
-#         send_email(leave_id, user.slug, form_data["reason"] if "reason" in form_data else "")
-
-#         if all(getattr(leave_request, field) == "APPROVED" for field in [
-#             "department_head_approval", "HOHR_approval", "final_approval"
-#         ]):
-#             leave_details.days_taken += int(leave_request.leave_days_approved)
-#             leave_details.save()
-#             leave_request.status = Leave_Request.Status.APPROVED
-#             leave_request.save()
-#             department.acting_department_head = leave_request.relieving_officer if applicant.type == "HOD" else department.acting_department_head
-#             department.save()
-
-#         response = HttpResponseRedirect(reverse("leave_requests", args=['slug',]))
-#         response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
-#         return response
-
-#     context = {
-#         "applicant_name": f"{applicant.last_name}, {applicant.first_name} {applicant.other_names}",
-#         "leave_request": leave_request,
-#         "leave_details": leave_details,
-#         "department_name": department.department_name,
-#         "department_head_name": f"{department.department_head.last_name}, {department.department_head.first_name} {department.department_head.other_names}",
-#         "days_remaining": days_remaining - int(leave_request.leave_days_requested),
-#         "HOHR_name": f"{HOHR.last_name}, {HOHR.first_name} {HOHR.other_names}",
-#         "applicant_slug": applicant_slug,
-#         "user_type": user.type,
-#         "days": days,
-#         "medical_note_link": medical_note_link,
-#         "admission_letter_link": admission_letter_link,
-#     }
-
-#     return render(request, "leave_approval.html", context)
-
-
-
-
-#     # if(leave_request.department_head_approval == True and leave_request.HOHR_approval == True and leave_request.final_approval == True):
-#     #     # Send email to applicant
-#     #     subject = 'Leave Request Approved'
-#     #     message = f"Dear {applicant.first_name},\n\nYour leave request has been approved.\n\nBest regards,\nLeave Management System"
-#     # elif(leave_request.department_head_approval == False and leave_request.HOHR_approval == False and leave_request.final_approval == False):
-#     #     # Send email to applicant
-#     #     subject = 'Leave Request Rejected'
-#     #     message = f"Dear {applicant.first_name},\n\nYour leave request has been rejected.\n\nBest regards,\nLeave Management System"
-#     # else:
-#     #     # Send email to department head
-#     #     subject = 'Leave Request Pending Approval'
-#     #     message = f"Dear {department_head.first_name},\n\nA leave request is pending your approval.\n\nBest regards,\nLeave Management System"
-
-
-    

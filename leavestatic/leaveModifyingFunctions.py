@@ -15,6 +15,7 @@ def get_reset_trigger(leave_type, today):
         return today.month in [1, 7] and today.day == 1
     return False
 
+
 def update_leave_progress():
     today = timezone.now().date()
     holidays = set(Holiday.objects.filter(is_active=True).values_list("date", flat=True))

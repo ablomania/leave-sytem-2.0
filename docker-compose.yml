@@ -1,7 +1,8 @@
+#docker-compose
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
     env_file:
@@ -35,6 +36,8 @@ services:
       - postgres
     environment:
       - CELERY_BROKER=redis://redis:6379/0
+    env_file:
+      - .env 
 
   beat:
     build: .
@@ -46,6 +49,8 @@ services:
       - redis
     environment:
       - CELERY_BROKER=redis://redis:6379/0
+    env_file:
+      - .env 
 
   redis:
     image: redis:alpine
@@ -63,6 +68,8 @@ services:
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
     volumes:
       - pg_data:/var/lib/postgresql/data
+    env_file:
+      - .env 
 
 volumes:
   pg_data:

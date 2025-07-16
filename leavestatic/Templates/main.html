@@ -28,11 +28,21 @@
             </div>
         </div>
         {% endif %}
+        {% if not index %}
+        <div class="main-nav">
+            <a href="{% url 'dashboard' slug %}" class="{% if loc == 'dashboard' %}active{% endif %}">Dashboard</a>
+            <a href="{% url 'leave_request' slug %}" class="{% if loc == 'request' %}active{% endif %}">New Leave Request</a>
+            <a href="{% url 'leave_requests' slug %}" class="{% if loc == 'approvals' %}active{% endif %}">Approvals</a>
+            <a href="{% url 'staff_on_leave' slug %}" class="{% if loc == 'on_leave' %}active{% endif %}">On Leave</a>
+            <a href="{% url 'leave_history' slug %}" class="{% if loc == 'history' %}active{% endif %}">History</a>
+            <a href="{% url 'profile' slug %}" class="{% if loc == 'profile' %}active{% endif %}">Profile</a>
+        </div>
+        {% endif %}
         <div class="body" id="body">
         {% block content %}
         {% endblock %}
             {% if all_leave %}
-            <div class="siderow">
+            <!-- <div class="siderow">
                 <div class="t1">
                     <img src="{% static 'images/left-chevron.png' %}" width="25px" height="40px" alt="">
                 </div>
@@ -68,7 +78,7 @@
                         {% endfor %}
                     </div>
                 </div>
-            </div>
+            </div> -->
             {% endif %}
         </div>
         <div class="footer">

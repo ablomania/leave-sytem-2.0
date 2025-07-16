@@ -2,10 +2,132 @@
 {% load static %}
 
 {% block title %}
-    GCPS Leave System
+    Welcome to GCPS Leave System
 {% endblock %}
 
 {% block content %}
-    <h1>Welcome to the GCPS Leave System</h1>
-    <p>Click <a href="{% url 'login' '0' %}">here</a> to sign in.</p>
+<style>
+    /* Container */
+.landing-container {
+  max-width: 1000px;
+  margin: auto;
+  padding: 60px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeInSlide 0.8s ease forwards;
+}
+
+/* Fade + Slide Intro Animation */
+@keyframes fadeInSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hero Section */
+.hero-card {
+  background: linear-gradient(to right, #eef2f3, #dfe6e9);
+  padding: 40px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+  margin-bottom: 40px;
+  transition: box-shadow 0.3s ease;
+}
+
+.hero-card:hover {
+  box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+}
+
+.hero-card h1 {
+  font-size: 2.2rem;
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+.hero-card p {
+  font-size: 1.1rem;
+  color: #555;
+}
+
+/* Call-to-action button */
+.cta {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 12px 28px;
+  background: #3498db;
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.3s ease;
+}
+
+.cta:hover {
+  background: #2980b9;
+}
+
+/* Feature Cards */
+.info-cards {
+  display: flex;
+  gap: 25px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.card {
+  background-color: #fff;
+  padding: 30px 20px;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  width: 280px;
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.card h3 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  color: #34495e;
+}
+
+.card p {
+  font-size: 0.95rem;
+  color: #666;
+}
+
+</style>
+<div class="landing-container">
+    <div class="hero-card">
+        <h1>Welcome to the GCPS Leave Management System</h1>
+        <p>Apply for leave, manage approvals, track holiday schedules, and stay updated — all in one place.</p>
+        <a href="{% url 'login' '0' %}" class="cta">Sign In</a>
+    </div>
+
+    <div class="info-cards">
+        <div class="card">
+            <h3>📅 Streamlined Leave Requests</h3>
+            <p>Submit and monitor your leave applications with ease.</p>
+        </div>
+        <div class="card">
+            <h3>🧑‍💼 Approval Workflows</h3>
+            <p>Approvers can manage requests from any device, anytime.</p>
+        </div>
+        <div class="card">
+            <h3>📊 Insights & Records</h3>
+            <p>Access real-time leave balances and historical reports.</p>
+        </div>
+    </div>
+</div>
 {% endblock %}

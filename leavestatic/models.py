@@ -282,6 +282,24 @@ class LeaveRequest(models.Model):
         return f"{self.id} - {self.applicant} - {self.start_date} - {self.end_date} - {self.status} - {self.type} -- {self.id}"
 
 
+class LeaveTypeAuditLog(models.Model):
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
+    old_leave_types = models.TextField()
+    new_leave_types = models.TextField()
+    changed_by = models.CharField(max_length=255)
+    notes = models.TextField(blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+
+class ApproverEditLog(models.Model):
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
+    assignments = models.TextField()
+    changed_by = models.CharField(max_length=255)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(max_length=100, default="Edit Form")
+
+
+
 class Email(models.Model):
     subject = models.CharField(max_length=255, null=True)
     message = models.TextField(null=True)
