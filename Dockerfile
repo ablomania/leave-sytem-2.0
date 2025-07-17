@@ -30,8 +30,8 @@ USER appuser
 
 EXPOSE 8000
 
-COPY entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+# COPY entrypoint.sh /entrypoint.sh
+# ENTRYPOINT ["/entrypoint.sh"]
 
 # ✅ Clean CMD for Gunicorn serving leaveProject via WSGI
 CMD ["gunicorn", "leaveProject.wsgi:application", "--bind", "0.0.0.0:8000"]
