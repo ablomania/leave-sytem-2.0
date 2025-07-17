@@ -260,6 +260,10 @@ def add_approver(form_data):
         approver_group_id = int(form_data['approver_group'])
         approver_level_id = int(form_data['approver_level'])
 
+        # Update special approver flag on Staff
+        is_special = form_data.get("is_special_approver") == "True"
+        Staff.objects.filter(id=approver_id).update(is_special_approver=is_special)
+
         # Check for existing assignment
         exists = Approver.objects.filter(
             staff_id=approver_id,
@@ -268,32 +272,36 @@ def add_approver(form_data):
         ).exists()
 
         if not exists:
-            # 🧩 Create new approver
+            # 🧩 Create new approver record
             new_approver = Approver.objects.create(
                 staff_id=approver_id,
                 group_to_approve_id=approver_group_id,
                 level_id=approver_level_id
             )
 
-            # 🔎 Fetch pending requests for matching group/level
+            # 🔎 Fetch matching pending requests
+            senior_staff_ids = Approver.objects.filter(
+                level__level__gte=new_approver.level.level,
+                is_active=True
+            ).values_list("staff_id", flat=True)
+
             pending_requests = LeaveRequest.objects.filter(
                 applicant__group_id=approver_group_id,
-                applicant__level_id=approver_level_id,
                 status=LeaveRequest.Status.PENDING,
                 is_active=True
-            )
+            ).exclude(applicant_id__in=senior_staff_ids)
 
-            # 🚦 Add approvals for pending requests
+            # 🚦 Add approvals for those requests
             Approval.objects.bulk_create([
                 Approval(
                     approver=new_approver,
                     request=request,
-                    status=Approval.ApprovalStatus.Pending,
+                    status=Approval.ApprovalStatus.PENDING,
                     is_active=True
                 ) for request in pending_requests
             ])
 
-            # ✉️ Send notification email via Celery
+            # ✉️ Notify approver via email
             approver = new_approver
             subject = "New Approver Assignment"
             message = (
@@ -304,31 +312,28 @@ def add_approver(form_data):
                 f"Please log in to the system to view and take action.\n\n"
                 f"Regards,\nLeave Management System"
             )
-
-            send_leave_email.delay(subject, message, [approver.staff.email])  # 🏃‍♂️ Run in background
-
-            # 📝 Optional: log assignment if you have an audit model
-            # ApproverAssignmentLog.objects.create(
-            #     staff=new_approver.staff,
-            #     group=new_approver.group_to_approve,
-            #     level=new_approver.level,
-            #     assigned_by=request.user,
-            #     notes="Auto-assigned via form submission."
-            # )
+            send_leave_email.delay(subject, message, [approver.staff.email])
 
     except (KeyError, ValueError, Staff.DoesNotExist) as e:
         print(f"Error adding approver: {e}")
 
 
+
 #Edit Approver
 def edit_approver(form_data):
     """
-    Updates approver assignments and sends email listing assigned group & level names.
+    Updates approver assignments and sets is_special_approver flag on Staff.
+    Sends email listing assigned group & level names.
     """
     try:
         staff_id_val = form_data['approver_staff']
         staff_id = int(staff_id_val[0]) if isinstance(staff_id_val, (list, tuple)) else int(staff_id_val)
 
+        # Handle checkbox for special approver
+        is_special = form_data.get("is_special_approver") == "on"
+        Staff.objects.filter(id=staff_id).update(is_special_approver=is_special)
+
+        # Read groups and levels
         if hasattr(form_data, 'getlist'):
             group_ids = form_data.getlist('groups')
             level_ids = form_data.getlist('levels')
@@ -341,9 +346,11 @@ def edit_approver(form_data):
         group_ids = [gid for gid in group_ids if gid]
         level_ids = [lid for lid in level_ids if lid]
 
+        # Remove existing approver assignments
         Approver.objects.filter(staff_id=staff_id).delete()
         assigned_pairs = []
 
+        # Re-create approver records
         for group_id, level_id in zip(group_ids, level_ids):
             try:
                 Approver.objects.create(
@@ -357,7 +364,7 @@ def edit_approver(form_data):
             except Exception as e:
                 print(f"Error creating approver for group {group_id} and level {level_id}: {e}")
 
-        # 📩 Send notification email via Celery
+        # Email notification to staff
         User = get_user_model()
         approver = User.objects.get(id=staff_id)
 
@@ -366,6 +373,8 @@ def edit_approver(form_data):
             f"Dear {approver.first_name},\n\n"
             f"You have been assigned as an approver for the following:\n\n" +
             "\n".join(assigned_pairs) +
+            ("\n\nAdditionally, you have been designated as a fallback Special Approver."
+             if is_special else "") +
             "\n\nPlease log in to review your responsibilities.\n\nRegards,\nGCPS Leave System"
         )
 
@@ -373,6 +382,7 @@ def edit_approver(form_data):
 
     except Exception as e:
         print(f"Error editing approver: {e}")
+
     
 
 

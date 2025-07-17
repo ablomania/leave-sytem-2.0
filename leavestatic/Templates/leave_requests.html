@@ -6,97 +6,179 @@
 {% endblock %}
 
 {% block content %}
+<script>
+  const approvalGroups = ["pending", "approved", "denied"];
+const approvalsPerPage = 5;
+const approvalState = {};
+
+function initApprovalPagination(group) {
+  const container = document.querySelector(`.approvals-group[data-group="${group}"]`);
+  if (!container) return;
+
+  const cards = container.querySelectorAll(".approval-card");
+  const totalPages = Math.ceil(cards.length / approvalsPerPage);
+  if (cards.length <= approvalsPerPage) return;
+
+  approvalState[group] = { page: 1, cards, totalPages };
+
+  const bar = document.querySelector(`.pagination-bar[data-group="${group}"]`);
+  if (bar) {
+    bar.innerHTML = `
+      <button onclick="changeApprovalPage('${group}', -1)">« Prev</button>
+      <span id="${group}_page_info"></span>
+      <button onclick="changeApprovalPage('${group}', 1)">Next »</button>
+    `;
+    bar.style.display = "flex";
+  }
+
+  renderApprovalPage(group);
+}
+
+function renderApprovalPage(group) {
+  const { page, cards, totalPages } = approvalState[group];
+  cards.forEach((card, i) => {
+    card.style.display = (i >= (page - 1) * approvalsPerPage && i < page * approvalsPerPage) ? "block" : "none";
+  });
+
+  const info = document.getElementById(`${group}_page_info`);
+  if (info) info.textContent = `Page ${page} of ${totalPages}`;
+}
+
+function changeApprovalPage(group, delta) {
+  const state = approvalState[group];
+  if (!state) return;
+
+  state.page += delta;
+  if (state.page < 1) state.page = 1;
+  if (state.page > state.totalPages) state.page = state.totalPages;
+
+  renderApprovalPage(group);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  approvalGroups.forEach(initApprovalPagination);
+});
+
+</script>
+<style>
+  .pagination-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin: 20px 0;
+  font-size: 0.95rem;
+}
+
+.pagination-bar button {
+  background-color: #0074d9;
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.pagination-bar button:hover {
+  background-color: #005fa3;
+}
+
+</style>
     <div class="approvals-container">
 
-  <!-- Pending Approvals -->
-  <section class="approvals-section approvals-pending">
-    <h2>Pending Approvals</h2>
-    <div class="cards">
-      {% if pending_approvals %}
-        {% for approval in pending_approvals %}
-          <div class="approval-card pending">
-            <header class="card-header">
-              <h3>{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}</h3>
-              <span class="status-label">{{ approval.get_status_display }}</span>
-            </header>
-            <div class="card-body">
-              <p><strong>Date:</strong> {{ approval.request.application_date }}</p>
-              <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
-              <p><strong>Days Requested:</strong> {{ approval.request.days_requested }}</p>
+    <!-- Pending Approvals -->
+    <section class="approvals-section approvals-pending">
+      <h2>Pending Approvals</h2>
+      <div class="cards approvals-group" data-group="pending">
+        {% if pending_approvals %}
+          {% for approval in pending_approvals %}
+            <div class="approval-card pending">
+              <header class="card-header">
+                <h3>{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}</h3>
+                <span class="status-label">{{ approval.get_status_display }}</span>
+              </header>
+              <div class="card-body">
+                <p><strong>Date:</strong> {{ approval.request.application_date }}</p>
+                <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
+                <p><strong>Days Requested:</strong> {{ approval.request.days_requested }}</p>
+              </div>
+              <footer class="card-actions">
+                <form action="" method="post" class="inline-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="approval_id" value="{{approval.id}}" id="">
+                  <input type="hidden" name="form_meta" value="approve" id="">
+                  <button type="submit" class="btn btn-success">Approve</button>
+                </form>
+                <form action="" method="post" class="inline-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="approval_id" value="{{approval.id}}" id="">
+                  <input type="hidden" value="deny" name="form_meta" id="">
+                  <button type="submit" class="btn btn-danger">Deny</button>
+                </form>
+              </footer>
             </div>
-            <footer class="card-actions">
-              <form action="" method="post" class="inline-form">
-                {% csrf_token %}
-                <input type="hidden" name="approval_id" value="{{approval.id}}" id="">
-                <input type="hidden" name="form_meta" value="approve" id="">
-                <button type="submit" class="btn btn-success">Approve</button>
-              </form>
-              <form action="" method="post" class="inline-form">
-                {% csrf_token %}
-                <input type="hidden" name="approval_id" value="{{approval.id}}" id="">
-                <input type="hidden" value="deny" name="form_meta" id="">
-                <button type="submit" class="btn btn-danger">Deny</button>
-              </form>
-            </footer>
-          </div>
-        {% endfor %}
-      {% else %}
-        <p class="no-items">No pending approvals.</p>
-      {% endif %}
-    </div>
-  </section>
+          {% endfor %}
+        {% else %}
+          <p class="no-items">No pending approvals.</p>
+        {% endif %}
+      </div>
+      <div class="pagination-bar" data-group="pending"></div>
+    </section>
 
-  <hr>
+    <hr>
 
-  <!-- Approved Approvals -->
-  <section class="approvals-section approvals-approved">
-    <h2>Approved Approvals</h2>
-    <div class="cards">
-      {% if approved_approvals %}
-        {% for approval in approved_approvals %}
-          <div class="approval-card approved">
-            <header class="card-header">
-              <h3>{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}</h3>
-              <span class="status-label">{{ approval.get_status_display }}</span>
-            </header>
-            <div class="card-body">
-              <p><strong>Date:</strong> {{ approval.request.application_date }}</p>
-              <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
-              <p><strong>Days Approved:</strong> {{ approval.days_approved }}</p>
+    <!-- Approved Approvals -->
+    <section class="approvals-section approvals-approved">
+      <h2>Approved Approvals</h2>
+      <div class="cards approvals-group" data-group="approved">
+        {% if approved_approvals %}
+          {% for approval in approved_approvals %}
+            <div class="approval-card approved">
+              <header class="card-header">
+                <h3>{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}</h3>
+                <span class="status-label">{{ approval.get_status_display }}</span>
+              </header>
+              <div class="card-body">
+                <p><strong>Date:</strong> {{ approval.request.application_date }}</p>
+                <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
+                <p><strong>Days Approved:</strong> {{ approval.days_approved }}</p>
+              </div>
             </div>
-          </div>
-        {% endfor %}
-      {% else %}
-        <p class="no-items">No approved approvals.</p>
-      {% endif %}
-    </div>
-  </section>
+          {% endfor %}
+        {% else %}
+          <p class="no-items">No approved approvals.</p>
+        {% endif %}
+      </div>
+      <div class="pagination-bar" data-group="approved"></div>
+    </section>
 
-  <hr>
+    <hr>
 
-  <!-- Denied Approvals -->
-  <section class="approvals-section approvals-denied">
-    <h2>Denied Approvals</h2>
-    <div class="cards">
-      {% if denied_approvals %}
-        {% for approval in denied_approvals %}
-          <div class="approval-card denied">
-            <header class="card-header">
-              <h3>{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}</h3>
-              <span class="status-label">{{ approval.get_status_display }}</span>
-            </header>
-            <div class="card-body">
-              <p><strong>Date:</strong> {{ approval.request.application_date }}</p>
-              <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
-              <p><strong>Reason:</strong> {{ approval.reason|default:"—" }}</p>
+    <!-- Denied Approvals -->
+    <section class="approvals-section approvals-denied">
+      <h2>Denied Approvals</h2>
+      <div class="cards approvals-group" data-group="denied">
+        {% if denied_approvals %}
+          {% for approval in denied_approvals %}
+            <div class="approval-card denied">
+              <header class="card-header">
+                <h3>{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}</h3>
+                <span class="status-label">{{ approval.get_status_display }}</span>
+              </header>
+              <div class="card-body">
+                <p><strong>Date:</strong> {{ approval.request.application_date }}</p>
+                <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
+                <p><strong>Reason:</strong> {{ approval.reason|default:"—" }}</p>
+              </div>
             </div>
-          </div>
-        {% endfor %}
-      {% else %}
-        <p class="no-items">No denied approvals.</p>
-      {% endif %}
-    </div>
-  </section>
+          {% endfor %}
+        {% else %}
+          <p class="no-items">No denied approvals.</p>
+        {% endif %}
+      </div>
+      <div class="pagination-bar" data-group="denied"></div>
+    </section>
 
 </div>
 {% endblock %}

@@ -305,6 +305,9 @@ def deny_leave(form_data):
 
 
 def leaveRequestHandler(form_data, user, request, slug):
+    from django.urls import reverse
+
+    # 1. Create Leave Request
     leave_request = LeaveRequest.objects.create(
         applicant=user,
         days_requested=form_data["days_requested"],
@@ -320,22 +323,47 @@ def leaveRequestHandler(form_data, user, request, slug):
         letter=form_data.get("letter") or None
     )
 
-    # Acknowledgment Setup
+    # 2. Acknowledgment Setup
     relieving_officer_id = int(form_data["relieving_officer"])
     Ack.objects.create(request=leave_request, staff_id=relieving_officer_id)
     Ack.objects.create(request=leave_request, staff_id=user.id, type=Ack.Type.SELF)
 
+    # 3. Fetch All Approvers in User's Group Except Self
     approvers = Approver.objects.select_related("staff", "level").filter(
         group_to_approve_id=user.group_id,
         is_active=True
-    ).exclude(staff_id=user.id)
+    ).exclude(staff=user)
 
-    Approval.objects.bulk_create([
-        Approval(approver=approver, request=leave_request)
-        for approver in approvers
-    ])
+    # 4. Check if Applicant is Also an Approver
+    applicant_approver = Approver.objects.filter(staff=user, is_active=True).first()
+    if applicant_approver and applicant_approver.level:
+        applicant_level_rank = applicant_approver.level.level
+        approvers = approvers.filter(level__level__gt=applicant_level_rank)
 
-    # ✉️ Email: Applicant
+    # 5. Create Approval Records
+    created_approvals = False
+    if approvers.exists():
+        Approval.objects.bulk_create([
+            Approval(approver=approver, request=leave_request)
+            for approver in approvers
+        ])
+        created_approvals = True
+    else:
+        # 6. Fallback to Special Approver (Staff)
+        fallback_staff = Staff.objects.filter(is_special_approver=True, is_active=True).first()
+        if fallback_staff:
+            fallback_approver = Approver.objects.filter(staff=fallback_staff, is_active=True).first()
+            if fallback_approver:
+                Approval.objects.create(
+                    approver=fallback_approver,
+                    request=leave_request,
+                    status=Approval.ApprovalStatus.PENDING
+                )
+                created_approvals = True
+
+    # 7. Emails ✉️
+
+    # Applicant Confirmation
     applicant_subject = 'Acknowledgment of Leave Application'
     applicant_msg = (
         f"Dear {user.first_name},\n\n"
@@ -345,7 +373,7 @@ def leaveRequestHandler(form_data, user, request, slug):
     )
     send_leave_email.delay(applicant_subject, applicant_msg, [user.email])
 
-    # ✉️ Email: Relieving Officer
+    # Relieving Officer Assignment
     relieving_officer = Staff.objects.get(id=relieving_officer_id)
     leave_type_name = leave_request.type.name.split()[0]
     relief_subject = f"Relief Assignment During {user.first_name} {user.last_name}’s Leave"
@@ -353,15 +381,18 @@ def leaveRequestHandler(form_data, user, request, slug):
         f"Dear {relieving_officer.first_name},\n\n"
         f"You are assigned to relieve {user.get_full_name()} during their {leave_type_name.lower()} leave "
         f"from {leave_request.start_date} to {leave_request.end_date}.\n\n"
-        f"Please acknowledge here:\n"
+        f"Acknowledge here:\n"
         f"{request.build_absolute_uri(reverse('relieve_ack', args=[leave_request.id, slug]))}\n\n"
         f"Thank you."
     )
     send_leave_email.delay(relief_subject, relief_msg, [relieving_officer.email])
 
-    # ✉️ Email: First Approver
-    first_approver = approvers.order_by("level__level").first()
-    if first_approver:
+    # First Approver Notification
+    first_approver = (
+        approvers.order_by("level__level").first()
+        if approvers.exists() else fallback_approver
+    )
+    if created_approvals and first_approver:
         approver_subject = 'Leave Application Pending Approval'
         approver_msg = (
             f"Dear {first_approver.staff.first_name},\n\n"
@@ -373,3 +404,4 @@ def leaveRequestHandler(form_data, user, request, slug):
         send_leave_email.delay(approver_subject, approver_msg, [first_approver.staff.email])
 
     return True
+

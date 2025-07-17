@@ -25,6 +25,7 @@ from django.utils.safestring import mark_safe
 import json
 from collections import defaultdict
 from django.contrib import messages
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 
@@ -655,7 +656,6 @@ def relieve_ack(request, id, slug):
 
 def leave_history(request, slug):
     """Displays a user's leave history with approval and acknowledgment progress."""
-
     user_slug = request.session.get("user_slug") or change_session(slug)
     if not user_slug:
         return redirect(reverse("login", args=["leave_history"]))
@@ -674,11 +674,25 @@ def leave_history(request, slug):
         .order_by("-application_date")
     )
 
-    # Group by year
-    grouped_leave = {}
+    # Group leave by year
+    grouped_leave_dict = {}
     for lr in leave_requests:
         year = lr.application_date.year
-        grouped_leave.setdefault(year, []).append(lr)
+        grouped_leave_dict.setdefault(year, []).append(lr)
+
+    # Sort and paginate year keys (each page displays one year)
+    years_sorted = sorted(grouped_leave_dict.keys(), reverse=True)
+    paginator = Paginator(years_sorted, 1)
+    page_number = request.GET.get("page") or "1"
+
+    try:
+        year_page = paginator.page(page_number)
+    except (PageNotAnInteger, EmptyPage):
+        return redirect(f"{reverse('leave_history', args=[slug])}?page=1")
+
+    # Safely extract the current year
+    current_year = year_page.object_list[0] if year_page.object_list else None
+    grouped_leave = {current_year: grouped_leave_dict[current_year]} if current_year else {}
 
     # Cancelled leaves
     terminated_leaves = (
@@ -688,16 +702,12 @@ def leave_history(request, slug):
         .order_by("-date_cancelled")
     )
 
-    if request.method == "POST":
-        form_data = request.POST
-
-
     context = {
-        "leave_requests": leave_requests,
         "grouped_leave": grouped_leave,
-        "slug": slug,
         "terminated_leaves": terminated_leaves,
-        'loc': 'history'
+        "slug": slug,
+        "year_page": year_page,
+        "loc": "history"
     }
 
     response = render(request, "leave_history.html", context)

@@ -2,7 +2,7 @@ from django.utils import timezone
 from django.core.mail import EmailMessage
 from django.conf import settings
 from datetime import timedelta
-from .models import Leave, StaffLeaveDetail, LeaveBalanceReset, Holiday, ApproverSwitch, Approval, LeaveRequest, Resumption
+from .models import *
 
 def get_reset_trigger(leave_type, today):
     if leave_type.reset_period == "YEARLY":
@@ -27,7 +27,6 @@ def update_leave_progress():
         application_date__lte=today - timedelta(days=14),
         is_active=True
     )
-    stale_requests_count = stale_requests.count()
     stale_requests.delete()
 
     # 🟡 Activate leaves starting today
@@ -37,8 +36,11 @@ def update_leave_progress():
         request__status=LeaveRequest.Status.APPROVED,
         request__start_date=today
     ):
+        update_obj = LeaveUpdate.objects.create(leaveobj=leave)
         leave.status = Leave.LeaveStatus.On_Leave
         leave.save(update_fields=["status"])
+        update_obj.status = "successful"
+        update_obj.save(update_fields=["status"])
 
     # 🟢 Update progress on active leaves
     active_leaves = Leave.objects.select_related("request", "request__applicant", "request__type").filter(
@@ -47,6 +49,8 @@ def update_leave_progress():
     )
 
     for leave in active_leaves:
+        update_obj = LeaveUpdate.objects.create(leaveobj=leave)
+
         request = leave.request
         staff = request.applicant
         current = request.start_date
@@ -61,7 +65,6 @@ def update_leave_progress():
         leave.days_remaining = max(leave.days_granted - used_days, 0)
         leave.save(update_fields=["days_remaining"])
 
-        # Prepare notification if threshold hit
         if leave.days_remaining % 5 == 0 or leave.days_remaining == 1:
             pending_emails.append({
                 "subject": f"Leave Update: {request.type.name}",
@@ -76,7 +79,6 @@ def update_leave_progress():
                 )
             })
 
-        # Complete leave when done
         if leave.days_remaining == 0:
             leave.status = Leave.LeaveStatus.Completed
             leave.is_active = False
@@ -88,7 +90,7 @@ def update_leave_progress():
             approver_emails = [
                 a.approver.staff.email
                 for a in Approval.objects.filter(request=request, is_active=True)
-                if a.approver.staff.email
+                if a.approver and a.approver.staff.email
             ]
 
             pending_emails.append({
@@ -106,6 +108,9 @@ def update_leave_progress():
                 )
             })
 
+        update_obj.status = "successful"
+        update_obj.save(update_fields=["status"])
+
     # 🔄 Reset quotas if needed
     for detail in StaffLeaveDetail.objects.select_related("staff", "leave_type").filter(is_active=True):
         leave_type = detail.leave_type
@@ -114,7 +119,6 @@ def update_leave_progress():
         if not get_reset_trigger(leave_type, today):
             continue
 
-        # Check if on leave of same type
         ongoing_leave = Leave.objects.filter(
             request__applicant=staff,
             request__type=leave_type,
@@ -146,7 +150,6 @@ def update_leave_progress():
             note=f"Reset on {today}. Used {used_days} day(s) already."
         )
 
-        # Notify mid-leave resets
         if ongoing_leave:
             pending_emails.append({
                 "subject": f"Leave Quota Reset Notice: {leave_type.name}",
@@ -165,7 +168,7 @@ def update_leave_progress():
                 )
             })
 
-    # ✉️ Send emails at the end
+    # ✉️ Final email loop
     for mail in pending_emails:
         try:
             EmailMessage(
@@ -177,7 +180,6 @@ def update_leave_progress():
             ).send(fail_silently=True)
         except Exception as e:
             print(f"❗ Email failed: {mail['subject']} → {mail['to']}\nError: {e}")
-
 
 
 def restore_original_approvers():

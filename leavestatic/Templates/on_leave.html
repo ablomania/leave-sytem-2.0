@@ -6,6 +6,65 @@
 {% endblock %}
 
 {% block content %}
+<script>
+    const paginationConfig = {
+        main_content: { selector: ".main_content .leave_card", perPage: 10 }
+    };
+
+    const sectionState = {};
+
+    function initPagination(sectionName) {
+        const config = paginationConfig[sectionName];
+        if (!config) return;
+
+        const cards = document.querySelectorAll(config.selector);
+        if (cards.length <= config.perPage) return;
+
+        sectionState[sectionName] = { page: 1, cards, totalPages: Math.ceil(cards.length / config.perPage) };
+
+        const bar = document.querySelector(`.pagination-bar[data-section="${sectionName}"]`);
+        if (bar) {
+            bar.innerHTML = `
+            <button onclick="changePage('${sectionName}', -1)">« Prev</button>
+            <span id="${sectionName}_page_info"></span>
+            <button onclick="changePage('${sectionName}', 1)">Next »</button>
+            `;
+            bar.style.display = "flex";
+        }
+
+        renderPage(sectionName);
+    }
+
+    function renderPage(sectionName) {
+        const { page, cards, perPage, totalPages } = {
+            ...sectionState[sectionName],
+            perPage: paginationConfig[sectionName].perPage
+        };
+
+        cards.forEach((card, i) => {
+            card.style.display = (i >= (page - 1) * perPage && i < page * perPage) ? "block" : "none";
+        });
+
+        const info = document.getElementById(`${sectionName}_page_info`);
+        if (info) info.textContent = `Page ${page} of ${totalPages}`;
+        }
+
+        function changePage(sectionName, delta) {
+        const state = sectionState[sectionName];
+        if (!state) return;
+
+        state.page += delta;
+        if (state.page < 1) state.page = 1;
+        if (state.page > state.totalPages) state.page = state.totalPages;
+
+        renderPage(sectionName);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        Object.keys(paginationConfig).forEach(initPagination);
+    });
+
+</script>
 <div class="users_on_leave">
     <div class="on_leave_header">
         <a href="{% url 'dashboard' slug %}">
@@ -36,6 +95,8 @@
         <p class="no-leave-msg">No staff are currently on leave.</p>
         {% endif %}
     </div>
+    <div class="pagination-bar" data-section="main_content"></div>
+
 </div>
 
 {% endblock %}

@@ -7,6 +7,73 @@
 {% endblock %}
 
 {% block content %}
+<script>
+    const paginationConfig = {
+        groups: { selector: ".groups .group_item", perPage: 5 },
+        staff_all: { selector: "#staff_all .staff_card", perPage: 10 },
+        gpd: { selector: ".gpd .staff_item", perPage: 10 },
+        app356: { selector: ".app356 .approver-item", perPage: 8 },
+        genders: { selector: ".genders .gender-card", perPage: 8 },
+        leave_types: { selector: ".leave_types .lvtlb", perPage: 5 },
+        holidays: { selector: ".holidays .vholitem, .holidays .fholitem", perPage: 5 },
+        levels: { selector: ".levels .level-card", perPage: 10 },
+        categories: { selector: ".categories .gender-card", perPage: 10 }
+    };
+
+    const sectionState = {};
+
+    function initPagination(sectionName) {
+        const config = paginationConfig[sectionName];
+        if (!config) return;
+
+        const cards = document.querySelectorAll(config.selector);
+        if (cards.length <= config.perPage) return;
+
+        sectionState[sectionName] = { page: 1, cards, totalPages: Math.ceil(cards.length / config.perPage) };
+
+        const bar = document.querySelector(`.pagination-bar[data-section="${sectionName}"]`);
+        if (bar) {
+            bar.innerHTML = `
+            <button onclick="changePage('${sectionName}', -1)">« Prev</button>
+            <span id="${sectionName}_page_info"></span>
+            <button onclick="changePage('${sectionName}', 1)">Next »</button>
+            `;
+            bar.style.display = "flex";
+        }
+
+        renderPage(sectionName);
+    }
+
+    function renderPage(sectionName) {
+        const { page, cards, perPage, totalPages } = {
+            ...sectionState[sectionName],
+            perPage: paginationConfig[sectionName].perPage
+        };
+
+        cards.forEach((card, i) => {
+            card.style.display = (i >= (page - 1) * perPage && i < page * perPage) ? "block" : "none";
+        });
+
+        const info = document.getElementById(`${sectionName}_page_info`);
+        if (info) info.textContent = `Page ${page} of ${totalPages}`;
+        }
+
+        function changePage(sectionName, delta) {
+        const state = sectionState[sectionName];
+        if (!state) return;
+
+        state.page += delta;
+        if (state.page < 1) state.page = 1;
+        if (state.page > state.totalPages) state.page = state.totalPages;
+
+        renderPage(sectionName);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        Object.keys(paginationConfig).forEach(initPagination);
+    });
+
+</script>
 <div class="setup_page">
     <h1>Settings</h1>
     <div class="nav001" id="nav001">
@@ -63,7 +130,7 @@
         </div>
         <div class="in_body_email">
         {% for email in i_emails %}
-        <div class="email-card">
+        <div class="email-card-i">
             <div class="email-content">
             <h3>{{ email.subject }}</h3>
             <p><strong>From:</strong> {{ email.sender }}</p>
@@ -128,7 +195,7 @@
             </div>
             <div class="in_body_level">
             {% for level in i_levels %}
-                <div class="level-card">
+                <div class="level-card-i">
                 <div class="level-content">
                     <h3>{{ level.name }}</h3>
                     <p><strong>Level Rank:</strong> {{ level.level }}</p>
@@ -147,6 +214,7 @@
             {% endfor %}
             </div>
         </div>
+        <div class="pagination-bar" data-section="levels"></div>
     </div>
 
     <div class="level_form_add" style="display: none;">
@@ -254,7 +322,7 @@
             <div class="in_body_gend">
             {% for gender in all_genders %}
         {% if not gender.is_active %}
-            <div class="gender-card">
+            <div class="gender-card-i">
                 <div class="gender-content">
                     <h3>{{ gender.name }}</h3>
                     <p><strong>Pronoun:</strong> {{ gender.pronoun }}</p>
@@ -314,7 +382,7 @@
             </div>
             <div class="in_body_cat">
             {% for sen in i_seniority %}
-            <div class="gender-card" style="margin-bottom: 10px;">
+            <div class="gender-card-i" style="margin-bottom: 10px;">
                 <div class="gender-content">
                     <h3>{{ sen.name }}</h3>
                     <p><strong>Rank:</strong> {{ sen.rank }}</p>
@@ -335,6 +403,7 @@
         {% endfor %}
             </div>
         </div>
+        <div class="pagination-bar" data-section="categories"></div>
     </div>
 
     <div class="cat_form_add" style="display: none;">
@@ -398,105 +467,105 @@
     {% endfor %}
 
     
-  <div class="staff" style="display: block;">
-    <div class="staff_nav_button">
-        <h3>All staff</h3>
-      <button type="button" onclick="mySwitcher('.staff', '.staff_form_add', '.staff')">New Staff</button>
-    </div>
-  <!-- Navigation Tabs -->
-  <div class="staff_nav">
-    <ul class="staff_nav_tabs">
-      <li class="staff_nav_item active" onclick="switchStaffTab('staff_all', this)">All Staff (A–Z)</li>
-      {% for group in active_groups %}
-      <li class="staff_nav_item" onclick="switchStaffTab('staff_group_{{ group.id }}', this)">
-        {{ group.name }}
-      </li>
-      {% endfor %}
-      <li class="staff_nav_item" onclick="switchStaffTab('staff_unassigned', this)">Unassigned</li>
-      <li class="staff_nav_item" onclick="switchStaffTab('staff_inactive', this)">Inactive</li>
-    </ul>
+    <div class="staff" style="display: block;">
+        <div class="staff_nav_button">
+            <h3>All staff</h3>
+            <button type="button" onclick="mySwitcher('.staff', '.staff_form_add', '.staff')">New Staff</button>
+        </div>
+        <!-- Navigation Tabs -->
+        <div class="staff_nav">
+            <ul class="staff_nav_tabs">
+                <li class="staff_nav_item active" onclick="switchStaffTab('staff_all', this)">All Staff (A–Z)</li>
+                {% for group in active_groups %}
+                <li class="staff_nav_item" onclick="switchStaffTab('staff_group_{{ group.id }}', this)">
+                    {{ group.name }}
+                </li>
+                {% endfor %}
+                <li class="staff_nav_item" onclick="switchStaffTab('staff_unassigned', this)">Unassigned</li>
+                <li class="staff_nav_item" onclick="switchStaffTab('staff_inactive', this)">Inactive</li>
+            </ul>
     
-  </div>
-
-  <!-- Panels -->
-  <div class="staff_panels">
-    <div class="staff_search">
-        <input type="text" id="staffSearchInput" placeholder="Search staff by name..." oninput="filterStaffByName(this.value)">
-    </div>
-
-    <!-- All Staff A–Z Panel -->
-    <div class="staff_panel" id="staff_all">
-      <div class="staff_cards">
-        {% for staff in all_staff|dictsort:"first_name" %}
-        {% if staff.is_active %}
-        <div class="staff_card">
-          <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
-          <p><strong>Role:</strong> {{ staff.role }}</p>
-          <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
-          <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
         </div>
-        {% endif %}
-        {% endfor %}
-      </div>
-    </div>
 
-    <!-- Individual Groups -->
-    {% for group in active_groups %}
-    <div class="staff_panel" id="staff_group_{{ group.id }}" style="display: none;">
-      <div class="staff_cards">
-        {% with staff_list=groups_list|get_item:group %}
-        {% for staff in staff_list %}
-        {% if staff.is_active %}
-        <div class="staff_card">
-          <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
-          <p><strong>Role:</strong> {{ staff.role }}</p>
-          <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
-          <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+        <!-- Panels -->
+        <div class="staff_panels">
+            <div class="staff_search">
+                <input type="text" id="staffSearchInput" placeholder="Search staff by name..." oninput="filterStaffByName(this.value)">
+            </div>
+
+            <!-- All Staff A–Z Panel -->
+            <div class="staff_panel" id="staff_all">
+                <div class="staff_cards">
+                    {% for staff in all_staff|dictsort:"first_name" %}
+                    {% if staff.is_active %}
+                    <div class="staff_card">
+                        <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
+                        <p><strong>Role:</strong> {{ staff.role }}</p>
+                        <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
+                        <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="pagination-bar" data-section="staff_all"></div>
+            </div>
+
+            <!-- Individual Groups -->
+            {% for group in active_groups %}
+            <div class="staff_panel" id="staff_group_{{ group.id }}" style="display: none;">
+                <div class="staff_cards">
+                    {% with staff_list=groups_list|get_item:group %}
+                    {% for staff in staff_list %}
+                    {% if staff.is_active %}
+                    <div class="staff_card">
+                        <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
+                        <p><strong>Role:</strong> {{ staff.role }}</p>
+                        <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
+                        <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                    {% endwith %}
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- Unassigned -->
+            <div class="staff_panel" id="staff_unassigned" style="display: none;">
+                <div class="staff_cards">
+                    {% for staff in all_staff %}
+                    {% if staff.is_active and not staff.group %}
+                    <div class="staff_card">
+                        <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
+                        <p><strong>Role:</strong> {{ staff.role }}</p>
+                        <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
+                        <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Inactive -->
+            <div class="staff_panel" id="staff_inactive" style="display: none;">
+                <div class="staff_cards">
+                    {% for staff in all_staff %}
+                    {% if not staff.is_active %}
+                    <form method="post" class="staff_card-i">
+                        {% csrf_token %}
+                        <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
+                        <p><strong>Role:</strong> {{ staff.role }}</p>
+                        <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
+                        <input type="hidden" name="form_meta" value="restore_staff">
+                        <input type="hidden" name="staff_id" value="{{ staff.id }}">
+                        <button type="submit">Restore</button>
+                    </form>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
         </div>
-        {% endif %}
-        {% endfor %}
-        {% endwith %}
-      </div>
     </div>
-    {% endfor %}
-
-    <!-- Unassigned -->
-    <div class="staff_panel" id="staff_unassigned" style="display: none;">
-      <div class="staff_cards">
-        {% for staff in all_staff %}
-        {% if staff.is_active and not staff.group %}
-        <div class="staff_card">
-          <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
-          <p><strong>Role:</strong> {{ staff.role }}</p>
-          <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
-          <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
-        </div>
-        {% endif %}
-        {% endfor %}
-      </div>
-    </div>
-
-    <!-- Inactive -->
-    <div class="staff_panel" id="staff_inactive" style="display: none;">
-      <div class="staff_cards">
-        {% for staff in all_staff %}
-        {% if not staff.is_active %}
-        <form method="post" class="staff_card">
-          {% csrf_token %}
-          <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
-          <p><strong>Role:</strong> {{ staff.role }}</p>
-          <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
-          <input type="hidden" name="form_meta" value="restore_staff">
-          <input type="hidden" name="staff_id" value="{{ staff.id }}">
-          <button type="submit">Restore</button>
-        </form>
-        {% endif %}
-        {% endfor %}
-      </div>
-    </div>
-
-  </div>
-</div>
 
 
 
@@ -593,6 +662,7 @@
             </div>
             
         </div>
+        <div class="pagination-bar" data-section=".groups"></div>
 
         <form action="" method="post" id="group_form" class="group_form" style="display: none;">
             {% csrf_token %}
@@ -1028,6 +1098,9 @@
                                 &nbsp;|&nbsp;  
                                 <strong>Level:</strong> {{ approver.level.name }}
                             </li>
+                            <li>
+                                <strong>{% if approver.staff.is_special_approver %} Special Approver {% endif %}</strong>
+                            </li>
                         {% endif %}
                     {% empty %}
                         <li><em>No active approvals</em></li>
@@ -1078,6 +1151,7 @@
             </ul>
 
         </div>
+        <div class="pagination-bar" data-section="app356"></div>
     </div>
 
     <div class="app_form_add" style="display: none;">
@@ -1092,6 +1166,7 @@
         <form class="app_form" action="" method="post">
             <input type="hidden" name="form_meta" value="add_approver" id="">
             {% csrf_token %}
+
             <div class="fld456">
                 <label for="approver_name">Approver Name</label>
                 <select name="approver_name" id="approver_name">
@@ -1101,6 +1176,7 @@
                     {% endfor %}
                 </select>
             </div>
+
             <div class="fld456">
                 <label for="approver_group">Group to approve</label>
                 <select name="approver_group" id="approver_group">
@@ -1109,6 +1185,7 @@
                     {% endfor %}
                 </select>
             </div>
+
             <div class="fld456">
                 <label for="approver_level">Approver Level</label>
                 <select name="approver_level" id="approver_level">
@@ -1117,12 +1194,24 @@
                     {% endfor %}
                 </select>
             </div>
+
+            <!-- ✅ Special approver tied to Staff -->
+            <div class="fld456">
+                <label for="is_special">
+                    <input type="checkbox" name="is_special_approver" id="is_special"
+                    value="True">
+                    Special Approver Override
+                </label>
+                <p class="hint">Can approve requests when no higher-ranked approvers exist</p>
+            </div>
+
             <div class="bt23">
                 <button class="save" type="button" onclick="submitMyForm4('.app_form', '.app356')">Save</button>
                 <button class="saaave" type="button" onclick="submitMyForm4('.app_form', '.app_form_add')">Save and add another</button>
             </div>
         </form>
     </div>
+
     
 
     {% for staff, approver_objs in approvers_list.items %}
@@ -1173,6 +1262,14 @@
                     </div>
                     {% endwith %}
                     {% endfor %}
+                </div>
+                <div class="fld456">
+                    <label for="is_special_{{staff.id}}">
+                        <input type="checkbox" name="is_special_approver" id="is_special_{{staff.id}}"
+                        {% if staff.is_special_approver %}checked{% endif %}>
+                        Special Approver Override
+                    </label>
+                    <p class="hint">Can approve requests when no higher-ranked approvers exist</p>
                 </div>
                 <div class="fld456">
                     <button type="submit">Save</button>
@@ -1236,6 +1333,7 @@
                 {% endfor %}
             </div>
         </div>
+        <div class="pagination-bar" data-section="leave_types"></div>
         
         <form action="" class="lvt_del" method="post">
             {% csrf_token %}

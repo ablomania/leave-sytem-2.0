@@ -56,8 +56,11 @@ class Staff(AbstractUser):
     group = models.ForeignKey("Group", on_delete=models.CASCADE, null=True, related_name="staff_members")
     leave_status = models.CharField(max_length=13, choices=LeaveStatus.choices, default=LeaveStatus.NOT_ON_LEAVE)
     gender = models.ForeignKey('Gender', on_delete=models.CASCADE, related_name="gender_for_staff", null=True)
+    is_special_approver = models.BooleanField(
+        default=False,
+        help_text="Can approve when no ranked approvers are available"
+    )
     image = models.ImageField(upload_to='images/profiles', null=True)
-    level = models.ForeignKey(Level, on_delete=models.CASCADE, related_name="level_of_staff", null=True)
     seniority = models.ForeignKey(Seniority, on_delete=models.CASCADE, related_name="seniority_of_staff", null=True)
     slug = models.SlugField(blank=True, null=True)
     def save(self, *args, **kwargs):
@@ -92,6 +95,20 @@ class Resumption(models.Model):
     notes = models.TextField(null=True, blank=True)
     confirmed = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+
+
+class LeaveUpdate(models.Model):
+    leaveobj = models.ForeignKey("Leave", on_delete=models.CASCADE)
+    date_modified = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[("failed", "Failed"), ("successful", "Successful")],
+        default="failed"
+    )
+
+    def __str__(self):
+        return f"Update for {self.leaveobj} at {self.date_modified} → {self.status}"
+
 
 
 

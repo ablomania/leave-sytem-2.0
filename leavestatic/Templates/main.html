@@ -81,9 +81,11 @@
             </div> -->
             {% endif %}
         </div>
-        <div class="footer">
+        {% if not login %}
+        <div class="main-footer">
             <p>&copy; 2025</p>
             <p>Ghana College of Physicians and Surgeons</p>
         </div>
+        {% endif %}
     </body>
 </html>

@@ -1441,6 +1441,7 @@
         color: #333;
     }
     .main-footer {
+        width: 100%;
         margin-top: 60px;
         padding: 20px;
         background: #1d1d1d;
@@ -4315,7 +4316,7 @@
             justify-content: flex-start;
         }
 
-        .gender-card {
+        .gender-card, .gender-card-i {
             background-color: #ffffff;
             border: 1px solid #ddd;
             border-radius: 0.5rem;
@@ -5440,7 +5441,7 @@
         }
 
         /* Card */
-        .level-card {
+        .level-card, .level-card-i {
             background-color: #ffffff;
             border: 1px solid #e2e2e2;
             border-radius: 0.5rem;
@@ -6781,7 +6782,7 @@
         gap: 1.5rem;
         }
 
-        .email-card {
+        .email-card, .email-card-i {
         background-color: #ffffff;
         border: 1px solid #ddd;
         border-radius: 0.5rem;
@@ -7348,6 +7349,30 @@
                 transform: translateY(0);
             }
         }
+    }
+
+    .pagination-bar {
+        display: none;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+        margin: 20px 0;
+        font-size: 0.95rem;
+    }
+
+    .pagination-bar button {
+        padding: 6px 18px;
+        border-radius: 6px;
+        background-color: #0074d9;
+        color: #fff;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
+
+    .pagination-bar button:hover {
+        background-color: #005fa3;
     }
 
 /* Main Navigator Container */

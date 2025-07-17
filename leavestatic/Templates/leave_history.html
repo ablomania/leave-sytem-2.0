@@ -1,25 +1,25 @@
 {% extends 'main.html' %}
 {% load static %}
-
 {% block title %}
-    History
+    Leave History
 {% endblock %}
 
 {% block content %}
 <div class="leave-history-container">
-  {% for year, requests in grouped_leave.items %}
-    <h2>{{ year }}</h2>
-    <div class="leave-card-grid">
-      {% for req in requests %}
-        <div class="leave-card">
-          <h3>
-            {{ req.type.name }}
-            <span class="status-tag status-{{ req.status|lower }}">{{ req.status }}</span>
-          </h3>
-          <p><strong>Applied:</strong> {{ req.application_date }}</p>
-          <p><strong>Duration:</strong> {{ req.start_date }} to {{ req.return_date }}</p>
 
-          {% if req.leave_set.all %}
+  {% if grouped_leave %}
+    {% for year, requests in grouped_leave.items %}
+      <h2>{{ year }} Leave Records</h2>
+      <div class="leave-card-grid">
+        {% for req in requests %}
+          <div class="leave-card">
+            <h3>
+              {{ req.type.name }}
+              <span class="status-tag status-{{ req.status|lower }}">{{ req.status }}</span>
+            </h3>
+            <p><strong>Applied:</strong> {{ req.application_date|date:"M j, Y" }}</p>
+            <p><strong>Duration:</strong> {{ req.start_date|date:"M j" }} to {{ req.return_date|date:"M j, Y" }}</p>
+
             {% for leave in req.leave_set.all %}
               {% if leave.status == "On Leave" and leave.is_active %}
                 <form method="post" action="{% url 'cancel_leave' leave.id slug %}">
@@ -28,56 +28,70 @@
                 </form>
               {% endif %}
             {% endfor %}
-          {% endif %}
 
-          <h4>Relieving Officer Acknowledgment</h4>
-          {% for ack in req.ack_set.all %}
-            <p>{{ ack.staff.first_name }}:
-              <span class="status-tag status-{{ ack.status|lower }}">{{ ack.status }}</span>
-            </p>
-          {% empty %}
-            <p class="empty">No acknowledgment yet.</p>
-          {% endfor %}
+            <h4>Relieving Officer Acknowledgment</h4>
+            {% for ack in req.ack_set.all %}
+              <p>{{ ack.staff.first_name }}:
+                <span class="status-tag status-{{ ack.status|lower }}">{{ ack.status }}</span>
+              </p>
+            {% empty %}
+              <p class="empty">No acknowledgment yet.</p>
+            {% endfor %}
 
-          <h4>Approval Progress</h4>
-          {% for approval in req.approval_set.all %}
-            <p>{{ approval.approver.staff.first_name }}:
-              <span class="status-tag status-{{ approval.status|lower }}">{{ approval.status }}</span>
-            </p>
-          {% empty %}
-            <p class="empty">No approvals yet.</p>
-          {% endfor %}
-        </div>
-      {% endfor %}
-    </div>
-  {% endfor %}
-
-  <div class="terminated-leaves-section fade-in">
-  <h2>Terminated Leave Records</h2>
-  {% if terminated_leaves %}
-    <div class="leave-card-grid">
-      {% for cancelled in terminated_leaves %}
-        <div class="leave-card cancelled-card">
-          <h3>{{ cancelled.leave_request.type.name }} 
-            <span class="status-tag status-cancelled">Cancelled</span>
-          </h3>
-          <p><strong>Start:</strong> {{ cancelled.leave_request.start_date }}</p>
-          <p><strong>End:</strong> {{ cancelled.leave_request.end_date }}</p>
-          <p><strong>Cancelled On:</strong> {{ cancelled.date_cancelled|date:"D, jS M Y" }}</p>
-          <p><strong>Days Used:</strong> {{ cancelled.days_used }}</p>
-          <p><strong>Remaining at Cancellation:</strong> {{ cancelled.days_remaining_at_cancel }}</p>
-          {% if cancelled.reason %}
-          <p><strong>Reason:</strong> {{ cancelled.reason }}</p>
-          {% endif %}
-        </div>
-      {% endfor %}
-    </div>
+            <h4>Approval Progress</h4>
+            {% for approval in req.approval_set.all %}
+              <p>{{ approval.approver.staff.first_name }}:
+                <span class="status-tag status-{{ approval.status|lower }}">{{ approval.status }}</span>
+              </p>
+            {% empty %}
+              <p class="empty">No approvals yet.</p>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
   {% else %}
-    <p class="empty">You have no cancelled leave records.</p>
+    <p class="empty">No leave history found for this page.</p>
   {% endif %}
-</div>
+
+  <!-- Pagination Controls -->
+  {% if year_page %}
+  <div class="pagination-controls">
+    {% if year_page.has_previous %}
+      <a class="pagination-button" href="?page={{ year_page.previous_page_number }}">« Previous Year</a>
+    {% endif %}
+    <span class="pagination-info">Showing {{ year_page.object_list.0 }}</span>
+    {% if year_page.has_next %}
+      <a class="pagination-button" href="?page={{ year_page.next_page_number }}">Next Year »</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Terminated Leaves -->
+  <div class="terminated-leaves-section fade-in">
+    <h2>Terminated Leave Records</h2>
+    {% if terminated_leaves %}
+      <div class="leave-card-grid">
+        {% for cancelled in terminated_leaves %}
+          <div class="leave-card cancelled-card">
+            <h3>{{ cancelled.leave_request.type.name }} 
+              <span class="status-tag status-cancelled">Cancelled</span>
+            </h3>
+            <p><strong>Start:</strong> {{ cancelled.leave_request.start_date|date:"M j, Y" }}</p>
+            <p><strong>End:</strong> {{ cancelled.leave_request.end_date|date:"M j, Y" }}</p>
+            <p><strong>Cancelled On:</strong> {{ cancelled.date_cancelled|date:"D, jS M Y" }}</p>
+            <p><strong>Days Used:</strong> {{ cancelled.days_used }}</p>
+            <p><strong>Remaining at Cancellation:</strong> {{ cancelled.days_remaining_at_cancel }}</p>
+            {% if cancelled.reason %}
+              <p><strong>Reason:</strong> {{ cancelled.reason }}</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty">You have no cancelled leave records.</p>
+    {% endif %}
+  </div>
 
 </div>
-
-
 {% endblock %}
