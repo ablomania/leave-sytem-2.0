@@ -2,7 +2,7 @@
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: sh -c "python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
     env_file:
@@ -28,26 +28,30 @@ services:
 
   celery:
     build: .
-    command: celery -A leaveProject worker --loglevel=info
+    command: sh -c "celery -A leaveProject worker --loglevel=info"
     volumes:
       - .:/app
     depends_on:
       - redis
       - postgres
     environment:
+      - DJANGO_SETTINGS_MODULE=leaveProject.settings
+      - DATABASE_NAME=${DATABASE_NAME} 
       - CELERY_BROKER=redis://redis:6379/0
     env_file:
       - .env 
 
   beat:
     build: .
-    command: celery -A leaveProject beat --loglevel=info
+    command: sh -c "python manage.py migrate django_celery_beat && celery -A leaveProject beat --loglevel=info"
     volumes:
       - .:/app
     depends_on:
       - postgres
       - redis
     environment:
+      - DJANGO_SETTINGS_MODULE=leaveProject.settings
+      - DATABASE_NAME=${DATABASE_NAME} 
       - CELERY_BROKER=redis://redis:6379/0
     env_file:
       - .env 

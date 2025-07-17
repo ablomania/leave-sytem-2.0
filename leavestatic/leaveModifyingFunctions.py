@@ -4,6 +4,8 @@ from django.conf import settings
 from datetime import timedelta
 from .models import *
 
+
+
 def get_reset_trigger(leave_type, today):
     if leave_type.reset_period == "YEARLY":
         return today.month == 1 and today.day == 1
