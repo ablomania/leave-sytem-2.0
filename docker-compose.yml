@@ -43,7 +43,7 @@ services:
 
   beat:
     build: .
-    command: sh -c "python manage.py migrate django_celery_beat && celery -A leaveProject beat --loglevel=info"
+    command: sh -c "python manage.py migrate django_celery_beat && celery -A leaveProject beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
       - .:/app
     depends_on:

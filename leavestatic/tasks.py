@@ -96,3 +96,27 @@ def send_verification_code(subject, message, recipient_email):
         recipient_list=[recipient_email],
         fail_silently=True
     )
+
+
+
+@shared_task
+def notify_new_admin(staff_email, staff_name):
+    if not staff_email:
+        return
+
+    subject = "🎉 You've Been Granted Admin Access"
+    message = (
+        f"Dear {staff_name},\n\n"
+        f"You have been added as a system administrator.\n"
+        f"You now have elevated access to manage the leave system and its settings.\n\n"
+        f"Please log in to view your privileges.\n\n"
+        f"Regards,\nGCPS Leave Management System"
+    )
+
+    send_mail(
+        subject,
+        message,
+        settings.EMAIL_HOST_USER,
+        [staff_email],
+        fail_silently=True
+    )

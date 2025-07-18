@@ -5621,9 +5621,7 @@
   margin-bottom: 1rem;
   font-size: 0.95rem;
   animation: fadeIn 0.3s ease;
-}
-
-.lvtsve,
+  .lvtsve,
 .lvtdsd {
   padding: 0.45rem 0.9rem;
   border: none;
@@ -5650,6 +5648,9 @@
 .lvtdsd:hover {
   background-color: #c02022;
 }
+
+}
+
 
 /* Active & Inactive Groups */
 .a_groups {
@@ -5813,16 +5814,45 @@
 }
 
 /* Mid Controls */
-.gpd .mid {
+.mid {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
-  background: #f3f3f3;
-  padding: 0.75rem 1.25rem;
-  border: 1px solid #ccc;
+  justify-content: space-between;
+  background-color: #f3f3f3;
+  padding: 0.6rem 1rem;
+  border: 1px solid #ddd;
   border-radius: 0.4rem;
+  margin-bottom: 1rem;
   font-size: 0.95rem;
+  animation: fadeIn 0.3s ease;
+  .lvtsve,
+.lvtdsd {
+  padding: 0.45rem 0.9rem;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.lvtsve {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.lvtsve:hover {
+  background-color: #218838;
+}
+
+.lvtdsd {
+  background-color: #e3342f;
+  color: #fff;
+}
+
+.lvtdsd:hover {
+  background-color: #c02022;
+}
+
 }
 
 /* Staff Lists */

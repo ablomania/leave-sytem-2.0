@@ -833,7 +833,17 @@
         <div class="mid" style="display: none;">
             <input type="checkbox"
                 id="select_all_staff_{{group.id}}"
-                onclick="selectAllBoxes(this.checked, 'staff_item_{{group.id}}', '.gpd{{group.id}} .mid', '.gpd{{group.id}} .mid .count_selected', '.gpd{{group.id}} .mid .count_total')">
+                onclick="selectAllBoxes(
+                    this.checked,
+                    'staff_item_{{group.id}}',
+                    '.gpd{{group.id}} .mid',
+                    '.gpd{{group.id}} .mid .count_selected',
+                    '.gpd{{group.id}} .mid .count_total',
+                    '.gpd{{group.id}}',
+                    '.staff_item_ch',
+                    'select_all_staff_{{group.id}}'
+                )"
+            >
             <label for="select_all_staff_{{group.id}}">Select All</label>
             <span>
                 <span class="count_selected">0</span> of
@@ -843,7 +853,7 @@
                     {{stv}}
                     {% endif %}
                     {% endfor %}
-                </span> selected kk
+                </span> selected
             </span>
             <button type="button" class="lvtsve" onclick="show4('del_staff')">&check; Save</button>
             <button type="button" class="lvtdsd" onclick="lvtdell2('gpd_del')">&times; Discard</button>
@@ -934,7 +944,7 @@
             <img src="{% static 'images/add-contact.png' %}" width="400px" alt="">
         </div>
         <form class="sf12 staff_form_add2_form" action="" method="post">
-            <input type="hidden" name="form_meta" value="add_staff_to_group" id="">
+            <input type="hidden" name="form_meta" value="add_staff" id="">
             <input type="hidden" name="group" value="{{group.id}}">
             {% csrf_token %}
             <div class="sgr45">
@@ -952,7 +962,7 @@
                 </div>
                 <div class="fld33">
                     <label for="gender_add2_{{group.id}}">Gender</label>
-                    <select name="gender" id="gender_add2_{{group.id}}">
+                    <select name="gender_add" id="gender_add2_{{group.id}}">
                         {% for gender in all_genders %}
                         <option value="{{gender.id}}">{{gender.name}} ({{gender.pronoun}})</option>
                         {% endfor %}

@@ -8,7 +8,8 @@ class LeavestaticConfig(AppConfig):
     def ready(self):
         from django.db.migrations.recorder import MigrationRecorder
         from django.db.utils import IntegrityError, ProgrammingError
-
+        import leavestatic.signals
+        
         orig = MigrationRecorder.ensure_schema
 
         def patched(self):
