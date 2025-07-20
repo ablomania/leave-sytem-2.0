@@ -1,0 +1,46 @@
+Update
+
+START
+  └── Get today's date and holiday list
+        └── Empty list: pending_emails
+        └── DELETE stale leave requests (>14 days old)
+        └── ACTIVATE leaves that start today
+        └── LOOP through active On_Leave leaves
+              ├── Count valid weekdays used
+              ├── Update leave.remaining_days
+              ├── Trigger update email if %5 or =1
+              ├── IF leave.days_remaining == 0
+              │     ├── Mark leave.status = Completed
+              │     ├── Mark request.status = Completed
+              │     └── Send completion email to staff & approvers
+              └── Log update object status = "successful"
+        └── LOOP through StaffLeaveDetail
+              └── IF get_reset_trigger returns True
+                    ├── IF staff is currently on leave
+                    │     └── Count valid days used so far
+                    ├── Reset days_taken & days_remaining
+                    ├── Create LeaveBalanceReset record
+                    └── IF was on leave, send quota reset notice
+        └── LOOP through pending_emails
+              └── Send email (fail silently)
+END
+
+
+
+
+restore
+START
+  └── Fetch completed leave requests with is_active = True
+        └── LOOP through each completed request
+              └── Check if resumption is confirmed and active for the applicant
+                    └── IF resumption exists
+                          └── Fetch active ApproverSwitch records for the request
+                                └── LOOP through each switch
+                                      ├── Set old_approver.is_active = True
+                                      ├── Set new_approver.is_active = False
+                                      └── Mark switch.is_active = False
+END
+
+
+
+

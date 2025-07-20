@@ -129,20 +129,40 @@ def createLeave(user, leave_request, ack_id):
     ).exists()
 
     if all_approved and relieving_ack and self_ack:
-        # Update leave request status
+        # 🟢 Mark leave request as approved
         leave_request.status = LeaveRequest.Status.APPROVED
         leave_request.save(update_fields=["status"])
 
-        # Update leave balance
+        # 📊 Update leave balance
         details = StaffLeaveDetail.objects.filter(
             staff=user,
             leave_type=leave_request.type
         ).first()
-
         if details:
             details.days_remaining -= new_leave.days_granted
             details.days_taken += new_leave.days_granted
             details.save(update_fields=["days_remaining", "days_taken"])
+
+        # 🔄 Check if applicant is an active approver
+        active_approver = Approver.objects.filter(staff=user, is_active=True).first()
+        if active_approver and relieving_ack:
+            relieving = Approver.objects.filter(
+                group_to_approve=active_approver.group_to_approve,
+                is_active=True
+            ).exclude(staff=user).order_by('staff__seniority__rank').first()
+
+            if relieving:
+                # Temporarily deactivate original approver
+                active_approver.is_active = False
+                active_approver.save(update_fields=["is_active"])
+
+                # Create switch record
+                ApproverSwitch.objects.create(
+                    old_approver=active_approver,
+                    new_approver=relieving,
+                    leave_obj=new_leave,
+                    is_active=True
+                )
 
         # ✉️ Prepare message content
         leave_type_name = leave_request.type.name.split()[0]
@@ -165,7 +185,7 @@ def createLeave(user, leave_request, ack_id):
             f"Sincerely,\nLeave Management System"
         )
 
-        # 📩 Collect CCs and send via Celery
+        # 📩 Send email
         cc_emails = [
             a.approver.staff.email
             for a in approvals
@@ -175,7 +195,6 @@ def createLeave(user, leave_request, ack_id):
             cc_emails.append(relieving_ack.staff.email)
 
         send_leave_email.delay(subject, message, [user.email], cc_emails)
-
 
 
 
