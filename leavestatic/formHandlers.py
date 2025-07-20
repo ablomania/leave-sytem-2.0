@@ -98,6 +98,32 @@ def handle_leave_cancellation(leave, staff, reason):
 
 
 
+def delegate_approver_role(applicant, relieving_staff, leave):
+    """
+    Temporarily transfers the approver role from the applicant to the relieving officer.
+    """
+    active_approver = Approver.objects.filter(staff=applicant, is_active=True).first()
+    if not active_approver or not relieving_staff:
+        return
+
+    relieving = Approver.objects.filter(staff=relieving_staff).first()
+    if not relieving:
+        return
+
+    # Deactivate applicant approver role
+    active_approver.is_active = False
+    active_approver.save(update_fields=["is_active"])
+
+    # Create switch record to track the delegation
+    ApproverSwitch.objects.create(
+        old_approver=active_approver,
+        new_approver=relieving,
+        leave_obj=leave,
+        is_active=True
+    )
+
+
+
 def createLeave(user, leave_request, ack_id):
     # 🚀 Create or update Leave object
     new_leave, _ = Leave.objects.update_or_create(
@@ -111,7 +137,7 @@ def createLeave(user, leave_request, ack_id):
         }
     )
 
-    # ✅ Check all approvals
+    # ✅ Check approvals and acknowledgments
     approvals = Approval.objects.filter(request=leave_request, is_active=True)
     all_approved = approvals.exists() and all(
         a.status == Approval.ApprovalStatus.Approved for a in approvals
@@ -129,7 +155,7 @@ def createLeave(user, leave_request, ack_id):
     ).exists()
 
     if all_approved and relieving_ack and self_ack:
-        # 🟢 Mark leave request as approved
+        # 🔐 Approve the leave request
         leave_request.status = LeaveRequest.Status.APPROVED
         leave_request.save(update_fields=["status"])
 
@@ -143,28 +169,10 @@ def createLeave(user, leave_request, ack_id):
             details.days_taken += new_leave.days_granted
             details.save(update_fields=["days_remaining", "days_taken"])
 
-        # 🔄 Check if applicant is an active approver
-        active_approver = Approver.objects.filter(staff=user, is_active=True).first()
-        if active_approver and relieving_ack:
-            relieving = Approver.objects.filter(
-                group_to_approve=active_approver.group_to_approve,
-                is_active=True
-            ).exclude(staff=user).order_by('staff__seniority__rank').first()
+        # 🔄 Delegate approver role if applicant is an active approver
+        delegate_approver_role(user, relieving_ack.staff, new_leave)
 
-            if relieving:
-                # Temporarily deactivate original approver
-                active_approver.is_active = False
-                active_approver.save(update_fields=["is_active"])
-
-                # Create switch record
-                ApproverSwitch.objects.create(
-                    old_approver=active_approver,
-                    new_approver=relieving,
-                    leave_obj=new_leave,
-                    is_active=True
-                )
-
-        # ✉️ Prepare message content
+        # ✉️ Compose approval message
         leave_type_name = leave_request.type.name.split()[0]
         start = leave_request.start_date.strftime("%A %d %B %Y")
         end = leave_request.end_date.strftime("%A %d %B %Y")
@@ -185,16 +193,18 @@ def createLeave(user, leave_request, ack_id):
             f"Sincerely,\nLeave Management System"
         )
 
-        # 📩 Send email
+        # 📩 Send email to applicant + CC approvers and relieving officer
         cc_emails = [
             a.approver.staff.email
             for a in approvals
-            if a.approver.staff.email
+            if a.approver and a.approver.staff.email
         ]
         if relieving_ack and relieving_ack.staff.email:
             cc_emails.append(relieving_ack.staff.email)
 
         send_leave_email.delay(subject, message, [user.email], cc_emails)
+
+
 
 
 
