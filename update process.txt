@@ -1,0 +1,44 @@
+START
+  └── Get today's date and holiday list
+        └── Empty list: pending_emails
+        └── DELETE stale leave requests (>14 days old)
+        └── ACTIVATE leaves that start today
+        └── LOOP through active On_Leave leaves
+              ├── Count valid weekdays used
+              ├── Update leave.remaining_days
+              ├── Trigger update email if %5 or =1
+              ├── IF remaining_days == 0
+              │     ├── Mark leave + request as COMPLETED
+              │     └── Send completion email
+              └── Log LeaveUpdate record
+        └── LOOP through StaffLeaveDetail
+              └── IF reset trigger matches today
+                    ├── IF staff is on leave:
+                    │     └── Recalculate days_used
+                    ├── Reset entitlement + balance
+                    ├── Create LeaveBalanceReset record
+                    └── Optional email if on leave
+        └── LOOP through pending_emails
+              └── Send each email silently
+END
+
+
+
+
+Reset Period Logic (get_reset_trigger)
+
+YEARLY → trigger only on Jan 1
+
+MONTHLY → always true
+
+QUARTERLY → trigger on 1st of Jan, Apr, Jul, Oct
+
+SEMI ANNUALLY → trigger on Jan 1 or Jul 1
+
+Email Conditions
+
+Leave remaining is divisible by 5 or equal to 1 → send reminder
+
+Leave just completed → notify staff & approvers
+
+Quota reset during active leave → notify staff
