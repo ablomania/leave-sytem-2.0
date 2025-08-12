@@ -1,0 +1,44 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Add Group - GCPS Leave System
+{% endblock %}
+
+{% block content %}
+<div class="grpfms23 group_forms_add" style="display: none;">
+    <div class="gp134h">
+        <div>
+            <button type="button" onclick="mySwitcher('.group_forms_add', '.groups')"><b>Back</b> &rsaquo; Groups</button>
+            <h2>New Group</h2>
+        </div>
+        
+        <p>Fill the forms below to add a new group</p>
+        <img src="{% static 'images/addtogroup.png' %}" width="500px" alt="">
+    </div>
+    <div class="grpfms">
+        <form action="" method="post" class="grp_forms_add_form">
+            <input type="hidden" name="form_meta" value="add_group">
+            {% csrf_token %}
+            <div class="fld456">
+                <label for="group_name_add">Name</label>
+                <input type="text" name="group_name" id="group_name_add" required>
+            </div>
+            <div class="fld456">
+                <label for="group_image_add">Image</label>
+                <input type="file" name="image" id="group_image_add" accept="image/*">
+            </div>
+            <div class="fld456">
+                <label for="group_active_add">Active?</label>
+                <select name="is_active" id="group_active_add">
+                    <option value="true" selected>Yes</option>
+                    <option value="false">No</option>
+                </select>
+            </div>
+            <div class="bt23">
+                <button class="save" type="button" onclick="submitMyForm4('.grp_forms_add_form', '.groups')">Save</button>
+                <button class="saaave" type="button" onclick="submitMyForm4('.grp_forms_add_form', '.group_forms_add')">Save and add another</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

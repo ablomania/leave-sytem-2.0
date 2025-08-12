@@ -1,0 +1,70 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Genders - GCPS Leave System
+{% endblock %}
+
+{% block content %}
+<div class="genders" style="display: none;">
+    <div class="genders_header">
+        <h3>Genders</h3>
+        <button type="button" onclick="mySwitcher('.genders', '.gender_form_add')">New Gender</button>
+    </div>
+    <div class="genders_list" style="margin-bottom: 20px;">
+    {% for gender in all_genders %}
+    {% if gender.is_active %}
+        <div class="gender-card">
+            <div class="gender-content">
+                <h3>{{ gender.name }}</h3>
+                <p><strong>Pronoun:</strong> {{ gender.pronoun }}</p>
+            </div>
+            <div class="gender-actions">
+                <button type="button" onclick="mySwitcher('.genders', '.gender_form_edit{{gender.id}}')">Edit</button>
+                <form action="" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_meta" value="del_gender" id="">
+                    <input type="hidden" name="gender_id" value="{{gender.id}}" id="">
+                    <button type="submit" class="delete-btn">Delete</button>
+                </form>
+                
+            </div>
+        </div>
+    {% endif %}
+    {% empty %}
+        <div class="no-genders">No genders found.</div>
+    {% endfor %}
+    </div>
+    <div class="inactive_gend">
+        <div class="in_header">
+            <button class="rot_gend" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+            onclick="show1('in_body_gend'), rotateMe('.rot_gend')"
+            >&#10094;</button>
+            <p onclick="show1('in_body_gend'), rotateMe('.rot_gend')">Inactive Genders (deleted)</p>
+        </div>
+        <div class="in_body_gend">
+        {% for gender in all_genders %}
+    {% if not gender.is_active %}
+        <div class="gender-card-i">
+            <div class="gender-content">
+                <h3>{{ gender.name }}</h3>
+                <p><strong>Pronoun:</strong> {{ gender.pronoun }}</p>
+            </div>
+            <div class="gender-actions">
+                <!-- <button type="button" onclick="mySwitcher('.genders', '.gender_form_edit{{gender.id}}')">Edit</button> -->
+                <form action="" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_meta" value="res_gender" id="">
+                    <input type="hidden" name="gender_id" value="{{gender.id}}" id="">
+                    <button type="submit" class="delete-btn">Restore</button>
+                </form>
+                
+            </div>
+        </div>
+    {% endif %}
+    {% empty %}
+        <div class="no-genders">No genders found.</div>
+    {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

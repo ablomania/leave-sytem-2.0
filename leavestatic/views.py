@@ -30,6 +30,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 
+
 def index(request):
     template = loader.get_template('index.html')
 
@@ -261,7 +262,20 @@ def password_reset(request):
     return HttpResponse(template.render(context, request))
 
 
+# def setup_leave(request, slug):
+#     user_slug = request.session.get("user_slug") or change_session(slug)
+#     if not user_slug:
+#         return redirect(reverse("login", args=["setup"]))
 
+#     # Ensure the user is an admin
+#     user = Staff.objects.get(slug=user_slug)
+    
+
+#     template = loader.get_template("setup/leave/setup_leave.html")
+#     context = {
+        
+#     }
+#     return HttpResponse(template.render(context, request))
 
 
 def setup(request, slug):

@@ -1,0 +1,36 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Edit Gender
+{% endblock %}
+
+{% block content %}
+<div class="gender_form_edit gender_form_edit{{gender.id}}" style="display: none;">
+    <div class="sf10">
+        <div class="sf10h">
+            <button type="button" onclick="mySwitcher('.gender_form_edit{{gender.id}}', '.genders')"><b>Back</b> &rsaquo; Genders</button>
+            <h2>Edit Gender</h2>
+        </div>
+        <p>Edit the details of this gender below.</p>
+        <img src="{% static 'images/gender2.png' %}" width="300px" alt="">
+    </div>
+    <form class="sf12" action="" method="post">
+        <input type="hidden" name="form_meta" value="edit_gender">
+        <input type="hidden" name="gender_id" value="{{gender.id}}">
+        {% csrf_token %}
+        <div class="sf45">
+            <div class="fld33">
+                <label for="gender_name_edit{{gender.id}}">Name</label>
+                <input type="text" name="name" id="gender_name_edit{{gender.id}}" value="{{gender.name}}" required>
+            </div>
+            <div class="fld33">
+                <label for="gender_pronoun_edit{{gender.id}}">Pronoun</label>
+                <input type="text" name="pronoun" id="gender_pronoun_edit{{gender.id}}" value="{{gender.pronoun}}" required>
+            </div>
+        </div>
+        <div class="bt23">
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

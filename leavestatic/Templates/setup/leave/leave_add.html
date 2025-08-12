@@ -1,0 +1,117 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Add Leave Type
+{% endblock %}
+
+{% block content %}
+<div class="lvt_form_add" style="display: none;">
+    <div class="lvt_form1">
+        <div class="lvt_formh">
+            <button type="button" onclick="mySwitcher('.lvt_form_add', '.leave_types')"><b>Back</b> &rsaquo; All Leave Types</button>
+            <h2>New Type of Leave</h2>
+        </div>
+        <p>Please fill the form to add a new type of leave</p>
+        <img src="{% static 'images/yoga.png' %}" width="500px" alt="">
+    </div>
+
+    <div class="lvt_form26">
+        <form action="" class="lvt_form26d" method="post">
+            {% csrf_token %}
+            <input type="hidden" value="add_lvt" name="form_meta">
+
+            <div class="lvt476">
+                <label for="lvt_name">Name</label>
+                <input type="text" name="name" id="lvt_name">
+            </div>
+
+            <div class="lvt476">
+                <label for="lvt_code">Leave Code</label>
+                <input type="text" name="code" id="lvt_code" placeholder="e.g. AL, CL, SL">
+            </div>
+
+            <div class="lvt476">
+                <label for="lvt_days">Maximum Days Allowed</label>
+                <input type="number" name="days" id="lvt_days">
+            </div>
+
+            <div class="lvt476">
+                <label for="seniority">Who can apply for this type of leave (seniority)</label>
+                <select name="seniority" id="seniority">
+                    {% for sen in seniority %}
+                    <option value="{{sen.id}}">{{sen.name}} (Level {{sen.rank}} staff)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="lvt476">
+                <label for="reset_period">Reset Period</label>
+                <select name="reset_period" id="reset_period">
+                    <option value="YEARLY">Yearly</option>
+                    <option value="SEMI ANNUALLY">Semi Annually</option>
+                    <option value="QUARTERLY">Quarterly (3 months)</option>
+                    <option value="MONTHLY">Monthly</option>
+                    <option value="NONE">No Reset</option>
+                </select>
+            </div>
+
+            <div class="lvt476">
+                <label for="multiple">Allow Multiple Applications?</label>
+                <select name="allow_multiple_applications" id="multiple">
+                    <option value="True">Yes</option>
+                    <option value="False">No</option>
+                </select>
+            </div>
+
+            <div class="lvt476">
+                <label for="paid_leave">Is This a Paid Leave?</label>
+                <select name="paid_leave" id="paid_leave">
+                    <option value="True">Yes</option>
+                    <option value="False">No</option>
+                </select>
+            </div>
+
+            <div class="lvt476">
+                <label for="eligibility">Eligibility Requirements</label>
+                <textarea name="eligibility" id="eligibility" rows="3" placeholder="e.g. Must have completed 6 months of service"></textarea>
+            </div>
+
+            <!-- <div class="lvt476">
+                <label for="requires_document">Requires Document Upload?</label>
+                <select name="requires_document" id="requires_document">
+                    <option value="True">Yes</option>
+                    <option value="False">No</option>
+                </select>
+            </div> -->
+
+            <div class="lvt476">
+                <p>This leave type should accept this input:</p>
+                <div>
+                    <input type="checkbox" value="True" name="i_date" id="i_date">
+                    <label for="i_date">Date of occurrence</label>
+                </div>
+                <div>
+                    <input type="checkbox" value="True" name="i_institution" id="i_institution">
+                    <label for="i_institution">Institution name</label>
+                </div>
+                <div>
+                    <input type="checkbox" value="True" name="i_course" id="i_course">
+                    <label for="i_course">Course Name</label>
+                </div>
+                <div>
+                    <input type="checkbox" value="True" name="i_note" id="i_note">
+                    <label for="i_note">Medical note</label>
+                </div>
+                <div>
+                    <input type="checkbox" value="True" name="i_letter" id="i_letter">
+                    <label for="i_letter">Admission letter</label>
+                </div>
+            </div>
+
+            <div class="lvt767">
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

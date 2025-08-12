@@ -1,0 +1,36 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Edit Category
+{% endblock %}
+
+{% block content %}
+<div class="cat_form_edit cat_form_edit{{sen.id}}" style="display: none;">
+    <div class="sf10">
+        <div class="sf10h">
+            <button type="button" onclick="mySwitcher('.cat_form_edit{{sen.id}}', '.categories')"><b>Back</b> &rsaquo; Categories</button>
+            <h2>Edit Category</h2>
+        </div>
+        <p>Edit the details of this category below.</p>
+        <img src="{% static 'images/cat1.png' %}" style="border-radius: 50%; border: #ddd 2px dashed;" width="300px" alt="">
+    </div>
+    <form class="sf12" action="" method="post">
+        <input type="hidden" name="form_meta" value="edit_cat">
+        <input type="hidden" name="cat_id" value="{{sen.id}}">
+        {% csrf_token %}
+        <div class="sf45">
+            <div class="fld33">
+                <label for="cat_name_edit{{sen.id}}">Name</label>
+                <input type="text" name="name" id="cat_name_edit{{sen.id}}" value="{{sen.name}}" required>
+            </div>
+            <div class="fld33">
+                <label for="cat_pronoun_edit{{sen.id}}">Rank</label>
+                <input type="number" name="rank" id="cat_rank_edit{{sen.id}}" value="{{sen.rank}}" required>
+            </div>
+        </div>
+        <div class="bt23">
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

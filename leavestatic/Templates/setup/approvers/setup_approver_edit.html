@@ -1,0 +1,70 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Edit Approver
+{% endblock %}
+
+{% block content %}
+<div class="appedit appedit{{staff.id}}" style="display: none;">
+    <div class="appedit_header">
+        <div class="appeh">
+            <button type="button" onclick="mySwitcher('.appedit{{staff.id}}', '.app356')"><b>Back</b> &rsaquo; Approvers</button>
+            <h2>Edit Approver</h2>
+        </div>
+        <p>Fill the form below to edit the approver</p>
+        <img src="{% static 'images/appr23.png' %}" width="500px" alt="">
+    </div>
+    <div class="appedit_form">
+        <form action="" method="post">
+            <input type="hidden" value="edit_app" name="form_meta" id="">
+            <input type="hidden" name="staff_id" value="{{staff.id}}" id="app_id">
+            {% csrf_token %}
+            <div class="fld456">
+                <label for="approver_staff_{{staff.id}}">Approver Name</label>
+                <select name="approver_staff" id="approver_staff_{{staff.id}}">
+                    {% for s in all_staff %}
+                    <option value="{{s.id}}" {% if staff.id == s.id %}selected{% endif %}>
+                        {{s.first_name}} {{s.other_names}} {{s.last_name}}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fld456">
+                <label>Groups and Levels</label>
+                {% for group in all_groups %}
+                {% with approver_obj=approver_objs|get_group:group %}
+                <div style="margin-bottom: 8px;">
+                    <input type="checkbox"
+                        name="groups"
+                        value="{{group.id}}"
+                        id="group_{{staff.id}}_{{group.id}}"
+                        {% if approver_obj %}checked{% endif %}>
+                    <label for="group_{{staff.id}}_{{group.id}}">{{group.name}}</label>
+                    <select name="levels">
+                        <option value="">---</option>
+                        {% for level in all_levels %}
+                        <option value="{{level.id}}"
+                            {% if approver_obj and approver_obj.level.id == level.id %}selected{% endif %}>
+                            {{level.name}}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endwith %}
+                {% endfor %}
+            </div>
+            <div class="fld456">
+                <label for="is_special_{{staff.id}}">
+                    <input type="checkbox" name="is_special_approver" id="is_special_{{staff.id}}"
+                    {% if staff.is_special_approver %}checked{% endif %}>
+                    Special Approver Override
+                </label>
+                <p class="hint">Can approve requests when no higher-ranked approvers exist</p>
+            </div>
+            <div class="fld456">
+                <button type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

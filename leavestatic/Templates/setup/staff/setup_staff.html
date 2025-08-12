@@ -1,0 +1,107 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Staff Setup - GCPS Leave System
+{% endblock %}
+
+{% block content %}
+<div class="staff" style="display: block;">
+    <div class="staff_nav_button">
+        <h3>All staff</h3>
+        <button type="button" onclick="mySwitcher('.staff', '.staff_form_add', '.staff')">New Staff</button>
+    </div>
+    <!-- Navigation Tabs -->
+    <div class="staff_nav">
+        <ul class="staff_nav_tabs">
+            <li class="staff_nav_item active" onclick="switchStaffTab('staff_all', this)">All Staff (A–Z)</li>
+            {% for group in active_groups %}
+            <li class="staff_nav_item" onclick="switchStaffTab('staff_group_{{ group.id }}', this)">
+                {{ group.name }}
+            </li>
+            {% endfor %}
+            <li class="staff_nav_item" onclick="switchStaffTab('staff_unassigned', this)">Unassigned</li>
+            <li class="staff_nav_item" onclick="switchStaffTab('staff_inactive', this)">Inactive</li>
+        </ul>
+
+    </div>
+
+    <!-- Panels -->
+    <div class="staff_panels">
+        <div class="staff_search">
+            <input type="text" id="staffSearchInput" placeholder="Search staff by name..." oninput="filterStaffByName(this.value)">
+        </div>
+
+        <!-- All Staff A–Z Panel -->
+        <div class="staff_panel" id="staff_all">
+            <div class="staff_cards">
+                {% for staff in all_staff|dictsort:"first_name" %}
+                {% if staff.is_active %}
+                <div class="staff_card">
+                    <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
+                    <p><strong>Role:</strong> {{ staff.role }}</p>
+                    <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
+                    <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            <div class="pagination-bar" data-section="staff_all"></div>
+        </div>
+
+        <!-- Individual Groups -->
+        {% for group in active_groups %}
+        <div class="staff_panel" id="staff_group_{{ group.id }}" style="display: none;">
+            <div class="staff_cards">
+                {% with staff_list=groups_list|get_item:group %}
+                {% for staff in staff_list %}
+                {% if staff.is_active %}
+                <div class="staff_card">
+                    <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
+                    <p><strong>Role:</strong> {{ staff.role }}</p>
+                    <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
+                    <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+                </div>
+                {% endif %}
+                {% endfor %}
+                {% endwith %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Unassigned -->
+        <div class="staff_panel" id="staff_unassigned" style="display: none;">
+            <div class="staff_cards">
+                {% for staff in all_staff %}
+                {% if staff.is_active and not staff.group %}
+                <div class="staff_card">
+                    <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
+                    <p><strong>Role:</strong> {{ staff.role }}</p>
+                    <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
+                    <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Inactive -->
+        <div class="staff_panel" id="staff_inactive" style="display: none;">
+            <div class="staff_cards">
+                {% for staff in all_staff %}
+                {% if not staff.is_active %}
+                <form method="post" class="staff_card-i">
+                    {% csrf_token %}
+                    <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
+                    <p><strong>Role:</strong> {{ staff.role }}</p>
+                    <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
+                    <input type="hidden" name="form_meta" value="restore_staff">
+                    <input type="hidden" name="staff_id" value="{{ staff.id }}">
+                    <button type="submit">Restore</button>
+                </form>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

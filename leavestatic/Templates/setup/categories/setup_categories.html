@@ -1,0 +1,67 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Categories
+{% endblock %}
+
+{% block content %}
+<div class="categories" style="display: none;">
+    <div class="genders_header">
+        <h3>Categories / Types Of Staff</h3>
+        <button type="button" onclick="mySwitcher('.categories', '.cat_form_add')">New Category</button>
+    </div>
+    <div class="genders_list">
+    {% for sen in a_seniority %}
+        <div class="gender-card">
+            <div class="gender-content">
+                <h3>{{ sen.name }}</h3>
+                <p><strong>Rank:</strong> {{ sen.rank }}</p>
+            </div>
+            <div class="gender-actions">
+                <button type="button" onclick="mySwitcher('.categories', '.cat_form_edit{{sen.id}}')">Edit</button>
+                <form action="" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_meta" value="del_sen" id="">
+                    <input type="hidden" name="sen_id" value="{{sen.id}}" id="">
+                    <button type="submit" class="delete-btn">Delete</button>
+                </form>
+            </div>
+        </div>
+    {% empty %}
+        <div class="no-genders">No categories found.</div>
+    {% endfor %}
+    </div>
+
+    <div class="inactive_cat">
+        <div class="in_header">
+            <button class="rot_cat" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+            onclick="show1('in_body_cat'), rotateMe('.rot_cat')"
+            >&#10094;</button>
+            <p onclick="show1('in_body_cat'), rotateMe('.rot_cat')">Inactive Categories (deleted)</p>
+        </div>
+        <div class="in_body_cat">
+        {% for sen in i_seniority %}
+        <div class="gender-card-i" style="margin-bottom: 10px;">
+            <div class="gender-content">
+                <h3>{{ sen.name }}</h3>
+                <p><strong>Rank:</strong> {{ sen.rank }}</p>
+            </div>
+            <div class="gender-actions">
+                <!-- <button type="button" onclick="mySwitcher('.genders', '.gender_form_edit{{gender.id}}')">Edit</button> -->
+                <form action="" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_meta" value="res_sen" id="">
+                    <input type="hidden" name="sen_id" value="{{sen.id}}" id="">
+                    <button type="submit" class="delete-btn">Restore</button>
+                </form>
+                
+            </div>
+        </div>
+    {% empty %}
+        <div class="no-genders">No categories found.</div>
+    {% endfor %}
+        </div>
+    </div>
+    <div class="pagination-bar" data-section="categories"></div>
+</div>
+{% endblock %}

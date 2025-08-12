@@ -1,0 +1,79 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Add Approver
+{% endblock %}
+
+{% block content %}
+<div class="staff_form_add staff_form_add_groups" style="display: none;">
+    <div class="sf10">
+        <div class="sf10h">
+            <button type="button" onclick="mySwitcher2('.staff_form_add_groups')"><b>Back</b> &rsaquo; </button>
+            <h2>New Staff</h2>
+        </div>
+        <p>Fill the form below to add a new staff member and assign to group(s)</p>
+        <img src="{% static 'images/add-contact.png' %}" width="400px" alt="">
+    </div>
+    <form class="sf12 staff_form_add_group_form" action="" method="post">
+        <input type="hidden" name="form_meta" value="add_staff">
+        {% csrf_token %}
+        <div class="sgr45">
+            <div class="fld33">
+                <label for="first_name_add_groups">First Name</label>
+                <input type="text" name="first_name" id="first_name_add_groups" required>
+            </div>
+            <div class="fld33">
+                <label for="last_name_add_groups">Last Name</label>
+                <input type="text" name="last_name" id="last_name_add_groups" required>
+            </div>
+            <div class="fld33">
+                <label for="other_names_add_groups">Other Names</label>
+                <input type="text" name="other_names" id="other_names_add_groups">
+            </div>
+            <div class="fld33">
+                <label for="gender_add_groups">Gender</label>
+                <select name="gender_add" id="gender_add_groups">
+                    {% for gender in all_genders %}
+                    <option value="{{gender.id}}">{{gender.name}} ({{gender.pronoun}})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fld33">
+                <label for="phone_number_add_groups">Phone Number</label>
+                <input type="text" name="phone_number" id="phone_number_add_groups">
+            </div>
+            <div class="fld33">
+                <label for="email_add_groups">Email</label>
+                <input type="email" name="email" id="email_add_groups">
+            </div>
+            <div class="fld33">
+                <label for="seniority_add_groups">Seniority</label>
+                <select name="seniority" id="seniority_add_groups">
+                    {% for sen in seniority %}
+                    <option value="{{sen.id}}">{{sen.name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fld33">
+                <label>Assign to Group</label>
+                <select name="group" id="group_id">
+                    {% for group in all_groups %}
+                    <option value="{{group.id}}">{{group.name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fld33">
+                <label for="is_active_add_groups">Active?</label>
+                <select name="is_active" id="is_active_add_groups">
+                    <option value="true" selected>Yes</option>
+                    <option value="false">No</option>
+                </select>
+            </div>
+        </div>
+        <div class="bt23">
+            <button class="save" type="button" onclick="submitMyForm4('.staff_form_add_group_form', '.groups')">Save</button>
+            <button class="saaave" type="button" onclick="submitMyForm4('.staff_form_add_group_form', '.staff_form_add_groups')">Save and add another</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Add Approver
+{% endblock %}
+
+{% block content %}
+<div class="app_form_add" style="display: none;">
+    <div class="app_form_header">
+        <div class="apfh">
+            <button type="button" onclick="mySwitcher('.app_form_add', '.app356')"><b>Back</b> &rsaquo; Approvers</button>
+            <h2>New Approver</h2>
+        </div>
+        <p>Fill the form below to add a new approver to the {{group.name}} group</p>
+        <img src="{% static 'images/agree.png' %}" width="400px" alt="">
+    </div>
+    <form class="app_form" action="" method="post">
+        <input type="hidden" name="form_meta" value="add_approver" id="">
+        {% csrf_token %}
+
+        <div class="fld456">
+            <label for="approver_name">Approver Name</label>
+            <select name="approver_name" id="approver_name">
+                <option value="None">--------</option>
+                {% for approver in all_staff %}
+                <option value="{{approver.id}}">{{approver.first_name}} {{approver.last_name}}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="fld456">
+            <label for="approver_group">Group to approve</label>
+            <select name="approver_group" id="approver_group">
+                {% for group in groups_list.keys %}
+                <option value="{{group.id}}">{{group.name}}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="fld456">
+            <label for="approver_level">Approver Level</label>
+            <select name="approver_level" id="approver_level">
+                {% for level in all_levels %}
+                <option value="{{level.id}}">{{level.name}}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- ✅ Special approver tied to Staff -->
+        <div class="fld456">
+            <label for="is_special">
+                <input type="checkbox" name="is_special_approver" id="is_special"
+                value="True">
+                Special Approver Override
+            </label>
+            <p class="hint">Can approve requests when no higher-ranked approvers exist</p>
+        </div>
+
+        <div class="bt23">
+            <button class="save" type="button" onclick="submitMyForm4('.app_form', '.app356')">Save</button>
+            <button class="saaave" type="button" onclick="submitMyForm4('.app_form', '.app_form_add')">Save and add another</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

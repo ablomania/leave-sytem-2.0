@@ -1,0 +1,93 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Holidays - GCPS Leave System
+{% endblock %}
+
+{% block content %}
+<div class="holidays" style="display: none;">
+    <div class="hol341">
+        <h3>Holidays</h3>
+        <button type="button" onclick="mySwitcher('.holidays','.hol_form_add')">New Holiday</button>
+    </div>
+    <!-- <div class="holmid" style="display: none;">
+        <button type="button" class="lvtsve" onclick="confirmAction(event, '.conf167', '.confheader', '.confmsg1', '.confmsg2')">&check; save</button>
+        <button type="button" class="lvtdsd" onclick="lvtdell2('lvt_del')">&times; discard</button>
+    </div> -->
+    <div class="hol342">
+        <div class="vhol351">
+            <div class="vhol352">
+                {% if v_holidays.count > 0 %}
+                <h2>Variable holidays</h2>
+                {% endif %}
+            </div>
+            <div class="vhol253">
+                {% for holiday in v_holidays %}
+                {% if holiday.is_active %}
+                <form class="vholitem" method="post">
+                    {% csrf_token %}
+                    <button class="tt" type="button" onclick="mySwitcher('.holidays', '.hol_form_edit{{holiday.id}}', true)">
+                        <h2>{{holiday.name}}</h2>
+                        <p>{{holiday.date}}</p>
+                    </button>
+                    <input type="hidden" name="form_meta" value="del_hol" id="">
+                    <input type="hidden" value="{{holiday.id}}" name="holiday" id="holiday_id">
+                    <button class="bb" type="submit">Delete</button>
+                </form>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        <div class="fhol351">
+            <div class="fhol352">
+                {% if f_holidays.count > 0 %}
+                <h2>Fixed holidays</h2>
+                {% endif %}
+            </div>
+            <div class="fhol253">
+                {% for holiday in f_holidays %}
+                {% if holiday.is_active %}
+                <form class="fholitem">
+                    {% csrf_token %}
+                    <button class="tt" type="button" onclick="mySwitcher('.holidays', '.hol_form_edit{{holiday.id}}', true)">
+                        <h2>{{holiday.name}}</h2>
+                        <p>{{holiday.date}}</p>
+                    </button>
+                    <input type="hidden" name="form_meta" value="del_hol" id="">
+                    <input type="hidden" value="{{holiday.id}}" name="holiday" id="holiday_id">
+                    <button class="bb" type="submit">Delete</button>
+                </form>
+                {% endif %}
+                {% endfor %}
+                {% if v_holidays.count == 0 and f_holidays.count == 0 %}
+                <p style="text-align: center; width: 100%;">No holidays found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="inactive_hol">
+        <div class="in_header">
+            <button class="rot_hol" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+            onclick="show1('in_body_hol'), rotateMe('.rot_hol')"
+            >&#10094;</button>
+            <p onclick="show1('in_body_hol'), rotateMe('.rot_hol')">Inactive Holidays (deleted)</p>
+        </div>
+        <div class="in_body_hol">
+            {% for holiday in all_holidays %}
+            {% if not holiday.is_active %}
+            <form class="holitem" method="post">
+                {% csrf_token %}
+                <button class="tt" type="button" onclick="mySwitcher('.holidays', '.hol_form_edit{{holiday.id}}', true)">
+                    <h2>{{holiday.name}}</h2>
+                    <p>{{holiday.date}}</p>
+                </button>
+                <input type="hidden" name="form_meta" value="res_hol" id="">
+                <input type="hidden" value="{{holiday.id}}" name="holiday" id="holiday_id">
+                <button class="bb" type="button">restore</button>
+            </form>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

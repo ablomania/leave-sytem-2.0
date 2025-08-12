@@ -1,0 +1,93 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Approvers
+{% endblock %}
+
+{% block content %}
+<div class="app356" style="display: none;">
+    <div class="app3561">
+        <h3 class="app356h">Approvers</h3>
+        <button type="button" onclick="mySwitcher('.app356', '.app_form_add', true)">New Approver</button>
+    </div>
+    <div class="approver-list">
+        {% for staff, approver_objs in approvers_list.items %}
+        {% if approver_objs|any_active %}
+            <div class="approver-item">
+                <h3 onclick="mySwitcher('.app356', '.appedit{{staff.id}}')" style="cursor: pointer;">
+                    {{ staff.first_name }} {{ staff.other_names }} {{ staff.last_name }}
+                </h3>
+
+                <form action="" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_meta" value="del_approver">
+                    <input type="hidden" name="staff_id" value="{{ staff.id }}">
+                    <button type="submit" title="Delete Approver" style="background: none; border: none;">
+                        <img src="{% static 'images/trash1.png' %}" width="15" height="15" alt="Delete">
+                    </button>
+                </form>
+
+                <ul class="group-level-list">
+                    {% for approver in approver_objs %}
+                        {% if approver.is_active %}
+                            <li>
+                                <strong>Group:</strong> {{ approver.group_to_approve.name }}  
+                                &nbsp;|&nbsp;  
+                                <strong>Level:</strong> {{ approver.level.name }}
+                            </li>
+                            <li>
+                                <strong>{% if approver.staff.is_special_approver %} Special Approver {% endif %}</strong>
+                            </li>
+                        {% endif %}
+                    {% empty %}
+                        <li><em>No active approvals</em></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+
+    <!-- Inactive Approvers Section -->
+    <div class="inactive_approvers">
+        <div class="in_header">
+            <button class="rot_app" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+            onclick="show1('in_body_app'), rotateMe('.rot_app')"
+            >&#10094;</button>
+            <p onclick="show1('in_body_app'), rotateMe('.rot_app')">Inactive Approvers (deleted)</p>
+        </div>
+        
+        <ul class="in_body_app">
+            {% for staff, approver_objs in approvers_list.items %}
+                {% for approver in approver_objs %}
+                    {% if not approver.is_active %}
+                    <li class="approver-item">
+                        <div class="approver-info">
+                            <strong>Name:</strong>
+                            {{ staff.first_name }} {{ staff.other_names }} {{ staff.last_name }}
+                        </div>
+                        <div class="approver-group">
+                            <strong>Approves Groups:</strong>
+                            {{ approver.group_to_approve.name }} - {{ approver.level.name }}
+                        </div>
+                        <div class="approver-actions">
+                            <form action="" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="form_meta" value="restore_approver">
+                                <input type="hidden" name="approver_id" value="{{ approver.id }}">
+                                <button type="submit">Restore</button>
+                            </form>
+                        </div>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+            {% empty %}
+                <li class="no-approvers" style="text-align:center;">No inactive approvers found.</li>
+            {% endfor %}
+        </ul>
+
+    </div>
+    <div class="pagination-bar" data-section="app356"></div>
+</div>
+{% endblock %}

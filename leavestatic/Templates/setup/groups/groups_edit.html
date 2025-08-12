@@ -1,0 +1,46 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Edit Group
+{% endblock %}
+
+{% block content %}
+<div class="grpfms23 edit_group_form{{group.id}}" style="display: none;">
+    <div class="gp134h">
+        <div class="gp134hh">
+            <button type="button" onclick="mySwitcher('.edit_group_form{{group.id}}', '.gpd{{group.id}}')"><b>Back</b> &rsaquo; {{group.name}}</button>
+            <h2>Edit Group</h2>
+        </div>
+        
+        <img src="{% static 'images/group4.png' %}" width="500px" alt="">
+    </div>
+    <div class="grpfms">
+        <form action="" class="edit_group_form_form" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="form_meta" value="edit_group">
+            <input type="hidden" name="group_id" value="{{group.id}}">
+            {% csrf_token %}
+            <div class="fld456">
+                <label for="group_name_edit{{group.id}}">Name</label>
+                <input type="text" name="name" id="group_name_edit{{group.id}}" value="{{group.name}}" required>
+            </div>
+            <div class="fld456">
+                <label for="group_image_edit{{group.id}}">Image</label>
+                <input type="file" name="image" id="group_image_edit{{group.id}}" accept="image/*">
+                {% if group.image %}
+                <img src="{{ group.image.url }}" width="80px" style="margin-top:5px;">
+                {% endif %}
+            </div>
+            <div class="fld456">
+                <label for="group_active_edit{{group.id}}">Active?</label>
+                <select name="is_active" id="group_active_edit{{group.id}}">
+                    <option value="true" {% if group.is_active %}selected{% endif %}>Yes</option>
+                    <option value="false" {% if not group.is_active %}selected{% endif %}>No</option>
+                </select>
+            </div>
+            <div class="bt23">
+                <button class="save" type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

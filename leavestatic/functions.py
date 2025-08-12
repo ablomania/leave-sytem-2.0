@@ -29,3 +29,10 @@ def change_session(slug):
     )
     return session.user.slug if session else None
 
+
+
+def check_secure_connection(request):
+    if request.is_secure():
+        print("Secure connection established.")
+    else:
+        print("Insecure connection detected. Please use HTTPS.")

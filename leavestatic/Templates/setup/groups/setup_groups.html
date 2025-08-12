@@ -1,0 +1,106 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Groups - GCPS Leave System
+{% endblock %}
+
+{% block content %}
+<div class="groups" style="display: none;">
+    <div class="group_buttons">
+        <h2>Groups</h2>
+        <div>
+            <input type="checkbox" class="select_all_groups" id="select_all_groups" onclick="selectAllBoxes(this.checked, 'group_item', '.groups .mid', '.groups .mid .count_selected', '.groups .mid .count_total', '.groups', '.group_item_ch', 'select_all_groups')">
+            <label id="select_all_label" for="select_all_groups">Select All</label>
+        </div>
+        <button type="button" onclick="mySwitcher('.groups', '.staff_form_add_groups')">New Staff</button>
+        <button type="button" onclick="mySwitcher('.groups', '.group_forms_add')" style="margin-right: 5px;">New Group</button>
+    </div>
+    <div class="mid" style="display: none;">
+        <div>
+            <label for="mid_action">Action: </label>
+            <select name="mid_action" id="mid_sel" 
+            style="width: max-content; height: 30px; border-radius: 10px; background-color: inherit; border: 1px solid #ddd;"
+            onchange="setMeta(value, 'group_form')"
+            >   
+                <option value="del_group">Delete selected groups</option>
+                <option value="rem_staff">Remove all staff from selected groups</option>
+            </select>
+        </div>
+        <span><span class="count_selected">0</span> of <span class="count_total">{{ all_groups|length }}</span> selected</span>
+        <button type="button" class="lvtsve" onclick="show4('del_group')">&check; Save</button>
+        <button type="button" class="lvtdsd" 
+        onclick="
+            clearMyForm('group_form', `input[name='group_ids']`),
+            selectAllBoxes(false, 'group_item', '.groups .mid', '.groups .mid .count_selected', '.groups .mid .count_total', '.groups', '.group_item_ch', 'select_all_groups')
+        "
+        >&times; Discard</button>
+    </div>
+    <div class="a_groups">
+        {% for group in active_groups %}
+        <div class="group_item">
+            <input type="checkbox"
+            name="group_ids"
+            value="{{group.id}}" 
+            class="group_item_ch" 
+            onchange="
+            selectReact(event, 'group_item', '.groups .mid', '.groups .mid .count_selected', '.groups .mid .count_total', '.group_item_ch', 'select_all_groups'),
+            setForm(event, 'group_form', `input[name='group_ids']`)
+            " 
+            style="position:absolute; left:10px; top:10px;">
+            <button type="button" class="dept-info" onclick="mySwitcher('.groups', '.gpd{{group.id}}')">
+                <h3 class="heading_pos">{{ group.name }}</h3>
+                <p class="count">
+                    {% with staff_list=groups_list|get_item:group %}
+                        {{ staff_list|length }} staff
+                    {% endwith %}
+                </p>
+            </button>
+            <button type="button" class="np" onclick="mySwitcher('.groups', '.edit_group_form{{group.id}}')">Edit</button>
+        </div>
+        {% empty %}
+        <div class="no-groups">No groups found.</div>
+        {% endfor %}
+    </div>
+
+    <div class="inactive_groups">
+        <div class="in_header">
+            <button class="rotb" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+            onclick="show1('in_body'), rotateMe('.rotb')"
+            >&#10094;</button>
+            <p onclick="show1('in_body'), rotateMe('.rotb')">Inactive Groups (deleted)</p>
+        </div>
+        <div class="in_body">
+            
+            <div class="a_groups">
+                {% for group in all_groups %}
+                {% if not group.is_active %}
+                <form class="group_item" method="post">
+                    {% csrf_token %}
+                    <button type="button" class="dept-info" onclick="mySwitcher('.groups', '.gpd{{group.id}}')">
+                        <h3 class="heading_pos">{{ group.name }}</h3>
+                        <p class="count">
+                            {% with staff_list=groups_list|get_item:group %}
+                                {{ staff_list|length }} staff
+                            {% endwith %}
+                        </p>
+                    </button>
+                    <input type="hidden" name="form_meta" value="restore_group" id="">
+                    <input type="hidden" value="{{group.id}}" name="group_ids">
+                    <button type="submit" class="np">Restore</button>
+                </form>
+                {% endif %}
+                {% empty %}
+                    <div class="no-groups">No groups found.</div>
+                {% endfor %}
+            </div>
+        </div>
+        
+    </div>
+    <div class="pagination-bar" data-section=".groups"></div>
+
+    <form action="" method="post" id="group_form" class="group_form" style="display: none;">
+        {% csrf_token %}
+        <input type="hidden" value="del_group" name="form_meta" id="">
+    </form>
+</div>
+{% endblock %}

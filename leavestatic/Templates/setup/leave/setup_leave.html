@@ -1,0 +1,69 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Leave Types - GCPS Leave System
+{% endblock %}
+
+{% block content %}
+<div class="leave_types" style="display: none;">
+    <div class="lvtheader">
+        <h3>Leave Types</h3>
+        <button type="button" onclick="mySwitcher('.leave_types','.lvt_form_add')">New Leave Type</button>
+        <!-- <button class="del56" onclick="show4('delete')" type="button"><img src="{% static 'images/trash1.png' %}" alt="" width="20px" height="20px"></button> -->
+    </div>
+    <div class="lvtmid" style="display: none;">
+        <button type="button" class="lvtsve" onclick="show4('del_leave_type')">&check; save</button>
+        <button type="button" class="lvtdsd" onclick="lvtdell2('lvt_del')">&times; discard</button>
+    </div>
+    <div class="lvtbody">
+        {% for leave in all_leave %}
+        {% if leave.is_active %}
+        <div class="lvtlb">
+            <button type="button" class="lvtype_heading" onclick="mySwitcher('.leave_types', '.lvt_form_edit{{leave.id}}', true)">
+                <p><b>{{leave.name}}</b></p>
+                <p>{{leave.days}} days</p>
+                <p>{{leave.seniority.name}}</p>
+            </button>
+            <input type="hidden" id="lvt{{leave.id}}" name="leave_type" value="{{leave.id}}">
+            <!-- <button type="button">&#9998;</button> -->
+            <button type="button" id="lvtdel_button" onclick="lvtdell(event, 'lvt_del')">select</button>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="inactive_lvt">
+        <div class="in_header">
+            <button class="rot_lvt" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+            onclick="show1('in_body_lvt'), rotateMe('.rot_lvt')"
+            >&#10094;</button>
+            <p onclick="show1('in_body_lvt'), rotateMe('.rot_lvt')">Inactive Approvers (deleted)</p>
+        </div>
+        <div class="in_body_lvt">
+            {% for leave in all_leave %}
+            {% if leave.is_active == False %}
+            <form method="post" class="lvtlb">
+                {% csrf_token %}
+                <input type="hidden" name="form_meta" value="res_lvt">
+                <input type="hidden" name="leave_id" value="{{leave.id}}" id="">
+                <button type="button" class="lvtype_heading" onclick="mySwitcher('.leave_types', '.lvt_form_edit{{leave.id}}', true)">
+                    <p><b>{{leave.name}}</b></p>
+                    <p>{{leave.days}} days</p>
+                    <p>{{leave.seniority.name}}</p>
+                </button>
+                <input type="hidden" class="lvt_res" id="lvt{{leave.id}}" name="leave_type" value="{{leave.id}}">
+                <!-- <button type="button">&#9998;</button> -->
+                <button type="submit"  class="lvt_res">Restore</button>
+            </form>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    <div class="pagination-bar" data-section="leave_types"></div>
+    
+    <form action="" class="lvt_del" method="post">
+        {% csrf_token %}
+        <input type="hidden" value="del_lvt" name="form_meta" id="">
+    </form>
+</div>
+{% endblock %}

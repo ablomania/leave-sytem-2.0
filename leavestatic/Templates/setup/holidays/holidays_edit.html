@@ -1,0 +1,48 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Edit Holiday
+{% endblock %}
+
+{% block content %}
+<div class="hol_form_edit hol_form_edit{{holiday.id}}" style="display: none;">
+    <div class="hf233">
+        <div class="hf243">
+            <button type="button" onclick="mySwitcher('.hol_form_edit{{holiday.id}}', '.holidays')"><b>Back</b> Holidays</button>
+            <h2>Edit Holiday</h2>
+        </div>
+        <p>Edit the details of this holiday below.</p>
+        <img src="{% static 'images/beach.png' %}" width="500px" alt="">
+    </div>
+    <form action="" method="post">
+        {% csrf_token %}
+        <input type="hidden" value="edit_hol" name="form_meta" id="">
+        <input type="hidden" name="hol_id" value="{{holiday.id}}" id="">
+        <div class="hf454">
+            <label for="name{{holiday.id}}">Name</label>
+            <input type="text" name="name" id="name{{holiday.id}}" value="{{holiday.name}}">
+        </div>
+        <div class="hf454">
+            <label for="date{{holiday.id}}">Date</label>
+            <input type="date" name="date" id="date{{holiday.id}}" value="{{holiday.date|date:'Y-m-d'}}">
+        </div>
+        <div class="hf454">
+            <label for="type{{holiday.id}}">Type of holiday (based on occurrence)</label>
+            <select name="type" id="type{{holiday.id}}">
+                <option value="Fixed" {% if holiday.type == "Fixed" %}selected{% endif %}>Fixed</option>
+                <option value="Variable" {% if holiday.type == "Variable" %}selected{% endif %}>Variable</option>
+            </select>
+        </div>
+        <div class="hf454">
+            <label for="recur{{holiday.id}}">Does this holiday recur annually?</label>
+            <select name="recur" id="recur{{holiday.id}}">
+                <option value="True" {% if holiday.recurs_annually %}selected{% endif %}>Yes</option>
+                <option value="False" {% if not holiday.recurs_annually %}selected{% endif %}>No</option>
+            </select>
+        </div>
+        <div>
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

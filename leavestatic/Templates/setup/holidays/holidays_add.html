@@ -1,0 +1,48 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Add Holiday
+{% endblock %}
+
+{% block content %}
+<div class="hol_form_add" style="display: none;">
+    <div class="hf233">
+        <div class="hf243">
+            <button type="button" onclick="mySwitcher('.hol_form_add', '.holidays')"><b>Back</b> Holidays</button>
+            <h2>New Holiday</h2>
+        </div>
+        
+        <p>Please fill the form to add a new holiday object</p>
+        <img src="{% static 'images/beach.png' %}" width="500px" alt="">
+    </div>
+    <form action="" method="post">
+        {% csrf_token %}
+        <input type="hidden" value="add_hol" name="form_meta" id="">
+        <div class="hf454">
+            <label for="name">Name</label>
+            <input type="text" name="name" id="name">
+        </div>
+        <div class="hf454">
+            <label for="date">Date</label>
+            <input type="date" name="date" id="date">
+        </div>
+        <div class="hf454">
+            <label for="type">Type of holiday (based on occurrence)</label>
+            <select name="type" id="type">
+                <option value="Fixed">Fixed</option>
+                <option value="Variable">Variable</option>
+            </select>
+        </div>
+        <div class="hf454">
+            <label for="recur">Does this holiday recur annually?</label>
+            <select name="recur" id="recur">
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+            </select>
+        </div>
+        <div>
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

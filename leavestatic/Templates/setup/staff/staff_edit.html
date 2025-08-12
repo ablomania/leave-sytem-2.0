@@ -1,0 +1,82 @@
+{% extends 'setup.html' %}
+{% load static %}
+{% block title %}
+    Edit Staff - {{staff.first_name}} {{staff.last_name}} - GCPS Leave System
+{% endblock %}
+
+{% block content %}
+<div class="staff_form_edit staff_form_edit{{staff.id}}" style="display: none;">
+    <div class="sf10">
+        <div class="sf10h">
+            <button type="button" onclick="mySwitcher('.staff_form_edit{{staff.id}}', '.gpd{{staff.group.id}}')"><b>Back</b> &rsaquo; {{staff.group.name}}</button>
+            <h2>Edit Staff</h2>
+        </div>
+        <p>Edit the details of this staff member in the {{staff.group.name}} group</p>
+        <img src="{% static 'images/regi.png' %}" width="500px" alt="">
+    </div>
+    <form class="sf12" action="" method="post" class="edit_group_form_form">
+        <input type="hidden" name="form_meta" value="edit_staff" id="">
+        <input type="hidden" name="staff_id" value="{{staff.id}}" id="">
+        {% csrf_token %}
+        <div class="sf56">
+            <img src="{% static 'images/add-contact.png' %}" width="200px" alt="">
+        </div>
+        <div class="sgr45">
+            <div class="fld33">
+                <label for="first_name_edit{{staff.id}}">First Name</label>
+                <input type="text" name="first_name" id="first_name_edit{{staff.id}}" value="{{staff.first_name}}" required>
+            </div>
+            <div class="fld33">
+                <label for="last_name_edit{{staff.id}}">Last Name</label>
+                <input type="text" name="last_name" id="last_name_edit{{staff.id}}" value="{{staff.last_name}}" required>
+            </div>
+            <div class="fld33">
+                <label for="other_names_edit{{staff.id}}">Other Names</label>
+                <input type="text" name="other_names" id="other_names_edit{{staff.id}}" value="{{staff.other_names}}">
+            </div>
+            <div class="fld33">
+                <label for="gender_edit{{staff.id}}">Gender</label>
+                <select name="gender" id="gender_edit{{staff.id}}" required>
+                    {% for gender in all_genders %}
+                    <option value="{{gender.id}}" {% if staff.gender and staff.gender.id == gender.id %}selected{% endif %}>{{gender.name}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fld33 fld34">
+                <label for="id_phone_number_edit{{staff.id}}">Phone Number</label>
+                <input type="text" name="phone_number" id="id_phone_number_edit{{staff.id}}" value="{{staff.phone_number}}" required>
+            </div>
+        </div>
+        <div class="fld33">
+            <label for="email_edit{{staff.id}}">Email</label>
+            <input type="email" name="email" id="email_edit{{staff.id}}" value="{{staff.email}}" required>
+        </div>
+        <div class="fld33">
+            <label for="group_edit{{staff.id}}">Assign to group:</label>
+            <select name="group" id="group_edit{{staff.id}}">
+                {% for grp in all_groups %}
+                <option value="{{grp.id}}" {% if grp.id == group.id %} selected {% endif %}>{{grp.name}}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="fld33">
+            <label for="type_edit{{staff.id}}">Seniority</label>
+            <select name="seniority" id="type_edit{{staff.id}}" required>
+                {% for sen in seniority %}
+                <option value="{{sen.id}}" {% if staff.seniority and staff.seniority.id == sen.id %}selected{% endif %}>{{sen.name}}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="fld33">
+                <label for="is_active_edit{{staff.id}}">Active?</label>
+                <select name="is_active" id="is_active_edit{{staff.id}}">
+                    <option value="true" {% if staff.is_active %}selected{% endif %}>Yes</option>
+                    <option value="false" {% if not staff.is_active %}selected{% endif %}>No</option>
+                </select>
+            </div>
+        <div class="bt23">
+            <button type="submit" id="submit-button">Save</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
