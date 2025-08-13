@@ -284,11 +284,12 @@ def staff_add(request, slug, group_id=None):
     template = loader.get_template("setup/staff/staff_add.html")
     return HttpResponse(template.render(context, request))
 
-def staff_add_group(request, slug):
+def staff_add_group(request, group_id, slug):
     user_slug = request.session.get("user_slug") or change_session(slug)
     if not user_slug:
         return redirect(reverse("login", args=["setup_staff"]))
     all_groups = Group.objects.order_by('name')
+    group = Group.objects.get(id=group_id)
     all_genders = Gender.objects.all().order_by("name")
     seniority = Seniority.objects.filter(is_active=True).order_by("name")
     context = {
@@ -296,6 +297,7 @@ def staff_add_group(request, slug):
         "all_genders": all_genders,
         "seniority": seniority,
         "slug": slug,
+        "group": group,
         "index": True,
     }
     template = loader.get_template("setup/staff/staff_add_group.html")
@@ -401,7 +403,7 @@ def gender_add(request, slug):
         "slug": slug,
         "index": True,
     }
-    template = loader.get_template("setup/genders/gender_add.html")
+    template = loader.get_template("setup/gender/gender_add.html")
     return HttpResponse(template.render(context, request))
 
 def gender_edit(request, slug, gender_id):
@@ -414,7 +416,7 @@ def gender_edit(request, slug, gender_id):
         "slug": slug,
         "index": True,
     }
-    template = loader.get_template("setup/genders/gender_edit.html")
+    template = loader.get_template("setup/gender/gender_edit.html")
     return HttpResponse(template.render(context, request))
 
 # --- HOLIDAY ADD/EDIT ---
@@ -427,7 +429,7 @@ def holiday_add(request, slug):
         "slug": slug,
         "index": True,
     }
-    template = loader.get_template("setup/holidays/holiday_add.html")
+    template = loader.get_template("setup/holidays/holidays_add.html")
     return HttpResponse(template.render(context, request))
 
 def holiday_edit(request, slug, hol_id):
@@ -440,7 +442,7 @@ def holiday_edit(request, slug, hol_id):
         "slug": slug,
         "index": True,
     }
-    template = loader.get_template("setup/holidays/holiday_edit.html")
+    template = loader.get_template("setup/holidays/holidays_edit.html")
     return HttpResponse(template.render(context, request))
 
 # --- GROUP ADD/EDIT ---
@@ -488,7 +490,7 @@ def level_edit(request, slug, level_id):
         return redirect(reverse("login", args=["setup_levels"]))
     level = get_object_or_404(Level, id=level_id)
     context = {
-        "level": level,
+        "lvl": level,
         "slug": slug,
         "index": True,
     }
@@ -686,7 +688,7 @@ def setup_genders(request, slug):
         "slug": slug,
         "index": True,
     }
-    template = loader.get_template("setup/genders/setup_genders.html")
+    template = loader.get_template("setup/gender/setup_gender.html")
     return HttpResponse(template.render(context, request))
 
 
@@ -799,7 +801,7 @@ def submit_inputs(request, slug):
             del_holiday(form_data)
             page = "setup_holidays"
         elif meta == "res_hol":
-            # res_holiday(form_data)
+            res_holiday(form_data)
             page = "setup_holidays"
 
         elif meta == "add_gender":
@@ -843,6 +845,50 @@ def submit_inputs(request, slug):
 
         print(form_data)
         return redirect(reverse(page if page else "setup", args=[slug]))
+
+
+
+def group_detail(request, group_id, slug):
+    # Maintain session consistency (mirrors setup view behavior)
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_groups"]))
+
+    group = get_object_or_404(Group, id=group_id)
+
+    # Build staff queryset for this group (both active and inactive; template filters itself)
+    staff_qs = (
+        Staff.objects.filter(group=group)
+        .order_by("last_name", "first_name")
+    )
+
+    # groups_list maps a Group object to its staff list (as in the congested setup view)
+    groups_list = {group: staff_qs}
+
+    # staff_dict maps group.id -> total staff count (template compares key to group.id)
+    staff_dict = {group.id: staff_qs.count()}
+
+    # Optional: attach a 'leader' attribute expected by the template.
+    # If you have a defined leader model field elsewhere, replace this heuristic.
+    leader = (
+        Staff.objects.filter(group=group, is_active=True)
+        .select_related("seniority")
+        .order_by("seniority__rank", "last_name", "first_name")
+        .first()
+    )
+    setattr(group, "leader", leader)
+
+    template = loader.get_template("setup/groups/gpd/group_detail.html")
+    context = {
+        "group": group,
+        "groups_list": groups_list,
+        "staff_dict": staff_dict,
+        "slug": slug,
+        'index': True,
+    }
+    return HttpResponse(template.render(context, request))
+
+
 
 def setup(request, slug):
     user_slug = request.session.get("user_slug") or change_session(slug)

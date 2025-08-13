@@ -1,0 +1,113 @@
+{% extends "setup.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}
+    Group Details
+{% endblock %}
+
+{% block setup %}
+<div class="gpd gpd{{group.id}}" style="display: flex;">
+    <div class="gpd_header">
+        <a href="{% url 'setup_groups' slug %}"><button class="bk" type="button"><b>Back</b> &rsaquo; Groups</button></a>
+        <h2>{{group.name}}</h2>
+        <a href="{% url 'group_edit' group.id slug %}"><button type="button" class="np">Edit</button></a>
+        <a href="{% url 'staff_add_group' group.id slug %}"><button type="button" class="np">New Staff</button></a>
+    </div>
+    <div class="mid" style="display: none;">
+        <input type="checkbox"
+            id="select_all_staff_{{group.id}}"
+            onclick="selectAllBoxes(
+                this.checked,
+                'staff_item_{{group.id}}',
+                '.gpd{{group.id}} .mid',
+                '.gpd{{group.id}} .mid .count_selected',
+                '.gpd{{group.id}} .mid .count_total',
+                '.gpd{{group.id}}',
+                '.staff_item_ch',
+                'select_all_staff_{{group.id}}'
+            )"
+        >
+        <label for="select_all_staff_{{group.id}}">Select All</label>
+        <span>
+            <span class="count_selected">0</span> of
+            <span class="count_total">
+                {% for st, stv in staff_dict.items %}
+                {% if st == group.id %}
+                {{stv}}
+                {% endif %}
+                {% endfor %}
+            </span> selected
+        </span>
+        <button type="button" class="lvtsve" onclick="show4('del_staff')">&check; Save</button>
+        <button type="button" class="lvtdsd" onclick="lvtdell2('gpd_del')">&times; Discard</button>
+    </div>
+    <div class="group_staff_list">
+        <p class="ava">Group leader: {% if group.leader and group.leader.first_name %}{{group.leader.first_name}} {{group.leader.last_name}}{% else %}Unknown{% endif %}</p>
+        <p class="ava">Staff in this group:</p>
+        <div class="staff_list">
+            {% with staff_list=groups_list|get_item:group %}
+                {% if staff_list %}
+                    {% for staff in staff_list %}
+                        {% if staff.is_active %}
+                        <div class="staff_item staff_item_{{group.id}}'">
+                            <input type="checkbox"
+                                value="{{staff.id}}"
+                                name="staff_ids"
+                                class="staff_item_ch"
+                                id="staff{{staff.id}}"
+                                onchange="selectReact(event, 'staff_item_{{group.id}}', '.gpd{{group.id}} .mid', '.gpd{{group.id}} .mid .count_selected', '.gpd{{group.id}} .mid .count_total', '.staff_item_ch'),
+                                setForm(event, 'del_staff_form{{group.id}}', `input[name='staff_ids']`)"
+                                >
+                            <label for="staff{{staff.id}}" class="staff_label">{{staff.first_name}} {{staff.last_name}}</label>
+                            <button type="button" onclick="mySwitcher('.gpd{{group.id}}', '.staff_form_edit{{staff.id}}')">&#9998;</button>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p>No staff in this group.</p>
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <div class="inactive_staff">
+        <div class="in_header in_header{{group.id}}">
+            <button class="rotb_staff rotb_staff{{group.id}}" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
+            onclick="show1('staff_in_body'), rotateMe('.rotb_staff{{group.id}}')"
+            >&#10094;</button>
+            <p onclick="show1('staff_in_body{{group.id}}'), rotateMe('.rotb_staff{{group.id}}')">Inactive Staff (deleted)</p>
+        </div>
+        <div class="staff_in_body staff_in_body{{group.id}}">
+            <div class="staff_list">
+                {% with staff_list=groups_list|get_item:group %}
+                    {% if staff_list %}
+                        {% for staff in staff_list %}
+                            {% if not staff.is_active %}
+                            <form method="post" action="" class="staff_item staff_item_{{group.id}}'">
+                                {% csrf_token %}
+                                <input type="hidden" name="form_meta" value="restore_staff" id="">
+                                <input type="hidden"
+                                    value="{{staff.id}}"
+                                    name="staff_id"
+                                    class="staff_item_ch"
+                                    id="staff{{staff.id}}"
+                                    >
+                                <label for="staff{{staff.id}}" class="staff_label">{{staff.first_name}} {{staff.last_name}}</label>
+                                <button type="submit">Restore</button>
+                            </form>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p>No staff in this group.</p>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+</div>
+<form action="" method="post" id="del_staff_form{{group.id}}" class="del_staff_form{{group.id}}" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" value="del_staff_form" name="form_meta" id="">
+</form>
+{% endblock %}

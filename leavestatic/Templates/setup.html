@@ -91,19 +91,32 @@
 </style>
 <div class="setup_page">
     <div class="{% if general %}nav001{% else %}nav56{% endif %}" id="nav001">
-        <button type="button" class="navgen nav" style="display: none;">General</button>
+        <a href="{% url 'setup' slug %}"><button type="button" class="navgen nav" style="display: {% if general %}none {% else %} block {% endif %};">General</button></a>
         <a href="{% url 'setup_groups' slug %}"><button type="button" class="navgp nav">Groups</button></a>
         <a href="{% url 'setup_staff' slug %}"><button type="button" class="navst nav">Staff</button></a>
         <a href="{% url 'setup_approvers' slug %}"><button type="button" class="navapp nav">Approvers</button></a>
-        <button type="button" onclick="loadSettings(event, '.leave_types')" class="navlt nav">Leave Types</button>
-        <button type="button" onclick="loadSettings(event, '.holidays')" class="navh nav">Holidays</button>
-        <button type="button" onclick="loadSettings(event, '.genders')" class="navgend nav">Genders</button>
+        <a href="{% url 'setup_leave_types' slug %}"><button type="button" class="navlt nav">Leave Types</button></a>
+        <a href="{% url 'setup_holidays' slug %}"><button type="button" class="navh nav">Holidays</button></a>
+        <a href="{% url 'setup_genders' slug %}"><button type="button" class="navgend nav">Genders</button></a>
         <a href="{% url 'setup_categories' slug %}"><button type="button" class="navcat nav">Categories</button></a>
-        <button type="button" onclick="loadSettings(event, '.levels')" class="navl nav">Levels</button>
-        <button type="button" onclick="loadSettings(event, '.emails')" class="navem nav">Emails</button>
+        <a href="{% url 'setup_levels' slug %}"><button type="button" class="navl nav">Levels</button></a>
+        <button type="button" class="navem nav">Emails</button>
     </div>
     {% block setup %}
     {% endblock %}
+
+    <div class="conf167" style="display: none;">
+        <h2 class="confheader"></h2>
+        <p class="confmsg1"></p>
+        <div class="conf78">
+            <img src="{% static 'images/3776063.png' %}" width="300px" alt="">
+            <p class="confmsg2"></p>
+        </div>
+        <div class="button_wrapper">
+            <button type="button" class="confbtn"  onclick="submitMyForm3()">Confirm</button>
+            <button type="button" class="cancelfbtn" onclick="closeFirst('conf167')">Cancel</button>
+        </div>
+    </div>
     
 </div>
 

@@ -4,11 +4,11 @@
     Edit Leave Type - GCPS Leave System
 {% endblock %}
 
-{% block content %}
-    <div class="lvt_form_edit lvt_form_edit{{leave.id}}" style="display: none;">
+{% block setup %}
+    <div class="lvt_form_edit lvt_form_edit{{leave.id}}" style="display: flex;">
         <div class="lvt_form1">
             <div class="lvt_formh">
-                <button type="button" onclick="mySwitcher('.lvt_form_edit{{leave.id}}', '.leave_types')"><b>Back</b> &rsaquo; All Leave Types</button>
+                <a href="{% url 'setup_leave_types' slug %}"><button type="button"><b>Back</b> &rsaquo; All Leave Types</button></a>
                 <h2>Modify {{leave.name}} Leave</h2>
             </div>
             <p>Please update the fields below to modify this leave type</p>
@@ -87,11 +87,11 @@
 
                 <div class="lvt476">
                     <p>Inputs this leave type accepts:</p>
-                    <div><input type="checkbox" name="i_date" value="True" {% if leave.includes_date_of_occurence %}checked{% endif %}> <label>Date of occurrence</label></div>
-                    <div><input type="checkbox" name="i_institution" value="True" {% if leave.includes_institution %}checked{% endif %}> <label>Institution name</label></div>
-                    <div><input type="checkbox" name="i_course" value="True" {% if leave.includes_course %}checked{% endif %}> <label>Course name</label></div>
-                    <div><input type="checkbox" name="i_note" value="True" {% if leave.includes_med_note %}checked{% endif %}> <label>Medical note</label></div>
-                    <div><input type="checkbox" name="i_letter" value="True" {% if leave.includes_letter %}checked{% endif %}> <label>Admission letter</label></div>
+                    <div><input type="checkbox" id="i_date" name="i_date" value="True" {% if leave.includes_date_of_occurence %}checked{% endif %}> <label for="i_date">Date of occurrence</label></div>
+                    <div><input type="checkbox" id="i_institution" name="i_institution" value="True" {% if leave.includes_institution %}checked{% endif %}> <label for="i_institution">Institution name</label></div>
+                    <div><input type="checkbox" id="i_course" name="i_course" value="True" {% if leave.includes_course %}checked{% endif %}> <label for="i_course">Course name</label></div>
+                    <div><input type="checkbox" id="i_note" name="i_note" value="True" {% if leave.includes_med_note %}checked{% endif %}> <label for="i_note">Medical note</label></div>
+                    <div><input type="checkbox" id="i_letter" name="i_letter" value="True" {% if leave.includes_letter %}checked{% endif %}> <label for="i_letter">Admission letter</label></div>
                 </div>
 
                 <div class="lvt767">

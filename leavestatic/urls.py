@@ -31,10 +31,12 @@ urlpatterns = [
     path('setup/staff/<str:slug>', views.setup_staff, name="setup_staff"),
     path('setup/staff/add/<str:slug>', views.staff_add, name="staff_add"),
     path('setup/staff/edit/<str:staff_id>/<str:slug>', views.staff_edit, name="staff_edit"),
+    path('setup/staff/add_to_group/<int:group_id>/<str:slug>', views.staff_add_group, name="staff_add_group"),
     # Groups
     path('setup/groups/<str:slug>', views.setup_groups, name="setup_groups"),
     path('setup/groups/add/<str:slug>', views.group_add, name="group_add"),
     path('setup/groups/edit/<int:group_id>/<str:slug>', views.group_edit, name="group_edit"),
+    path('setup/groups/detail/<int:group_id>/<str:slug>', views.group_detail, name="group_detail"),
     # Gender
     path('setup/gender/<str:slug>', views.setup_genders, name="setup_genders"),
     path('setup/gender/add/<str:slug>', views.gender_add, name="gender_add"),
@@ -46,9 +48,9 @@ urlpatterns = [
     # Leave Types
     path('setup/leave_types/<str:slug>', views.setup_leave_types, name="setup_leave_types"),
     path('setup/leave_types/add/<str:slug>', views.leavetype_add, name="leavetype_add"),
-    path('setup/leave_types/edit/<int:leave_type_id>/<str:slug>', views.leavetype_edit, name="leave_type_edit"),
+    path('setup/leave_types/edit/<int:leave_id>/<str:slug>', views.leavetype_edit, name="leave_type_edit"),
     # Holidays
     path('setup/holidays/<str:slug>', views.setup_holidays, name="setup_holidays"),
     path('setup/holidays/add/<str:slug>', views.holiday_add, name="holiday_add"),
-    path('setup/holidays/edit/<int:holiday_id>/<str:slug>', views.holiday_edit, name="holiday_edit"),
+    path('setup/holidays/edit/<int:hol_id>/<str:slug>', views.holiday_edit, name="holiday_edit"),
 ]

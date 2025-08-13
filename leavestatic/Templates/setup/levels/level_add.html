@@ -4,13 +4,13 @@
     Add Level
 {% endblock %}
 
-{% block content %}
-<div class="level_form_add" style="display: none;">
+{% block setup %}
+<div class="level_form_add" style="display: flex;">
     <div class="sf10">
         <div class="sf10h">
-        <button type="button" onclick="mySwitcher('.level_form_add', '.levels')">
+        <a href="{% url 'setup_levels' slug %}"><button type="button">
             <b>Back</b> &rsaquo; Levels
-        </button>
+        </button></a>
         <h2>New Level</h2>
         </div>
         <p>Fill the form below to add a new level</p>

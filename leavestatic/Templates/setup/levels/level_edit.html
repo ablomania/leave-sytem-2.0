@@ -5,13 +5,13 @@
     Edit Level
 {% endblock %}
 
-{% block content %}
-<div class="level_form_edit level_form_edit{{lvl.id}}" style="display: none;">
+{% block setup %}
+<div class="level_form_edit level_form_edit{{lvl.id}}" style="display: flex;">
     <div class="sf10">
         <div class="sf10h">
-            <button type="button" onclick="mySwitcher('.level_form_edit{{lvl.id}}', '.levels')">
+            <a href="{% url 'setup_levels' slug %}"><button type="button">
                 <b>Back</b> &rsaquo; Levels
-            </button>
+            </button></a>
             <h2>Edit Level</h2>
         </div>
         <p>Edit the details of this level below.</p>
