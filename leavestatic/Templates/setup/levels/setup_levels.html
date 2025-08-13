@@ -6,11 +6,11 @@
     Setup Levels - GCPS Leave System
 {% endblock %}
 
-{% block content %}
-<div class="levels" style="display: none;">
+{% block setup %}
+<div class="levels" style="display: flex;">
     <div class="levels_header">
         <h3>Levels</h3>
-        <button type="button" onclick="mySwitcher('.levels', '.level_form_add')">New Level</button>
+        <a href="{% url 'level_add' slug %}"><button type="button">New Level</button></a>
     </div>
 
     <div class="levels_list" style="margin-bottom: 20px;">
@@ -22,7 +22,7 @@
             <p><strong>Level Rank:</strong> {{ level.level }}</p>
             </div>
             <div class="level-actions">
-            <button type="button" onclick="mySwitcher('.levels', '.level_form_edit{{level.id}}')">Edit</button>
+            <a href="{% url 'level_edit' level.id slug %}"><button type="button">Edit</button></a>
             <form action="{% url 'submit_inputs' slug %}" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="form_meta" value="del_level">

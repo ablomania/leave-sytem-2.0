@@ -4376,6 +4376,15 @@
             cursor: pointer;
         }
 
+        .rot_gend {
+            background: #eee;
+            border: none;
+            font-size: 1.1rem;
+            padding: 0.4rem 0.6rem;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
         .gender-actions button:first-child {
             background-color: #0077cc;
             color: #fff;
@@ -4813,12 +4822,17 @@
                 gap: 10px;
                 background-color: #cbf5dd;
                 padding-right: 10px;
+                height: 60px;
+                a{
+                    height: 60px;
+                }
                 button{
                     color: #fff;
                     background-color: #0077c0;
                     border: none;
                     width: max-content;
                     border-bottom-left-radius: 50%;
+                    height: 100%;
                 }
             }
             .lvt_form1{
@@ -4877,12 +4891,17 @@
                 background-color: #cbf5dd;
                 padding-right: 10px;
                 border-top-right-radius: 50px;
+                height: 60px;
+                a{
+                    height: 60px;
+                }
                 button{
                     color: #fff;
                     background-color: #0077c0;
                     border: none;
                     width: max-content;
                     border-bottom-left-radius: 50%;
+                    height: 100%;
                 }
             }
             .lvt_form1{
@@ -5350,224 +5369,6 @@
         }
         }
 
-        
-
-        .groups {
-  background: #fff;
-  display: flex;
-  flex-direction: column;
-  padding: 2rem;
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-  margin-top: 2rem;
-  animation: fadeIn 0.4s ease;
-  button{
-    box-shadow: none;
-  }
-
-  /* Header */
-.group_buttons {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.2rem;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 0.5rem;
-}
-
-.group_buttons h2 {
-  margin: 0;
-  font-size: 1.6rem;
-  color: #333;
-  flex-grow: 1;
-}
-
-.group_buttons div,
-.group_buttons button {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.group_buttons label {
-  font-weight: 500;
-  color: #444;
-  font-size: 0.95rem;
-}
-
-.group_buttons input[type="checkbox"] {
-  cursor: pointer;
-}
-
-.group_buttons button {
-  padding: 0.5rem 1rem;
-  border: none;
-  background-color: #0077cc;
-  color: white;
-  border-radius: 0.3rem;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.25s ease;
-}
-
-.group_buttons button:hover {
-  background-color: #005fa3;
-}
-
-/* Group Interaction Bar */
-.mid {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #f3f3f3;
-  padding: 0.6rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 0.4rem;
-  margin-bottom: 1rem;
-  font-size: 0.95rem;
-  animation: fadeIn 0.3s ease;
-  .lvtsve,
-.lvtdsd {
-  padding: 0.45rem 0.9rem;
-  border: none;
-  border-radius: 0.25rem;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.lvtsve {
-  background-color: #28a745;
-  color: #fff;
-}
-
-.lvtsve:hover {
-  background-color: #218838;
-}
-
-.lvtdsd {
-  background-color: #e3342f;
-  color: #fff;
-}
-
-.lvtdsd:hover {
-  background-color: #c02022;
-}
-
-}
-
-
-/* Active & Inactive Groups */
-.a_groups {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-/* Group Card */
-.group_item {
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    background-color: #fafafa;
-    border: 1px solid #ddd;
-    border-radius: 0.5rem;
-    width: 260px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-    overflow: hidden;
-    padding: 0;
-    animation: cardFadeUp 0.4s ease forwards;
-    opacity: 0;
-    transform: translateY(10px);
-    height: 200px;
-}
-
-.group_item input[type="checkbox"] {
-  position: absolute;
-  left: 10px;
-  top: 10px;
-  z-index: 2;
-}
-
-.group_item .dept-info {
-  display: block;
-  width: 100%;
-  text-align: left;
-  border: none;
-  background: transparent;
-  padding: 1.1rem 1rem 0.5rem;
-  cursor: pointer;
-  height: 85%;
-}
-
-.group_item h3.heading_pos {
-  margin: 0;
-  font-size: 1.1rem;
-  color: #333;
-}
-
-.group_item .count {
-  margin: 0.4rem 0 0;
-  font-size: 0.9rem;
-  color: #666;
-}
-
-/* Edit / Restore Buttons */
-.group_item a{
-    height: 15%;
-}
-.group_item a .np {
-  width: 100%;
-  padding: 0.6rem;
-  border: none;
-  background-color: #0077cc;
-  color: #fff;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  border-top: 1px solid #ccc;
-  height: 100%;
-}
-
-.group_item .np:hover {
-  background-color: #005fa3;
-}
-
-/* Inactive Section */
-.inactive_groups {
-  margin-top: 2rem;
-  border-top: 1px solid #ccc;
-  padding-top: 1rem;
-}
-
-.in_header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  cursor: pointer;
-  font-weight: 600;
-  color: #444;
-}
-
-.rotb {
-  background-color: #efefef;
-  border: none;
-  font-size: 1.2rem;
-  padding: 0.4rem 0.6rem;
-  border-radius: 50%;
-  transition: transform 0.3s ease;
-}
-
-.in_body {
-  display: none;
-  margin-top: 1rem;
-}
-  
-}
-
-   
 
 .gpd {
   display: flex;

@@ -4,11 +4,11 @@
     Holidays - GCPS Leave System
 {% endblock %}
 
-{% block content %}
-<div class="holidays" style="display: none;">
+{% block setup %}
+<div class="holidays" style="display: flex;">
     <div class="hol341">
         <h3>Holidays</h3>
-        <button type="button" onclick="mySwitcher('.holidays','.hol_form_add')">New Holiday</button>
+        <a href="{% url 'holiday_add' slug %}"><button type="button">New Holiday</button></a>
     </div>
     <!-- <div class="holmid" style="display: none;">
         <button type="button" class="lvtsve" onclick="confirmAction(event, '.conf167', '.confheader', '.confmsg1', '.confmsg2')">&check; save</button>
@@ -26,10 +26,10 @@
                 {% if holiday.is_active %}
                 <form action="{% url 'submit_inputs' slug %}" class="vholitem" method="post">
                     {% csrf_token %}
-                    <button class="tt" type="button" onclick="mySwitcher('.holidays', '.hol_form_edit{{holiday.id}}', true)">
+                    <a href="{% url 'holiday_edit' holiday.id slug %}"><button class="tt" type="button">
                         <h2>{{holiday.name}}</h2>
                         <p>{{holiday.date}}</p>
-                    </button>
+                    </button></a>
                     <input type="hidden" name="form_meta" value="del_hol" id="">
                     <input type="hidden" value="{{holiday.id}}" name="holiday" id="holiday_id">
                     <button class="bb" type="submit">Delete</button>
@@ -49,10 +49,10 @@
                 {% if holiday.is_active %}
                 <form action="{% url 'submit_inputs' slug %}" class="fholitem" method="post">
                     {% csrf_token %}
-                    <button class="tt" type="button" onclick="mySwitcher('.holidays', '.hol_form_edit{{holiday.id}}', true)">
+                    <a href="{% url 'holiday_edit' holiday.id slug %}"><button class="tt" type="button">
                         <h2>{{holiday.name}}</h2>
                         <p>{{holiday.date}}</p>
-                    </button>
+                    </button></a>
                     <input type="hidden" name="form_meta" value="del_hol" id="">
                     <input type="hidden" value="{{holiday.id}}" name="holiday" id="holiday_id">
                     <button class="bb" type="submit">Delete</button>
@@ -83,7 +83,7 @@
                 </button>
                 <input type="hidden" name="form_meta" value="res_hol" id="">
                 <input type="hidden" value="{{holiday.id}}" name="holiday" id="holiday_id">
-                <button class="bb" type="button">restore</button>
+                <button class="bb" type="submit">restore</button>
             </form>
             {% endif %}
             {% endfor %}

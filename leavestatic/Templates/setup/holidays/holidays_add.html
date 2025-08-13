@@ -4,11 +4,11 @@
     Add Holiday
 {% endblock %}
 
-{% block content %}
-<div class="hol_form_add" style="display: none;">
+{% block setup %}
+<div class="hol_form_add" style="display: flex;">
     <div class="hf233">
         <div class="hf243">
-            <button type="button" onclick="mySwitcher('.hol_form_add', '.holidays')"><b>Back</b> Holidays</button>
+            <a href="{% url 'setup_holidays' slug %}"><button type="button"><b>Back</b> Holidays</button></a>
             <h2>New Holiday</h2>
         </div>
         

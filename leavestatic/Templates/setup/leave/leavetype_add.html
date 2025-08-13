@@ -4,11 +4,11 @@
     Add Leave Type
 {% endblock %}
 
-{% block content %}
-<div class="lvt_form_add" style="display: none;">
+{% block setup %}
+<div class="lvt_form_add" style="display: flex;">
     <div class="lvt_form1">
         <div class="lvt_formh">
-            <button type="button" onclick="mySwitcher('.lvt_form_add', '.leave_types')"><b>Back</b> &rsaquo; All Leave Types</button>
+            <a href="{% url 'setup_leave_types' slug %}"><button type="button"><b>Back</b> &rsaquo; All Leave Types</button></a>
             <h2>New Type of Leave</h2>
         </div>
         <p>Please fill the form to add a new type of leave</p>

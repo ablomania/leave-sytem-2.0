@@ -4,11 +4,11 @@
     Genders - GCPS Leave System
 {% endblock %}
 
-{% block content %}
-<div class="genders" style="display: none;">
+{% block setup %}
+<div class="genders" style="display: flex;">
     <div class="genders_header">
         <h3>Genders</h3>
-        <button type="button" onclick="mySwitcher('.genders', '.gender_form_add')">New Gender</button>
+        <a href="{% url 'gender_add' slug %}"><button type="button">New Gender</button></a>
     </div>
     <div class="genders_list" style="margin-bottom: 20px;">
     {% for gender in all_genders %}
@@ -19,7 +19,7 @@
                 <p><strong>Pronoun:</strong> {{ gender.pronoun }}</p>
             </div>
             <div class="gender-actions">
-                <button type="button" onclick="mySwitcher('.genders', '.gender_form_edit{{gender.id}}')">Edit</button>
+                <a href="{% url 'gender_edit' gender.id slug %}"><button type="button">Edit</button></a>
                 <form action="{% url 'submit_inputs' slug %}" method="post">
                     {% csrf_token %}
                     <input type="hidden" name="form_meta" value="del_gender" id="">

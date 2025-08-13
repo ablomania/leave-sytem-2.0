@@ -13,6 +13,7 @@ __pycache__/
 db.sqlite3
 media/
 local_settings.py
+leave_system_db
 
 # If using Django's collectstatic
 /static/

@@ -512,22 +512,18 @@ def add_leave_type(form_data):
 
 
 def edit_leave(form_data):
+    print("Editing leave type with form data:", form_data)
     leave_id = int(form_data.get("leave_id"))
     try:
         leave = LeaveType.objects.get(id=leave_id)
     except LeaveType.DoesNotExist:
         return  # Optionally log or raise an error here
 
-    bool_fields = [
-        "allow_multiple_applications",
-        "paid_leave",
-        "i_date",
-        "i_institution",
-        "i_course",
-        "i_note",
-        "i_letter",
-    ]
-    parsed_bools = {field: form_data.get(field) == "True" for field in bool_fields}
+    leave.includes_date_of_occurence = True if form_data.get("i_date") == "True" else False
+    leave.includes_institution = True if form_data.get("i_institution") == "True" else False
+    leave.includes_course = True if form_data.get("i_course") == "True" else False
+    leave.includes_med_note = True if form_data.get("i_note") == "True" else False
+    leave.includes_letter = True if form_data.get("i_letter") == "True" else False
 
     leave.name = form_data.get("name")
     leave.code = form_data.get("code")
@@ -535,10 +531,6 @@ def edit_leave(form_data):
     leave.seniority_id = int(form_data.get("seniority"))
     leave.reset_period = form_data.get("reset_period")
     leave.eligibility = form_data.get("eligibility", "")
-
-    # Assign all boolean fields dynamically
-    for field, value in parsed_bools.items():
-        setattr(leave, field, value)
 
     leave.save()
 
@@ -671,9 +663,9 @@ def del_holiday(form_data):
 
 
 
-def del_holiday(form_data):
+def res_holiday(form_data):
     """
-    Deactivates a Holiday object based on a single submitted ID.
+    Reactivates a Holiday object based on a single submitted ID.
     Expects form_data to include:
         - 'holiday': ID of the holiday to deactivate
     """
@@ -683,7 +675,7 @@ def del_holiday(form_data):
 
     try:
         holiday = Holiday.objects.get(id=int(hol_id))
-        holiday.is_active = False
+        holiday.is_active = True
         holiday.save()
     except Holiday.DoesNotExist:
         print(f"Holiday with ID {hol_id} does not exist.")

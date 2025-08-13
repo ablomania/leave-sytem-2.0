@@ -4,11 +4,11 @@
     Leave Types - GCPS Leave System
 {% endblock %}
 
-{% block content %}
-<div class="leave_types" style="display: none;">
+{% block setup %}
+<div class="leave_types" style="display: flex;">
     <div class="lvtheader">
         <h3>Leave Types</h3>
-        <button type="button" onclick="mySwitcher('.leave_types','.lvt_form_add')">New Leave Type</button>
+        <a href="{% url 'leavetype_add' slug %}"><button type="button">New Leave Type</button></a>
         <!-- <button class="del56" onclick="show4('delete')" type="button"><img src="{% static 'images/trash1.png' %}" alt="" width="20px" height="20px"></button> -->
     </div>
     <div class="lvtmid" style="display: none;">
@@ -19,11 +19,12 @@
         {% for leave in all_leave %}
         {% if leave.is_active %}
         <div class="lvtlb">
-            <button type="button" class="lvtype_heading" onclick="mySwitcher('.leave_types', '.lvt_form_edit{{leave.id}}', true)">
+            <a href="{% url 'leave_type_edit' leave.id slug %}"><button type="button" class="lvtype_heading">
                 <p><b>{{leave.name}}</b></p>
                 <p>{{leave.days}} days</p>
                 <p>{{leave.seniority.name}}</p>
             </button>
+            </a>
             <input type="hidden" id="lvt{{leave.id}}" name="leave_type" value="{{leave.id}}">
             <!-- <button type="button">&#9998;</button> -->
             <button type="button" id="lvtdel_button" onclick="lvtdell(event, 'lvt_del')">select</button>

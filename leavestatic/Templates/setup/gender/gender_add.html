@@ -4,11 +4,11 @@
     Add Gender
 {% endblock %}
 
-{% block content %}
-<div class="gender_form_add" style="display: none;">
+{% block setup %}
+<div class="gender_form_add" style="display: flex;">
     <div class="sf10">
         <div class="sf10h">
-            <button type="button" onclick="mySwitcher('.gender_form_add', '.genders')"><b>Back</b> &rsaquo; Genders</button>
+            <a href="{% url 'setup_genders' slug %}"><button type="button"><b>Back</b> &rsaquo; Genders</button></a>
             <h2>New Gender</h2>
         </div>
         <p>Fill the form below to add a new gender</p>
