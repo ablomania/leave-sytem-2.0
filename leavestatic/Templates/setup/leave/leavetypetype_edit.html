@@ -16,7 +16,7 @@
         </div>
 
         <div class="lvt_form26">
-            <form action="" method="post" class="lvt_form26d">
+            <form action="{% url 'submit_inputs' slug %}" method="post" class="lvt_form26d">
                 {% csrf_token %}
                 <input type="hidden" name="form_meta" value="edit_lvt">
                 <input type="hidden" name="leave_id" value="{{leave.id}}" id="">

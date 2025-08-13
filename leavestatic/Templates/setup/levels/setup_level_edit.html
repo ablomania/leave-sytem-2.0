@@ -1,5 +1,6 @@
 {% extends 'setup.html' %}
 {% load static %}
+{% load static custom_filters %}
 {% block title %}
     Edit Level
 {% endblock %}
@@ -16,7 +17,7 @@
         <p>Edit the details of this level below.</p>
         <img src="{% static 'images/cat1.png' %}" style="border-radius: 50%; border: #ddd 2px dashed;" width="300px" alt="">
     </div>
-    <form class="sf12" action="" method="post">
+    <form class="sf12" action="{% url 'submit_inputs' slug %}" method="post">
         <input type="hidden" name="form_meta" value="edit_level">
         <input type="hidden" name="level_id" value="{{lvl.id}}">
         {% csrf_token %}

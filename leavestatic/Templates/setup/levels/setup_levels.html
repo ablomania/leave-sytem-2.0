@@ -1,6 +1,7 @@
 {% extends 'setup.html' %}
 {% load static %}
 
+{% load static custom_filters %}
 {% block title %}
     Setup Levels - GCPS Leave System
 {% endblock %}
@@ -22,7 +23,7 @@
             </div>
             <div class="level-actions">
             <button type="button" onclick="mySwitcher('.levels', '.level_form_edit{{level.id}}')">Edit</button>
-            <form action="" method="post">
+            <form action="{% url 'submit_inputs' slug %}" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="form_meta" value="del_level">
                 <input type="hidden" name="level_id" value="{{ level.id }}">
@@ -51,7 +52,7 @@
                 <p><strong>Level Rank:</strong> {{ level.level }}</p>
             </div>
             <div class="level-actions">
-                <form action="" method="post">
+                <form action="{% url 'submit_inputs' slug %}" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="form_meta" value="res_level">
                 <input type="hidden" name="level_id" value="{{ level.id }}">

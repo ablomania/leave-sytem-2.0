@@ -4,17 +4,17 @@
     Add Staff
 {% endblock %}
 
-{% block content %}
-<div class="staff_form_add2 staff_form_add2{{group.id}}" style="display: none;">
+{% block setup %}
+<div class="staff_form_add2 staff_form_add2{{group.id}}" style="display: flex;">
     <div class="sf10">
         <div class="sf10h">
-            <button type="button" onclick="mySwitcher('.staff_form_add2{{group.id}}', '.gpd{{group.id}}')"><b>Back</b> &rsaquo; {{group.name}}</button>
+            <a href="{% url 'setup_staff' slug %}"><button type="button"><b>Back</b> &rsaquo; {{group.name}}</button></a>
             <h2>New Staff</h2>
         </div>
         <p>Fill the form below to add a new staff member to the <b>{{group.name}}</b> group</p>
         <img src="{% static 'images/add-contact.png' %}" width="400px" alt="">
     </div>
-    <form class="sf12 staff_form_add2_form" action="" method="post">
+    <form class="sf12 staff_form_add2_form" action="{% url 'submit_inputs' slug %}" method="post">
         <input type="hidden" name="form_meta" value="add_staff" id="">
         <input type="hidden" name="group" value="{{group.id}}">
         {% csrf_token %}

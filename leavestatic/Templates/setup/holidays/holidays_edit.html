@@ -14,7 +14,7 @@
         <p>Edit the details of this holiday below.</p>
         <img src="{% static 'images/beach.png' %}" width="500px" alt="">
     </div>
-    <form action="" method="post">
+    <form action="{% url 'submit_inputs' slug %}" method="post">
         {% csrf_token %}
         <input type="hidden" value="edit_hol" name="form_meta" id="">
         <input type="hidden" name="hol_id" value="{{holiday.id}}" id="">

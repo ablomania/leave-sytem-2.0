@@ -4,18 +4,18 @@
     Edit Group
 {% endblock %}
 
-{% block content %}
-<div class="grpfms23 edit_group_form{{group.id}}" style="display: none;">
+{% block setup %}
+<div class="grpfms23 edit_group_form{{group.id}}" style="display: flex;">
     <div class="gp134h">
         <div class="gp134hh">
-            <button type="button" onclick="mySwitcher('.edit_group_form{{group.id}}', '.gpd{{group.id}}')"><b>Back</b> &rsaquo; {{group.name}}</button>
+            <a href="{% url 'setup_groups' slug %}"><button type="button"><b>Back</b> &rsaquo; {{group.name}}</button></a>
             <h2>Edit Group</h2>
         </div>
         
         <img src="{% static 'images/group4.png' %}" width="500px" alt="">
     </div>
     <div class="grpfms">
-        <form action="" class="edit_group_form_form" method="post" enctype="multipart/form-data">
+        <form action="{% url 'submit_inputs' slug %}" class="edit_group_form_form" method="post" enctype="multipart/form-data">
             <input type="hidden" name="form_meta" value="edit_group">
             <input type="hidden" name="group_id" value="{{group.id}}">
             {% csrf_token %}

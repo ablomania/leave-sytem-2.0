@@ -15,7 +15,7 @@
         <img src="{% static 'images/appr23.png' %}" width="500px" alt="">
     </div>
     <div class="appedit_form">
-        <form action="" method="post">
+        <form action="{% url 'submit_inputs' slug %}" method="post">
             <input type="hidden" value="edit_app" name="form_meta" id="">
             <input type="hidden" name="staff_id" value="{{staff.id}}" id="app_id">
             {% csrf_token %}

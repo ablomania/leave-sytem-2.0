@@ -8,13 +8,13 @@
 <div class="staff_form_edit staff_form_edit{{staff.id}}" style="display: none;">
     <div class="sf10">
         <div class="sf10h">
-            <button type="button" onclick="mySwitcher('.staff_form_edit{{staff.id}}', '.gpd{{staff.group.id}}')"><b>Back</b> &rsaquo; {{staff.group.name}}</button>
+            <a href="{% url 'setup_staff' slug %}"></a><button type="button" ><b>Back</b> &rsaquo; {{staff.group.name}}</button></a>
             <h2>Edit Staff</h2>
         </div>
         <p>Edit the details of this staff member in the {{staff.group.name}} group</p>
         <img src="{% static 'images/regi.png' %}" width="500px" alt="">
     </div>
-    <form class="sf12" action="" method="post" class="edit_group_form_form">
+    <form class="sf12" action="{% url 'submit_inputs' slug %}" method="post" class="edit_group_form_form">
         <input type="hidden" name="form_meta" value="edit_staff" id="">
         <input type="hidden" name="staff_id" value="{{staff.id}}" id="">
         {% csrf_token %}

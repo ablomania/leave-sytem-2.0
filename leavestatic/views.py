@@ -262,21 +262,587 @@ def password_reset(request):
     return HttpResponse(template.render(context, request))
 
 
-# def setup_leave(request, slug):
-#     user_slug = request.session.get("user_slug") or change_session(slug)
-#     if not user_slug:
-#         return redirect(reverse("login", args=["setup"]))
+# Add / Edit setup views
+# --- STAFF ADD/EDIT ---
 
-#     # Ensure the user is an admin
-#     user = Staff.objects.get(slug=user_slug)
-    
+def staff_add(request, slug, group_id=None):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_staff"]))
+    all_groups = Group.objects.order_by('name')
+    all_genders = Gender.objects.all().order_by("name")
+    seniority = Seniority.objects.filter(is_active=True).order_by("name")
+    group = get_object_or_404(Group, id=group_id) if group_id else None
+    context = {
+        "all_groups": all_groups,
+        "all_genders": all_genders,
+        "seniority": seniority,
+        "group": group,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/staff/staff_add.html")
+    return HttpResponse(template.render(context, request))
 
-#     template = loader.get_template("setup/leave/setup_leave.html")
-#     context = {
-        
-#     }
-#     return HttpResponse(template.render(context, request))
+def staff_add_group(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_staff"]))
+    all_groups = Group.objects.order_by('name')
+    all_genders = Gender.objects.all().order_by("name")
+    seniority = Seniority.objects.filter(is_active=True).order_by("name")
+    context = {
+        "all_groups": all_groups,
+        "all_genders": all_genders,
+        "seniority": seniority,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/staff/staff_add_group.html")
+    return HttpResponse(template.render(context, request))
 
+def staff_edit(request, slug, staff_id):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_staff"]))
+    staff = get_object_or_404(Staff, id=staff_id)
+    all_groups = Group.objects.order_by('name')
+    all_genders = Gender.objects.all().order_by("name")
+    seniority = Seniority.objects.filter(is_active=True).order_by("name")
+    group = staff.group if hasattr(staff, "group") else None
+    context = {
+        "staff": staff,
+        "all_groups": all_groups,
+        "all_genders": all_genders,
+        "seniority": seniority,
+        "group": group,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/staff/staff_edit.html")
+    return HttpResponse(template.render(context, request))
+
+# --- APPROVER ADD/EDIT ---
+
+def approver_add(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_approvers"]))
+    all_staff = Staff.objects.filter(is_superuser=False).order_by("last_name", "first_name")
+    all_groups = Group.objects.order_by('name')
+    all_levels = Level.objects.filter(is_active=True).order_by("name")
+    groups_list = {group: None for group in all_groups}
+    context = {
+        "all_staff": all_staff,
+        "all_groups": all_groups,
+        "all_levels": all_levels,
+        "groups_list": groups_list,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/approvers/setup_approver_add.html")
+    return HttpResponse(template.render(context, request))
+
+def approver_edit(request, slug, staff_id):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_approvers"]))
+    staff = get_object_or_404(Staff, id=staff_id)
+    all_staff = Staff.objects.filter(is_superuser=False).order_by("last_name", "first_name")
+    all_groups = Group.objects.order_by('name')
+    all_levels = Level.objects.filter(is_active=True).order_by("name")
+    # All Approver objects for this staff
+    approver_objs = Approver.objects.filter(staff=staff)
+    context = {
+        "staff": staff,
+        "all_staff": all_staff,
+        "all_groups": all_groups,
+        "all_levels": all_levels,
+        "approver_objs": approver_objs,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/approvers/setup_approver_edit.html")
+    return HttpResponse(template.render(context, request))
+
+# --- CATEGORY (SENIORITY) ADD/EDIT ---
+
+def category_add(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_categories"]))
+    context = {
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/categories/setup_categories_add.html")
+    return HttpResponse(template.render(context, request))
+
+def category_edit(request, slug, cat_id):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_categories"]))
+    category = get_object_or_404(Seniority, id=cat_id)
+    context = {
+        "sen": category,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/categories/setup_categories_edit.html")
+    return HttpResponse(template.render(context, request))
+
+# --- GENDER ADD/EDIT ---
+
+def gender_add(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_genders"]))
+    context = {
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/genders/gender_add.html")
+    return HttpResponse(template.render(context, request))
+
+def gender_edit(request, slug, gender_id):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_genders"]))
+    gender = get_object_or_404(Gender, id=gender_id)
+    context = {
+        "gender": gender,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/genders/gender_edit.html")
+    return HttpResponse(template.render(context, request))
+
+# --- HOLIDAY ADD/EDIT ---
+
+def holiday_add(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_holidays"]))
+    context = {
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/holidays/holiday_add.html")
+    return HttpResponse(template.render(context, request))
+
+def holiday_edit(request, slug, hol_id):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_holidays"]))
+    holiday = get_object_or_404(Holiday, id=hol_id)
+    context = {
+        "holiday": holiday,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/holidays/holiday_edit.html")
+    return HttpResponse(template.render(context, request))
+
+# --- GROUP ADD/EDIT ---
+
+def group_add(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_groups"]))
+    context = {
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/groups/group_add.html")
+    return HttpResponse(template.render(context, request))
+
+def group_edit(request, slug, group_id):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_groups"]))
+    group = get_object_or_404(Group, id=group_id)
+    context = {
+        "group": group,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/groups/group_edit.html")
+    return HttpResponse(template.render(context, request))
+
+# --- LEVEL ADD/EDIT ---
+
+def level_add(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_levels"]))
+    context = {
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/levels/level_add.html")
+    return HttpResponse(template.render(context, request))
+
+def level_edit(request, slug, level_id):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_levels"]))
+    level = get_object_or_404(Level, id=level_id)
+    context = {
+        "level": level,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/levels/level_edit.html")
+    return HttpResponse(template.render(context, request))
+
+# --- LEAVE TYPE ADD/EDIT ---
+
+def leavetype_add(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_leave_types"]))
+    seniority = Seniority.objects.filter(is_active=True).order_by("name")
+    context = {
+        "seniority": seniority,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/leave/leavetype_add.html")
+    return HttpResponse(template.render(context, request))
+
+def leavetype_edit(request, slug, leave_id):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_leave_types"]))
+    leave = get_object_or_404(LeaveType, id=leave_id)
+    seniority = Seniority.objects.filter(is_active=True).order_by("name")
+    context = {
+        "leave": leave,
+        "seniority": seniority,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/leave/leavetype_edit.html")
+    return HttpResponse(template.render(context, request))
+
+
+def setup_groups(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_groups"]))
+
+    groups = Group.objects.filter(is_active=True).order_by('name')
+    all_groups = Group.objects.order_by('name')
+    staff_dict = {id: Staff.objects.filter(group_id=id).count() for id in all_groups.values_list("id", flat=True)}
+    active_groups = groups
+    groups_list = defaultdict(list)
+    for group in groups:
+        users = Staff.objects.filter(group=group)
+        groups_list[group] = users
+
+    context = {
+        "groups": groups,
+        "all_groups": all_groups,
+        "staff_dict": staff_dict,
+        "active_groups": active_groups,
+        "slug": slug,
+        "groups_list": groups_list,
+        "index": True,
+    }
+    template = loader.get_template("setup/groups/setup_groups.html")
+    return HttpResponse(template.render(context, request))
+
+
+def setup_staff(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_staff"]))
+
+    all_staff = Staff.objects.filter(is_superuser=False).order_by("last_name", "first_name")
+    active_groups = Group.objects.filter(is_active=True).order_by("name")
+    all_groups = Group.objects.order_by('name')
+    seniority = Seniority.objects.filter(is_active=True).order_by("name")
+    all_genders = Gender.objects.all().order_by("name")
+    groups_list = {group: Staff.objects.filter(group=group) for group in active_groups}
+
+    context = {
+        "all_staff": all_staff,
+        "active_groups": active_groups,
+        "all_groups": all_groups,
+        "seniority": seniority,
+        "all_genders": all_genders,
+        "groups_list": groups_list,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/staff/setup_staff.html")
+    return HttpResponse(template.render(context, request))
+
+
+def setup_staff(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_staff"]))
+
+    all_staff = Staff.objects.filter(is_superuser=False).order_by("last_name", "first_name")
+    active_groups = Group.objects.filter(is_active=True).order_by("name")
+    all_groups = Group.objects.order_by('name')
+    seniority = Seniority.objects.filter(is_active=True).order_by("name")
+    all_genders = Gender.objects.all().order_by("name")
+    groups_list = {group: Staff.objects.filter(group=group) for group in active_groups}
+
+    context = {
+        "all_staff": all_staff,
+        "active_groups": active_groups,
+        "all_groups": all_groups,
+        "seniority": seniority,
+        "all_genders": all_genders,
+        "groups_list": groups_list,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/staff/setup_staff.html")
+    return HttpResponse(template.render(context, request))
+
+
+
+def setup_approvers(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_approvers"]))
+
+    all_staff = Staff.objects.filter(is_superuser=False).order_by("last_name", "first_name")
+    all_groups = Group.objects.order_by('name')
+    all_levels = Level.objects.filter(is_active=True).order_by("name")
+    # Build approvers_list as in setup()
+    approvers_list = {}
+    staff_qs = Staff.objects.filter(approver__isnull=False).distinct()
+    for staff in staff_qs:
+        staff_approvers = Approver.objects.filter(staff=staff).select_related('group_to_approve', 'level')
+        if staff_approvers:
+            approvers_list[staff] = staff_approvers
+
+    context = {
+        "all_staff": all_staff,
+        "all_groups": all_groups,
+        "all_levels": all_levels,
+        "approvers_list": approvers_list,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/approvers/setup_approvers.html")
+    return HttpResponse(template.render(context, request))
+
+
+def setup_leave_types(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_leave_types"]))
+
+    all_leave = LeaveType.objects.all().order_by('name', 'seniority__name')
+    seniority = Seniority.objects.filter(is_active=True).order_by("name")
+    all_levels = Level.objects.filter(is_active=True).order_by("name")
+
+    context = {
+        "all_leave": all_leave,
+        "seniority": seniority,
+        "all_levels": all_levels,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/leave/setup_leave.html")
+    return HttpResponse(template.render(context, request))
+
+
+def setup_holidays(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_holidays"]))
+
+    f_holidays = Holiday.objects.filter(type='Fixed', is_active=True).order_by("name")
+    v_holidays = Holiday.objects.filter(type='Variable', is_active=True).order_by("name")
+    all_holidays = Holiday.objects.all().order_by("name")
+
+    context = {
+        "f_holidays": f_holidays,
+        "v_holidays": v_holidays,
+        "all_holidays": all_holidays,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/holidays/setup_holidays.html")
+    return HttpResponse(template.render(context, request))
+
+
+def setup_genders(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_genders"]))
+
+    all_genders = Gender.objects.all().order_by("name")
+
+    context = {
+        "all_genders": all_genders,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/genders/setup_genders.html")
+    return HttpResponse(template.render(context, request))
+
+
+def setup_categories(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_categories"]))
+
+    seniority = Seniority.objects.filter(is_active=True).order_by("name")
+    i_seniority = Seniority.objects.filter(is_active=False).order_by("name")
+    a_seniority = seniority
+
+    context = {
+        "seniority": seniority,
+        "i_seniority": i_seniority,
+        "a_seniority": a_seniority,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/categories/setup_categories.html")
+    return HttpResponse(template.render(context, request))
+
+
+def setup_levels(request, slug):
+    user_slug = request.session.get("user_slug") or change_session(slug)
+    if not user_slug:
+        return redirect(reverse("login", args=["setup_levels"]))
+
+    all_levels = Level.objects.filter(is_active=True).order_by("name")
+    i_levels = Level.objects.filter(is_active=False).order_by("name")
+
+    context = {
+        "all_levels": all_levels,
+        "i_levels": i_levels,
+        "slug": slug,
+        "index": True,
+    }
+    template = loader.get_template("setup/levels/setup_levels.html")
+    return HttpResponse(template.render(context, request))
+
+
+def submit_inputs(request, slug):
+    if request.method == "POST":
+        form_data = request.POST
+        meta = form_data.get('form_meta')
+        page = None
+
+        if meta == "add_group":
+            add_group(form_data)
+            page = "setup_groups"
+        elif meta == "edit_group":
+            edit_group(form_data)
+            page = "setup_groups"
+        elif meta == "del_group":
+            del_group(dict(form_data))
+            page = "setup_groups"
+        elif meta == "restore_group":
+            restore_group(dict(form_data))
+            page = "setup_groups"
+
+        elif meta == "add_staff":
+            add_staff(form_data, request)
+            page = "setup_staff"
+        elif meta == "edit_staff":
+            edit_staff(form_data)
+            page = "setup_staff"
+        elif meta == "rem_staff":
+            rem_staff(form_data)
+            page = "setup_staff"
+        elif meta == "del_staff_form":
+            del_staff(dict(form_data))
+            page = "setup_staff"
+        elif meta == "restore_staff":
+            restore_staff(dict(form_data))
+            page = "setup_staff"
+
+        elif meta == "add_approver":
+            add_approver(form_data)
+            page = "setup_approvers"
+        elif meta == "edit_app":
+            edit_approver(dict(form_data))
+            page = "setup_approvers"
+        elif meta == "del_approver":
+            del_approver(form_data)
+            page = "setup_approvers"
+        elif meta == "restore_approver":
+            res_approver(form_data)
+            page = "setup_approvers"
+
+        elif meta == "add_lvt":
+            add_leave_type(form_data)
+            page = "setup_leave_types"
+        elif meta == "edit_lvt":
+            edit_leave(form_data)
+            page = "setup_leave_types"
+        elif meta == "del_lvt":
+            del_leave(dict(form_data))
+            page = "setup_leave_types"
+        elif meta == "res_lvt":
+            res_leave(form_data)
+            page = "setup_leave_types"
+
+        elif meta == "add_hol":
+            add_holiday(form_data)
+            page = "setup_holidays"
+        elif meta == "edit_hol":
+            edit_holiday(form_data)
+            page = "setup_holidays"
+        elif meta == "del_hol":
+            del_holiday(form_data)
+            page = "setup_holidays"
+        elif meta == "res_hol":
+            # res_holiday(form_data)
+            page = "setup_holidays"
+
+        elif meta == "add_gender":
+            add_gender(form_data)
+            page = "setup_genders"
+        elif meta == "edit_gender":
+            edit_gender(form_data)
+            page = "setup_genders"
+        elif meta == "del_gender":
+            del_gender(form_data)
+            page = "setup_genders"
+        elif meta == "res_gender":
+            res_gender(form_data)
+            page = "setup_genders"
+
+        elif meta == "add_cat":
+            add_sen(form_data)
+            page = "setup_categories"
+        elif meta == "edit_cat":
+            edit_sen(form_data)
+            page = "setup_categories"
+        elif meta == "del_sen":
+            del_sen(form_data)
+            page = "setup_categories"
+        elif meta == "res_sen":
+            res_sen(form_data)
+            page = "setup_categories"
+
+        elif meta == "add_level":
+            add_lvl(form_data)
+            page = "setup_levels"
+        elif meta == "edit_level":
+            edit_lvl(form_data)
+            page = "setup_levels"
+        elif meta == "del_level":
+            del_lvl(form_data)
+            page = "setup_levels"
+        elif meta == "res_level":
+            res_lvl(form_data)
+            page = "setup_levels"
+
+        print(form_data)
+        return redirect(reverse(page if page else "setup", args=[slug]))
 
 def setup(request, slug):
     user_slug = request.session.get("user_slug") or change_session(slug)
@@ -322,45 +888,6 @@ def setup(request, slug):
         users = Staff.objects.filter(group=group)
         groups_list[group] = users
 
-    if request.method == "POST":
-        form_data = request.POST
-        if form_data['form_meta'] == "add_group": add_group(form_data)
-        elif form_data['form_meta'] == "edit_group": edit_group(form_data)
-        elif form_data['form_meta'] == "del_group": del_group(dict(form_data))
-        elif form_data['form_meta'] == "add_staff": add_staff(form_data, request)
-        elif form_data['form_meta'] == "rem_staff": rem_staff(form_data)
-        elif form_data['form_meta'] == "edit_staff": edit_staff(form_data)
-        elif form_data['form_meta'] == "del_staff_form": del_staff(dict(form_data))
-        elif form_data['form_meta'] == "restore_group": restore_group(dict(form_data))
-        elif form_data['form_meta'] == "restore_staff": restore_staff(dict(form_data))
-        elif form_data['form_meta'] == "add_approver": add_approver(form_data)
-        elif form_data['form_meta'] == "edit_app": edit_approver(dict(form_data))
-        elif form_data['form_meta'] == "del_approver": del_approver(form_data)
-        elif form_data['form_meta'] == "restore_approver": res_approver(form_data)
-        elif form_data['form_meta'] == "add_lvt": add_leave_type(form_data)
-        elif form_data['form_meta'] == "edit_lvt": edit_leave(form_data)
-        elif form_data['form_meta'] == "del_lvt": del_leave(dict(form_data))
-        elif form_data['form_meta'] == "res_lvt": res_leave(form_data)
-        elif form_data['form_meta'] == "add_hol": add_holiday(form_data)
-        elif form_data['form_meta'] == "edit_hol": edit_holiday(form_data)
-        
-        elif form_data['form_meta'] == "del_gender": del_gender(form_data)
-        elif form_data['form_meta'] == "res_gender": res_gender(form_data)
-        elif form_data['form_meta'] == "edit_gender": edit_gender(form_data)
-        elif form_data['form_meta'] == "add_gender": add_gender(form_data)
-        
-        elif form_data['form_meta'] == "add_cat": add_sen(form_data)
-        elif form_data['form_meta'] == "edit_cat": edit_sen(form_data)
-        elif form_data['form_meta'] == "res_sen": res_sen(form_data)
-        elif form_data['form_meta'] == "del_sen": del_sen(form_data)
-        
-        elif form_data['form_meta'] == "del_level": del_lvl(form_data)
-        elif form_data['form_meta'] == "res_level": res_lvl(form_data)
-        elif form_data['form_meta'] == "add_level": add_lvl(form_data)
-        elif form_data['form_meta'] == "edit_level": edit_lvl(form_data)
-        print(form_data)
-        return redirect(reverse('setup', args=[slug,]))
-
     context = {
         'first_time': False, 'groups_list': groups_list,
         'approvers_list': approvers_list, 'all_staff': all_staff,
@@ -372,7 +899,7 @@ def setup(request, slug):
         'seniority': seniority, 'staff_dict': staff_dict,
         'active_groups': active_groups, 'i_seniority': i_seniority,
         'a_seniority': a_seniority, "i_levels" : i_levels,
-        'index': True,
+        'index': True, 'slug': slug, "general": True,
     }
     return HttpResponse(template.render(context, request))
 

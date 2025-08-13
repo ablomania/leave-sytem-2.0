@@ -4,34 +4,37 @@
     Add Category
 {% endblock %}
 
-{% block content %}
-    <div class="cat_form_add" style="display: none;">
-        <div class="sf10">
-            <div class="sf10h">
-                <button type="button" onclick="mySwitcher('.cat_form_add', '.categories')"><b>Back</b> &rsaquo; Categories</button>
-                <h2>New Category</h2>
-            </div>
-            <p>Fill the form below to add a new category</p>
-            <img src="{% static 'images/cat1.png' %}" width="300px" alt=""
-            style="border-radius: 50%; border: 1px solid #ddd;"
-            >
+{% block setup %}
+<style>
+    
+</style>
+<div class="cat_form_add" style="display: flex;">
+    <div class="sf10">
+        <div class="sf10h">
+            <a href="{% url 'setup_categories' slug %}"><button type="button"><b>Back</b> &rsaquo; Categories</button></a>
+            <h2>New Category</h2>
         </div>
-        <form class="sf12" action="" method="post">
-            <input type="hidden" name="form_meta" value="add_cat">
-            {% csrf_token %}
-            <div class="sf45">
-                <div class="fld33">
-                    <label for="cat_name_add">Name</label>
-                    <input type="text" name="name" id="cat_name_add" required>
-                </div>
-                <div class="fld33">
-                    <label for="cat_rank_add">Rank</label>
-                    <input type="number" name="rank" id="cat_rank_add" required>
-                </div>
-            </div>
-            <div class="bt23">
-                <button type="submit">Save</button>
-            </div>
-        </form>
+        <p>Fill the form below to add a new category</p>
+        <img src="{% static 'images/cat1.png' %}" width="300px" alt=""
+        style="border-radius: 50%; border: 1px solid #ddd;"
+        >
     </div>
+    <form class="sf12" action="{% url 'submit_inputs' slug %}" method="post">
+        <input type="hidden" name="form_meta" value="add_cat">
+        {% csrf_token %}
+        <div class="sf45">
+            <div class="fld33">
+                <label for="cat_name_add">Name</label>
+                <input type="text" name="name" id="cat_name_add" required>
+            </div>
+            <div class="fld33">
+                <label for="cat_rank_add">Rank</label>
+                <input type="number" name="rank" id="cat_rank_add" required>
+            </div>
+        </div>
+        <div class="bt23">
+            <button type="submit">Save</button>
+        </div>
+    </form>
+</div>
 {% endblock %}

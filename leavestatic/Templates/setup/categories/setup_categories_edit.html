@@ -4,17 +4,17 @@
     Edit Category
 {% endblock %}
 
-{% block content %}
-<div class="cat_form_edit cat_form_edit{{sen.id}}" style="display: none;">
+{% block setup %}
+<div class="cat_form_edit cat_form_edit{{sen.id}}" style="display: flex;">
     <div class="sf10">
         <div class="sf10h">
-            <button type="button" onclick="mySwitcher('.cat_form_edit{{sen.id}}', '.categories')"><b>Back</b> &rsaquo; Categories</button>
+            <a href="{% url 'setup_categories' slug %}"><button type="button"><b>Back</b> &rsaquo; Categories</button></a>
             <h2>Edit Category</h2>
         </div>
         <p>Edit the details of this category below.</p>
         <img src="{% static 'images/cat1.png' %}" style="border-radius: 50%; border: #ddd 2px dashed;" width="300px" alt="">
     </div>
-    <form class="sf12" action="" method="post">
+    <form class="sf12" action="{% url 'submit_inputs' slug %}" method="post">
         <input type="hidden" name="form_meta" value="edit_cat">
         <input type="hidden" name="cat_id" value="{{sen.id}}">
         {% csrf_token %}

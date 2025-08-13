@@ -135,10 +135,7 @@ window.onload = function dd() {
         editFields()
     }
 
-    if(document.querySelector(".setup_page")) {
-        let temp = localStorage.getItem("prevName");
-        loadSettings(null, temp);
-    }
+    
 
 
     let screenWidth = window.screen.width;
@@ -1086,6 +1083,73 @@ const mySwitcher = (oldSelector, newSelector, mainNodeName=".groups", debug = fa
     }
     localStorage.setItem("mainNodeName", mainNodeName);
 };
+
+
+const paginationConfig = {
+    groups: { selector: ".groups .group_item", perPage: 5 },
+    staff_all: { selector: "#staff_all .staff_card", perPage: 10 },
+    gpd: { selector: ".gpd .staff_item", perPage: 10 },
+    app356: { selector: ".app356 .approver-item", perPage: 8 },
+    genders: { selector: ".genders .gender-card", perPage: 8 },
+    leave_types: { selector: ".leave_types .lvtlb", perPage: 5 },
+    holidays: { selector: ".holidays .vholitem, .holidays .fholitem", perPage: 5 },
+    levels: { selector: ".levels .level-card", perPage: 10 },
+    categories: { selector: ".categories .gender-card", perPage: 10 }
+};
+
+const sectionState = {};
+
+function initPagination(sectionName) {
+    const config = paginationConfig[sectionName];
+    if (!config) return;
+
+    const cards = document.querySelectorAll(config.selector);
+    if (cards.length <= config.perPage) return;
+
+    sectionState[sectionName] = { page: 1, cards, totalPages: Math.ceil(cards.length / config.perPage) };
+
+    const bar = document.querySelector(`.pagination-bar[data-section="${sectionName}"]`);
+    if (bar) {
+        bar.innerHTML = `
+        <button onclick="changePage('${sectionName}', -1)">« Prev</button>
+        <span id="${sectionName}_page_info"></span>
+        <button onclick="changePage('${sectionName}', 1)">Next »</button>
+        `;
+        bar.style.display = "flex";
+    }
+
+    renderPage(sectionName);
+}
+
+function renderPage(sectionName) {
+    const { page, cards, perPage, totalPages } = {
+        ...sectionState[sectionName],
+        perPage: paginationConfig[sectionName].perPage
+    };
+
+    cards.forEach((card, i) => {
+        card.style.display = (i >= (page - 1) * perPage && i < page * perPage) ? "block" : "none";
+    });
+
+    const info = document.getElementById(`${sectionName}_page_info`);
+    if (info) info.textContent = `Page ${page} of ${totalPages}`;
+    }
+
+    function changePage(sectionName, delta) {
+    const state = sectionState[sectionName];
+    if (!state) return;
+
+    state.page += delta;
+    if (state.page < 1) state.page = 1;
+    if (state.page > state.totalPages) state.page = state.totalPages;
+
+    renderPage(sectionName);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    Object.keys(paginationConfig).forEach(initPagination);
+});
+
 
 
 const confirmAction = (event, nodeName, headerName, msg1Name, msg2Name) => {

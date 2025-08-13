@@ -24,7 +24,7 @@
             <div class="vhol253">
                 {% for holiday in v_holidays %}
                 {% if holiday.is_active %}
-                <form class="vholitem" method="post">
+                <form action="{% url 'submit_inputs' slug %}" class="vholitem" method="post">
                     {% csrf_token %}
                     <button class="tt" type="button" onclick="mySwitcher('.holidays', '.hol_form_edit{{holiday.id}}', true)">
                         <h2>{{holiday.name}}</h2>
@@ -47,7 +47,7 @@
             <div class="fhol253">
                 {% for holiday in f_holidays %}
                 {% if holiday.is_active %}
-                <form class="fholitem">
+                <form action="{% url 'submit_inputs' slug %}" class="fholitem" method="post">
                     {% csrf_token %}
                     <button class="tt" type="button" onclick="mySwitcher('.holidays', '.hol_form_edit{{holiday.id}}', true)">
                         <h2>{{holiday.name}}</h2>
@@ -75,7 +75,7 @@
         <div class="in_body_hol">
             {% for holiday in all_holidays %}
             {% if not holiday.is_active %}
-            <form class="holitem" method="post">
+            <form action="{% url 'submit_inputs' slug %}" class="holitem" method="post">
                 {% csrf_token %}
                 <button class="tt" type="button" onclick="mySwitcher('.holidays', '.hol_form_edit{{holiday.id}}', true)">
                     <h2>{{holiday.name}}</h2>

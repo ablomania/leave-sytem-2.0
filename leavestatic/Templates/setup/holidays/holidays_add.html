@@ -15,7 +15,7 @@
         <p>Please fill the form to add a new holiday object</p>
         <img src="{% static 'images/beach.png' %}" width="500px" alt="">
     </div>
-    <form action="" method="post">
+    <form action="{% url 'submit_inputs' slug %}" method="post">
         {% csrf_token %}
         <input type="hidden" value="add_hol" name="form_meta" id="">
         <div class="hf454">

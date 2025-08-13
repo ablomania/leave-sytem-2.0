@@ -1,14 +1,134 @@
 {% extends 'setup.html' %}
-{% load static %}
+{% load static custom_filters %}
+
 {% block title %}
-    Approvers
+    Approvers - GCPS Leave System
 {% endblock %}
 
-{% block content %}
-<div class="app356" style="display: none;">
+<style>
+    .approver-list {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        padding: 10px;
+    }
+
+    .approver-item {
+        background-color: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 15px 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: box-shadow 0.3s ease;
+        width: 300px;
+    }
+
+    .approver-item:hover {
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+
+    .approver-item h3 {
+        margin: 0 0 10px;
+        font-size: 18px;
+        color: #0077c0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .approver-item form {
+        display: inline;
+        margin-left: 10px;
+    }
+
+    .approver-item button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        vertical-align: middle;
+    }
+
+    .group-level-list {
+        list-style: none;
+        padding-left: 0;
+        margin-top: 10px;
+    }
+
+    .group-level-list li {
+        padding: 5px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .group-level-list li:last-child {
+        border-bottom: none;
+    }
+
+    .inactive_gend{
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        /* position: absolute; */
+        bottom: 0;
+        left: 0;
+        margin-left: 1px;
+        margin-right: 10px;
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+        min-width: 98%;
+        padding-left: 5px;
+        .in_header{
+            display: flex;
+            flex-direction: row;
+            height: 40px;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 10px;
+            margin: 10px;
+            .rot_gend{
+                border: 1px solid gray;
+                background-color: inherit;
+                width: 30px;
+                height: 30px;
+                color: #000;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-direction: row;
+                &:hover{
+                    cursor: pointer;
+                }
+            }
+            &:hover{
+                p{
+                    text-decoration: underline;
+                    cursor: pointer;
+                }
+            }
+        }
+        .rot_gend{
+            transition: transform 1s ease-in-out;
+        }
+        .in_body_gend{
+            display: none;
+            flex-direction: row;
+            gap: 20px;
+            animation-name: fade-in-top;
+            animation-duration: 1s;
+            animation-iteration-count: 1;
+            width: 100%;
+        }
+    }
+</style>
+
+{% block setup %}
+<div class="app356">
     <div class="app3561">
         <h3 class="app356h">Approvers</h3>
-        <button type="button" onclick="mySwitcher('.app356', '.app_form_add', true)">New Approver</button>
+        <a href="{% url 'setup_approver_add' slug %}"><button type="button">New Approver</button></a>
     </div>
     <div class="approver-list">
         {% for staff, approver_objs in approvers_list.items %}
@@ -18,7 +138,7 @@
                     {{ staff.first_name }} {{ staff.other_names }} {{ staff.last_name }}
                 </h3>
 
-                <form action="" method="post">
+                <form action="{% url 'submit_inputs' slug %}" method="post">
                     {% csrf_token %}
                     <input type="hidden" name="form_meta" value="del_approver">
                     <input type="hidden" name="staff_id" value="{{ staff.id }}">
@@ -72,7 +192,7 @@
                             {{ approver.group_to_approve.name }} - {{ approver.level.name }}
                         </div>
                         <div class="approver-actions">
-                            <form action="" method="post">
+                            <form action="{% url 'submit_inputs' slug %}" method="post">
                                 {% csrf_token %}
                                 <input type="hidden" name="form_meta" value="restore_approver">
                                 <input type="hidden" name="approver_id" value="{{ approver.id }}">

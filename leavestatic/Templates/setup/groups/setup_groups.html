@@ -1,19 +1,19 @@
 {% extends 'setup.html' %}
-{% load static %}
+{% load static custom_filters %}
 {% block title %}
     Groups - GCPS Leave System
 {% endblock %}
 
-{% block content %}
-<div class="groups" style="display: none;">
+{% block setup %}
+<div class="groups" style="display: flex;">
     <div class="group_buttons">
         <h2>Groups</h2>
         <div>
             <input type="checkbox" class="select_all_groups" id="select_all_groups" onclick="selectAllBoxes(this.checked, 'group_item', '.groups .mid', '.groups .mid .count_selected', '.groups .mid .count_total', '.groups', '.group_item_ch', 'select_all_groups')">
             <label id="select_all_label" for="select_all_groups">Select All</label>
         </div>
-        <button type="button" onclick="mySwitcher('.groups', '.staff_form_add_groups')">New Staff</button>
-        <button type="button" onclick="mySwitcher('.groups', '.group_forms_add')" style="margin-right: 5px;">New Group</button>
+        <a href="{% url 'staff_add' slug %}"><button type="button">New Staff</button></a>
+        <a href="{% url 'group_add' slug %}"><button type="button" style="margin-right: 5px;">New Group</button></a>
     </div>
     <div class="mid" style="display: none;">
         <div>
@@ -55,7 +55,7 @@
                     {% endwith %}
                 </p>
             </button>
-            <button type="button" class="np" onclick="mySwitcher('.groups', '.edit_group_form{{group.id}}')">Edit</button>
+            <a href="{% url 'group_edit' group.id slug %}"><button type="button" class="np">Edit</button></a>
         </div>
         {% empty %}
         <div class="no-groups">No groups found.</div>
@@ -74,7 +74,7 @@
             <div class="a_groups">
                 {% for group in all_groups %}
                 {% if not group.is_active %}
-                <form class="group_item" method="post">
+                <form class="group_item" action="{% url 'submit_inputs' slug %}" method="post">
                     {% csrf_token %}
                     <button type="button" class="dept-info" onclick="mySwitcher('.groups', '.gpd{{group.id}}')">
                         <h3 class="heading_pos">{{ group.name }}</h3>
@@ -98,9 +98,22 @@
     </div>
     <div class="pagination-bar" data-section=".groups"></div>
 
-    <form action="" method="post" id="group_form" class="group_form" style="display: none;">
+    <form action="{% url 'submit_inputs' slug %}" method="post" id="group_form" class="group_form" style="display: none;">
         {% csrf_token %}
         <input type="hidden" value="del_group" name="form_meta" id="">
     </form>
+
+    <div class="conf167" style="display: none;">
+        <h2 class="confheader"></h2>
+        <p class="confmsg1"></p>
+        <div class="conf78">
+            <img src="{% static 'images/3776063.png' %}" width="300px" alt="">
+            <p class="confmsg2"></p>
+        </div>
+        <div class="button_wrapper">
+            <button type="button" class="confbtn"  onclick="submitMyForm3()">Confirm</button>
+            <button type="button" class="cancelfbtn" onclick="closeFirst('conf167')">Cancel</button>
+        </div>
+    </div>
 </div>
 {% endblock %}

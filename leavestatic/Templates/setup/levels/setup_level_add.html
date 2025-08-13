@@ -17,7 +17,7 @@
         <img src="{% static 'images/cat1.png' %}" width="300px" alt=""
             style="border-radius: 50%; border: 1px solid #ddd;">
     </div>
-    <form class="sf12" action="" method="post">
+    <form class="sf12" action="{% url 'submit_inputs' slug %}" method="post">
         <input type="hidden" name="form_meta" value="add_level">
         {% csrf_token %}
         <div class="sf45">

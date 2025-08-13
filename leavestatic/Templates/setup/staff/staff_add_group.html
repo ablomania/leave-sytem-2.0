@@ -14,7 +14,7 @@
         <p>Fill the form below to add a new staff member and assign to group(s)</p>
         <img src="{% static 'images/add-contact.png' %}" width="400px" alt="">
     </div>
-    <form class="sf12 staff_form_add_group_form" action="" method="post">
+    <form class="sf12 staff_form_add_group_form" action="{% url 'submit_inputs' slug %}" method="post">
         <input type="hidden" name="form_meta" value="add_staff">
         {% csrf_token %}
         <div class="sgr45">

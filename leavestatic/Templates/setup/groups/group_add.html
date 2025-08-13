@@ -4,11 +4,11 @@
     Add Group - GCPS Leave System
 {% endblock %}
 
-{% block content %}
-<div class="grpfms23 group_forms_add" style="display: none;">
+{% block setup %}
+<div class="grpfms23 group_forms_add" style="display: flex;">
     <div class="gp134h">
         <div>
-            <button type="button" onclick="mySwitcher('.group_forms_add', '.groups')"><b>Back</b> &rsaquo; Groups</button>
+            <a href="{% url 'setup_groups' slug %}"><button type="button"><b>Back</b> &rsaquo; Groups</button></a>
             <h2>New Group</h2>
         </div>
         
@@ -16,7 +16,7 @@
         <img src="{% static 'images/addtogroup.png' %}" width="500px" alt="">
     </div>
     <div class="grpfms">
-        <form action="" method="post" class="grp_forms_add_form">
+        <form action="{% url 'submit_inputs' slug %}" method="post" class="grp_forms_add_form">
             <input type="hidden" name="form_meta" value="add_group">
             {% csrf_token %}
             <div class="fld456">

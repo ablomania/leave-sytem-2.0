@@ -42,7 +42,7 @@
         <div class="in_body_lvt">
             {% for leave in all_leave %}
             {% if leave.is_active == False %}
-            <form method="post" class="lvtlb">
+            <form action="{% url 'submit_inputs' slug %}" method="post" class="lvtlb">
                 {% csrf_token %}
                 <input type="hidden" name="form_meta" value="res_lvt">
                 <input type="hidden" name="leave_id" value="{{leave.id}}" id="">
@@ -61,7 +61,7 @@
     </div>
     <div class="pagination-bar" data-section="leave_types"></div>
     
-    <form action="" class="lvt_del" method="post">
+    <form action="{% url 'submit_inputs' slug %}" class="lvt_del" method="post">
         {% csrf_token %}
         <input type="hidden" value="del_lvt" name="form_meta" id="">
     </form>

@@ -1,14 +1,16 @@
 {% extends 'setup.html' %}
-{% load static %}
+{% load static custom_filters %}
+
+{% load custom_filters %}
 {% block title %}
     Staff Setup - GCPS Leave System
 {% endblock %}
 
-{% block content %}
-<div class="staff" style="display: block;">
+{% block setup %}
+<div class="staff" style="display: flex;">
     <div class="staff_nav_button">
         <h3>All staff</h3>
-        <button type="button" onclick="mySwitcher('.staff', '.staff_form_add', '.staff')">New Staff</button>
+        <a href="{% url 'staff_add' slug %}"><button type="button">New Staff</button></a>
     </div>
     <!-- Navigation Tabs -->
     <div class="staff_nav">
@@ -89,7 +91,7 @@
             <div class="staff_cards">
                 {% for staff in all_staff %}
                 {% if not staff.is_active %}
-                <form method="post" class="staff_card-i">
+                <form method="post" action="{% url 'submit_inputs' slug %}" class="staff_card-i">
                     {% csrf_token %}
                     <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
                     <p><strong>Role:</strong> {{ staff.role }}</p>

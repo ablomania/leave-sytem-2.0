@@ -14,7 +14,7 @@
         <p>Fill the form below to add a new gender</p>
         <img src="{% static 'images/gender.png' %}" width="300px" alt="">
     </div>
-    <form class="sf12" action="" method="post">
+    <form class="sf12" action="{% url 'submit_inputs' slug %}" method="post">
         <input type="hidden" name="form_meta" value="add_gender">
         {% csrf_token %}
         <div class="sf45">
