@@ -21,7 +21,7 @@ urlpatterns = [
     path('submit_inputs/<str:slug>', views.submit_inputs, name='submit_inputs'),
     # Approvers
     path('setup/approvers/add/<str:slug>', views.approver_add, name='setup_approver_add'),
-    path('setup/approvers/edit/<int:id>/<str:slug>', views.approver_edit, name='setup_approver_edit'),
+    path('setup/approvers/edit/<int:staff_id>/<str:slug>', views.approver_edit, name='setup_approver_edit'),
     path('setup/approvers/<str:slug>', views.setup_approvers, name='setup_approvers'),
     # Categories
     path('setup/categories/add/<str:slug>', views.category_add, name='setup_category_add'),

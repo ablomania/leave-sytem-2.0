@@ -226,62 +226,81 @@
 <div class="groups" style="display: flex;">
     <div class="group_buttons">
         <h2>Groups</h2>
-        <div>
-            <input type="checkbox" class="select_all_groups" id="select_all_groups" onclick="selectAllBoxes(this.checked, 'group_item', '.groups .mid', '.groups .mid .count_selected', '.groups .mid .count_total', '.groups', '.group_item_ch', 'select_all_groups')">
-            <label id="select_all_label" for="select_all_groups">Select All</label>
-        </div>
+       
         <div>
             <a href="{% url 'staff_add' slug %}"><button type="button">New Staff</button></a>
             <a href="{% url 'group_add' slug %}"><button type="button" style="margin-right: 5px;">New Group</button></a>
         </div>
         
     </div>
-    <div class="mid" style="display: none;">
-        <div>
-            <label for="mid_action">Action: </label>
-            <select name="mid_action" id="mid_sel" 
-            style="width: max-content; height: 30px; border-radius: 10px; background-color: inherit; border: 1px solid #ddd;"
-            onchange="setMeta(value, 'group_form')"
-            >   
-                <option value="del_group">Delete selected groups</option>
-                <option value="rem_staff">Remove all staff from selected groups</option>
-            </select>
+    <form action="{% url 'submit_inputs' slug %}" method="post" id="group_form" class="groups_form">
+        {% csrf_token %}
+        <div class="mid" style="display: none;">
+             <div>
+                <input type="checkbox" class="multi" id="multi" onclick="
+                    selAllBoxes(this.checked, 'group_item_ch')">
+                <label id="select_all_label" for="multi">Select All</label>
+            </div>
+            <div>
+                <label for="mid_sel">Action: </label>
+                <div style="display: flex; flex-direction: row;">
+                    <select name="form_meta" id="mid_sel" 
+                    required onchange="toggleGroupSelect(this.value, 'new_group_id')">   
+                        <option value="" disabled selected>Select an option</option>
+                        <option value="del_group" title="Delete all staff from the selected groups">Delete</option>
+                        <option value="rem_staff" title="Remove all staff from the selected groups. Affected staff will not be assigned to any group">Unassign</option>
+                        <option value="change_group_group" title="Move all the staff members from the selected group(s) to a different group">Move to Group</option>
+                    </select>
+                    <select name="new_group_id" id="new_group_id" class="mid_sel" disabled style="display: none; margin-left: 5px;">
+                        <option value="" disabled selected>Select Group</option>
+                        {% for group in all_groups %}
+                        <option value="{{group.id}}">{{group.name}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+            </div>
+            <span><span class="count_selected">0</span> of <span class="count_total">{{ all_groups|length }}</span> selected</span>
+            <div>
+                <button type="submit" class="lvtsve">&check; Save</button>
+                <button type="button" class="lvtdsd" 
+                onclick="
+                    resetForm('group_form'),
+                    resetCounter('count_selected'),
+                    hideMid('mid'),
+                    resetAndHideGroupSelect('new_group_id')
+                "
+                >&times; Discard</button>
+            </div>
         </div>
-        <span><span class="count_selected">0</span> of <span class="count_total">{{ all_groups|length }}</span> selected</span>
-        <button type="button" class="lvtsve" onclick="show4('del_group')">&check; Save</button>
-        <button type="button" class="lvtdsd" 
-        onclick="
-            clearMyForm('group_form', `input[name='group_ids']`),
-            selectAllBoxes(false, 'group_item', '.groups .mid', '.groups .mid .count_selected', '.groups .mid .count_total', '.groups', '.group_item_ch', 'select_all_groups')
-        "
-        >&times; Discard</button>
-    </div>
-    <div class="a_groups">
-        {% for group in active_groups %}
-        <div class="group_item">
-            <input type="checkbox"
-            name="group_ids"
-            value="{{group.id}}" 
-            class="group_item_ch" 
-            onchange="
-            selectReact(event, 'group_item', '.groups .mid', '.groups .mid .count_selected', '.groups .mid .count_total', '.group_item_ch', 'select_all_groups'),
-            setForm(event, 'group_form', `input[name='group_ids']`)
-            " 
-            style="position:absolute; left:10px; top:10px;">
-            <a class="top" href="{% url 'group_detail' group.id slug %}"><button type="button" class="dept-info">
-                <h3 class="heading_pos">{{ group.name }}</h3>
-                <p class="count">
-                    {% with staff_list=groups_list|get_item:group %}
-                        {{ staff_list|length }} staff
-                    {% endwith %}
-                </p>
-            </button></a>
-            <a class="bot" href="{% url 'group_edit' group.id slug %}"><button type="button" class="np">Edit</button></a>
+        <div class="a_groups">
+            {% for group in active_groups %}
+            <div class="group_item">
+                <input type="checkbox"
+                name="group_ids"
+                value="{{group.id}}" 
+                class="group_item_ch" 
+                onchange="
+                    selectCheckBox(this.className, 'multi'),
+                    displayMid('mid'),
+                    updateCounter('count_selected', this.className)"
+                " 
+                style="position:absolute; left:10px; top:10px;">
+                <a class="top" href="{% url 'group_detail' group.id slug %}"><button type="button" class="dept-info">
+                    <h3 class="heading_pos">{{ group.name }}</h3>
+                    <p class="count">
+                        {% with staff_list=groups_list|get_item:group %}
+                            {{ staff_list|length }} staff
+                        {% endwith %}
+                    </p>
+                </button></a>
+                <a class="bot" href="{% url 'group_edit' group.id slug %}"><button type="button" class="np">Edit</button></a>
+            </div>
+            {% empty %}
+            <div class="no-groups">No groups found.</div>
+            {% endfor %}
         </div>
-        {% empty %}
-        <div class="no-groups">No groups found.</div>
-        {% endfor %}
-    </div>
+    </form>
 
     <div class="inactive_groups">
         <div class="in_header">
@@ -317,7 +336,7 @@
         </div>
         
     </div>
-    <div class="pagination-bar" data-section=".groups"></div>
+    <div class="pagination-bar" data-section="groups"></div>
 
     <form action="{% url 'submit_inputs' slug %}" method="post" id="group_form" class="group_form" style="display: none;">
         {% csrf_token %}

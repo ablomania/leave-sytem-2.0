@@ -322,18 +322,18 @@ def add_approver(form_data):
 #Edit Approver
 def edit_approver(form_data):
     """
-    Updates approver assignments and sets is_special_approver flag on Staff.
-    Sends email listing assigned group & level names.
+    Updates approver assignments for a staff member.
+    Ensures one active approver per group, updates levels, and disables obsolete records.
     """
     try:
-        staff_id_val = form_data['approver_staff']
+        staff_id_val = form_data.get('staff_id') or form_data.get('approver_staff')
         staff_id = int(staff_id_val[0]) if isinstance(staff_id_val, (list, tuple)) else int(staff_id_val)
 
-        # Handle checkbox for special approver
+        # Handle special approver flag
         is_special = form_data.get("is_special_approver") == "on"
         Staff.objects.filter(id=staff_id).update(is_special_approver=is_special)
 
-        # Read groups and levels
+        # Extract group and level IDs
         if hasattr(form_data, 'getlist'):
             group_ids = form_data.getlist('groups')
             level_ids = form_data.getlist('levels')
@@ -343,42 +343,58 @@ def edit_approver(form_data):
             group_ids = [group_ids] if isinstance(group_ids, str) else group_ids
             level_ids = [level_ids] if isinstance(level_ids, str) else level_ids
 
-        group_ids = [gid for gid in group_ids if gid]
-        level_ids = [lid for lid in level_ids if lid]
+        # Clean and pair inputs
+        group_ids = [int(gid) for gid in group_ids if gid]
+        level_ids = [int(lid) for lid in level_ids if lid]
+        input_pairs = list(zip(group_ids, level_ids))
 
-        # Remove existing approver assignments
-        Approver.objects.filter(staff_id=staff_id).delete()
+        # Fetch existing approvers
+        existing_approvers = Approver.objects.filter(staff_id=staff_id)
+        existing_by_group = {a.group_to_approve_id: a for a in existing_approvers}
+
         assigned_pairs = []
 
-        # Re-create approver records
-        for group_id, level_id in zip(group_ids, level_ids):
-            try:
+        # Process input pairs
+        for group_id, level_id in input_pairs:
+            if group_id not in existing_by_group:
+                # Create new approver
                 Approver.objects.create(
                     staff_id=staff_id,
-                    group_to_approve_id=int(group_id),
-                    level_id=int(level_id)
+                    group_to_approve_id=group_id,
+                    level_id=level_id,
+                    is_active=True
                 )
-                group_name = Group.objects.get(id=int(group_id)).name
-                level_name = Level.objects.get(id=int(level_id)).name
-                assigned_pairs.append(f"• {group_name} (Level: {level_name})")
-            except Exception as e:
-                print(f"Error creating approver for group {group_id} and level {level_id}: {e}")
+            else:
+                approver = existing_by_group[group_id]
+                approver.level_id = level_id
+                approver.is_active = True
+                approver.save()
 
-        # Email notification to staff
+            group_name = Group.objects.get(id=group_id).name
+            level_name = Level.objects.get(id=level_id).name
+            assigned_pairs.append(f"• {group_name} (Level: {level_name})")
+
+        # Mark any leftover approvers as inactive
+        for group_id, approver in existing_by_group.items():
+            if group_id not in group_ids:
+                approver.is_active = False
+                approver.save()
+
+        # Email notification
         User = get_user_model()
-        approver = User.objects.get(id=staff_id)
+        approver_user = User.objects.get(id=staff_id)
 
         subject = "Approver Assignment Updated"
         message = (
-            f"Dear {approver.first_name},\n\n"
-            f"You have been assigned as an approver for the following:\n\n" +
-            "\n".join(assigned_pairs) +
+            f"Dear {approver_user.first_name},\n\n"
+            f"Your approver assignments have been updated:\n\n" +
+            ("\n".join(assigned_pairs) if assigned_pairs else "No active assignments.") +
             ("\n\nAdditionally, you have been designated as a fallback Special Approver."
              if is_special else "") +
             "\n\nPlease log in to review your responsibilities.\n\nRegards,\nGCPS Leave System"
         )
 
-        send_leave_email.delay(subject, message, [approver.email])
+        send_leave_email.delay(subject, message, [approver_user.email])
 
     except Exception as e:
         print(f"Error editing approver: {e}")
@@ -873,3 +889,137 @@ def res_lvl(form_data):
         # Handle the error or log it
         raise ValueError(f"Failed to activate level: {e}")
     
+
+def del_multi_staff(form_data):
+    """
+    Deactivates multiple Staff records based on a list of IDs.
+    Expects:
+        - 'staff_ids': list of Staff IDs to deactivate
+    """
+    staff_ids = form_data.get('staff_ids', [])
+    if not staff_ids:
+        return
+
+    # Normalize input to a list of integers
+    if isinstance(staff_ids, str):
+        staff_ids = [int(sid) for sid in staff_ids.split(',') if sid.isdigit()]
+    elif isinstance(staff_ids, (list, tuple)):
+        staff_ids = [int(sid) for sid in staff_ids if str(sid).isdigit()]
+    else:
+        staff_ids = []
+
+    if not staff_ids:
+        return
+
+    # Deactivate staff and related leave details
+    Staff.objects.filter(id__in=staff_ids).update(is_active=False)
+    StaffLeaveDetail.objects.filter(staff_id__in=staff_ids).update(is_active=False)
+
+
+def multi_change_group(form_data):
+    """
+    Changes the group of multiple Staff records based on a list of IDs.
+    Expects:
+        - 'staff_ids': list of Staff IDs to update
+        - 'new_group_id': ID of the new group to assign
+    """
+    staff_ids = form_data.get('staff_ids', [])
+    print(f"Received staff_ids: {staff_ids}")
+    new_group_id = int(form_data['group_id'][0])
+    if not staff_ids or not new_group_id:
+        return
+    # Normalize input to a list of integers
+    if isinstance(staff_ids, str):
+        staff_ids = [int(sid) for sid in staff_ids.split(',') if sid.isdigit()]
+    elif isinstance(staff_ids, (list, tuple)):
+        staff_ids = [int(sid) for sid in staff_ids if str(sid).isdigit()]
+    else:
+        staff_ids = []
+    if not staff_ids:
+        return
+    # Update group for all specified staff
+    Staff.objects.filter(id__in=staff_ids).update(group_id=new_group_id)
+    # Notify each staff member of the group change
+    User = get_user_model()
+    for staff_id in staff_ids:
+        try:
+            user = User.objects.get(id=staff_id)
+            subject = "Group Change Notification"
+            message = (
+                f"Dear {user.first_name},\n\n"
+                "Your group has been changed. Please log in to the system to review your new group assignments.\n\n"
+                "Regards,\nGCPS Leave System"
+            )
+            send_leave_email.delay(subject, message, [user.email])
+        except User.DoesNotExist:
+            print(f"User with ID {staff_id} not found.")
+        except Exception as e:
+            print(f"Error notifying user {staff_id}: {e}")
+
+
+def multi_change_group_group(form_data):
+    """
+    Changes the group of multiple Staff records based on a list of IDs.
+    Expects:
+        - 'group_ids': list of Group IDs to fetch staff from
+        - 'new_group_id': ID of the new group to assign
+    """
+    group_ids = form_data.get('group_ids', [])
+    new_group_id = int(form_data['new_group_id'][0])
+    if not group_ids or not new_group_id:
+        return
+    # Normalize input to a list of integers
+    if isinstance(group_ids, str):
+        group_ids = [int(gid) for gid in group_ids.split(',') if gid.isdigit()]
+    elif isinstance(group_ids, (list, tuple)):
+        group_ids = [int(gid) for gid in group_ids if str(gid).isdigit()]
+    else:
+        group_ids = []
+    if not group_ids:
+        return
+    # Update group for all staff in the specified groups
+    Staff.objects.filter(group_id__in=group_ids).update(group_id=new_group_id)
+    # Notify each staff member of the group change
+    User = get_user_model()
+    for staff in Staff.objects.filter(group_id=new_group_id):
+        try:
+            user = User.objects.get(id=staff.id)
+            subject = "Group Change Notification"
+            message = (
+                f"Dear {user.first_name},\n\n"
+                "Your group has been changed. Please log in to the system to review your new group assignments.\n\n"
+                "Regards,\nGCPS Leave System"
+            )
+            send_leave_email.delay(subject, message, [user.email])
+        except User.DoesNotExist:
+            print(f"User with ID {staff.id} not found.")
+        except Exception as e:
+            print(f"Error notifying user {staff.id}: {e}")
+
+
+
+def multi_change_category(form_data):
+    """
+    Changes the seniority category of multiple LeaveType records based on a list of IDs.
+    Expects:
+        - 'leave_type_ids': list of LeaveType IDs to update
+        - 'new_category_id': ID of the new seniority category to assign
+    """
+    leave_type_ids = form_data.get('leave_type_ids', [])
+    new_category_id = int(form_data['new_category_id'][0]) if isinstance(form_data['new_category_id'], (list, tuple)) else int(form_data['new_category_id'])
+    if not leave_type_ids or not new_category_id:
+        return
+
+    # Normalize input to a list of integers
+    if isinstance(leave_type_ids, str):
+        leave_type_ids = [int(lid) for lid in leave_type_ids.split(',') if lid.isdigit()]
+    elif isinstance(leave_type_ids, (list, tuple)):
+        leave_type_ids = [int(lid) for lid in leave_type_ids if str(lid).isdigit()]
+    else:
+        leave_type_ids = []
+
+    if not leave_type_ids:
+        return
+
+    # Update seniority category for all specified leave types
+    LeaveType.objects.filter(id__in=leave_type_ids).update(seniority_id=new_category_id)

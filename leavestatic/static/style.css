@@ -3984,6 +3984,13 @@
         height: max-content;
         padding-bottom: 20px;
         padding-top: 70px;
+        #mid_sel, .mid_sel{
+            width: max-content; 
+            height: 30px; 
+            border-radius: 10px; 
+            background-color: inherit; 
+            border: 1px solid #ddd;
+        }
         a{
             height: 100%;
         }
@@ -5908,39 +5915,46 @@
         }
 
         /* Mid Actions */
-        .lvtmid {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
+        .mid {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background-color: #f3f3f3;
+                padding: 0.6rem 1rem;
+                border: 1px solid #ddd;
+                border-radius: 0.4rem;
+                margin-bottom: 1rem;
+                font-size: 0.95rem;
+                animation: fadeIn 0.3s ease;
+                .lvtsve,
+                .lvtdsd {
+                    padding: 0.45rem 0.9rem;
+                    border: none;
+                    border-radius: 0.25rem;
+                    font-size: 0.9rem;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                }
 
-        .lvtsve,
-        .lvtdsd {
-            padding: 0.5rem 1rem;
-            font-size: 0.9rem;
-            border: none;
-            border-radius: 0.3rem;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
+                .lvtsve {
+                    background-color: #28a745;
+                    color: #fff;
+                }
 
-        .lvtsve {
-            background-color: #0077cc;
-            color: #fff;
-        }
+                .lvtsve:hover {
+                    background-color: #218838;
+                }
 
-        .lvtsve:hover {
-            background-color: #005fa3;
-        }
+                .lvtdsd {
+                    background-color: #e3342f;
+                    color: #fff;
+                }
 
-        .lvtdsd {
-            background-color: #dc3545;
-            color: white;
-        }
+                .lvtdsd:hover {
+                    background-color: #c02022;
+                }
 
-        .lvtdsd:hover {
-            background-color: #b52a37;
-        }
+            }
 
         /* Leave Cards */
         .lvtbody,

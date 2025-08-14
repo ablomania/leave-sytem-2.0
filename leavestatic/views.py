@@ -641,6 +641,7 @@ def setup_leave_types(request, slug):
     if not user_slug:
         return redirect(reverse("login", args=["setup_leave_types"]))
 
+    categories = Seniority.objects.filter(is_active=True).order_by("name")
     all_leave = LeaveType.objects.all().order_by('name', 'seniority__name')
     seniority = Seniority.objects.filter(is_active=True).order_by("name")
     all_levels = Level.objects.filter(is_active=True).order_by("name")
@@ -651,6 +652,7 @@ def setup_leave_types(request, slug):
         "all_levels": all_levels,
         "slug": slug,
         "index": True,
+        "categories": categories,
     }
     template = loader.get_template("setup/leave/setup_leave.html")
     return HttpResponse(template.render(context, request))
@@ -843,6 +845,19 @@ def submit_inputs(request, slug):
             res_lvl(form_data)
             page = "setup_levels"
 
+        elif meta == "del_multi_staff":
+            del_multi_staff(dict(form_data))
+            page = "setup_staff"
+        elif meta == "change_group":
+            multi_change_group(dict(form_data))
+            page = "setup_groups"
+        elif meta == "change_group_group":
+            multi_change_group_group(dict(form_data))
+            page = "setup_groups"
+        elif meta == "change_category":
+            multi_change_category(dict(form_data))
+            page = "setup_leave_types"
+
         print(form_data)
         return redirect(reverse(page if page else "setup", args=[slug]))
 
@@ -855,6 +870,7 @@ def group_detail(request, group_id, slug):
         return redirect(reverse("login", args=["setup_groups"]))
 
     group = get_object_or_404(Group, id=group_id)
+    groups = Group.objects.filter(is_active=True).exclude(id=group_id).order_by('name')
 
     # Build staff queryset for this group (both active and inactive; template filters itself)
     staff_qs = (
@@ -885,6 +901,7 @@ def group_detail(request, group_id, slug):
         "staff_dict": staff_dict,
         "slug": slug,
         'index': True,
+        'groups': groups,
     }
     return HttpResponse(template.render(context, request))
 

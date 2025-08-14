@@ -14,62 +14,87 @@
         <a href="{% url 'group_edit' group.id slug %}"><button type="button" class="np">Edit</button></a>
         <a href="{% url 'staff_add_group' group.id slug %}"><button type="button" class="np">New Staff</button></a>
     </div>
-    <div class="mid" style="display: none;">
-        <input type="checkbox"
-            id="select_all_staff_{{group.id}}"
-            onclick="selectAllBoxes(
-                this.checked,
-                'staff_item_{{group.id}}',
-                '.gpd{{group.id}} .mid',
-                '.gpd{{group.id}} .mid .count_selected',
-                '.gpd{{group.id}} .mid .count_total',
-                '.gpd{{group.id}}',
-                '.staff_item_ch',
-                'select_all_staff_{{group.id}}'
-            )"
-        >
-        <label for="select_all_staff_{{group.id}}">Select All</label>
-        <span>
-            <span class="count_selected">0</span> of
-            <span class="count_total">
-                {% for st, stv in staff_dict.items %}
-                {% if st == group.id %}
-                {{stv}}
-                {% endif %}
-                {% endfor %}
-            </span> selected
-        </span>
-        <button type="button" class="lvtsve" onclick="show4('del_staff')">&check; Save</button>
-        <button type="button" class="lvtdsd" onclick="lvtdell2('gpd_del')">&times; Discard</button>
-    </div>
-    <div class="group_staff_list">
-        <p class="ava">Group leader: {% if group.leader and group.leader.first_name %}{{group.leader.first_name}} {{group.leader.last_name}}{% else %}Unknown{% endif %}</p>
-        <p class="ava">Staff in this group:</p>
-        <div class="staff_list">
-            {% with staff_list=groups_list|get_item:group %}
-                {% if staff_list %}
-                    {% for staff in staff_list %}
-                        {% if staff.is_active %}
-                        <div class="staff_item staff_item_{{group.id}}'">
-                            <input type="checkbox"
-                                value="{{staff.id}}"
-                                name="staff_ids"
-                                class="staff_item_ch"
-                                id="staff{{staff.id}}"
-                                onchange="selectReact(event, 'staff_item_{{group.id}}', '.gpd{{group.id}} .mid', '.gpd{{group.id}} .mid .count_selected', '.gpd{{group.id}} .mid .count_total', '.staff_item_ch'),
-                                setForm(event, 'del_staff_form{{group.id}}', `input[name='staff_ids']`)"
-                                >
-                            <label for="staff{{staff.id}}" class="staff_label">{{staff.first_name}} {{staff.last_name}}</label>
-                            <button type="button" onclick="mySwitcher('.gpd{{group.id}}', '.staff_form_edit{{staff.id}}')">&#9998;</button>
-                        </div>
-                        {% endif %}
+    <form action="{% url 'submit_inputs' slug %}" id="group_detail_form" method="post">
+        {% csrf_token %}
+        <div class="mid" style="display: none;">
+            <div>
+                <label for="action">Action</label>
+                <div style="display: flex; flex-direction: row;">
+                    <select name="form_meta" id="mid_sel" required onchange="toggleGroupSelect(this.value, 'group_id')">
+                        <option value="del_multi_staff">Delete Staff</option>
+                        <option value="restore_multi_staff">Restore Staff</option>
+                        <option value="change_group">Move to Group</option>
+                    </select>
+                    <select name="group_id" id="group_id" class="mid_sel" disabled style="display: none; margin-left: 5px;">
+                        {% for g in groups %}
+                        <option value="{{g.id}}">
+                            {{g.name}}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+            </div>
+            <div>
+                <input type="checkbox" class="multi" id="multi"
+                onchange="selAllBoxes(this.checked,'staff_item_ch')"
+                >
+                <label for="multi">Select All</label>
+            </div>
+            
+            <span>
+                <span class="count_selected">0</span> of
+                <span class="count_total">
+                    {% for st, stv in staff_dict.items %}
+                    {% if st == group.id %}
+                    {{stv}}
+                    {% endif %}
                     {% endfor %}
-                {% else %}
-                    <p>No staff in this group.</p>
-                {% endif %}
-            {% endwith %}
+                </span> selected
+            </span>
+            <div>
+                <button type="submit" class="lvtsve">Save</button>
+                <button type="button" class="lvtdsd"
+                 onclick="
+                    resetForm('group_detail_form'),
+                    resetCounter('count_selected'),
+                    hideMid('mid'),
+                    resetAndHideGroupSelect('group_id')
+                 ">
+                 &times; Discard</button>
+            </div>
         </div>
-    </div>
+        <div class="group_staff_list">
+            <p class="ava">Group leader: {% if group.leader and group.leader.first_name %}{{group.leader.first_name}} {{group.leader.last_name}}{% else %}Unknown{% endif %}</p>
+            <p class="ava">Staff in this group:</p>
+            <div class="staff_list">
+                {% with staff_list=groups_list|get_item:group %}
+                    {% if staff_list %}
+                        {% for staff in staff_list %}
+                            {% if staff.is_active %}
+                            <div class="staff_item staff_item_{{group.id}}'">
+                                <input type="checkbox"
+                                    value="{{staff.id}}"
+                                    name="staff_ids"
+                                    class="staff_item_ch"
+                                    id="staff{{staff.id}}"
+                                    onchange="
+                                    selectCheckBox(this.className, 'multi'),
+                                    displayMid('mid'), 
+                                    updateCounter('count_selected', this.className)"
+                                    >
+                                <label for="staff{{staff.id}}" class="staff_label">{{staff.first_name}} {{staff.last_name}}</label>
+                                <a href="{% url 'staff_edit' staff.id slug %}"><button type="button">&#9998;</button></a>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <p>No staff in this group.</p>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </form>
 
     <div class="inactive_staff">
         <div class="in_header in_header{{group.id}}">
@@ -84,7 +109,7 @@
                     {% if staff_list %}
                         {% for staff in staff_list %}
                             {% if not staff.is_active %}
-                            <form method="post" action="" class="staff_item staff_item_{{group.id}}'">
+                            <form method="post" action="{% url 'submit_inputs' slug %}" class="staff_item staff_item_{{group.id}}'">
                                 {% csrf_token %}
                                 <input type="hidden" name="form_meta" value="restore_staff" id="">
                                 <input type="hidden"
@@ -106,8 +131,4 @@
         </div>
     </div>
 </div>
-<form action="" method="post" id="del_staff_form{{group.id}}" class="del_staff_form{{group.id}}" style="display: none;">
-    {% csrf_token %}
-    <input type="hidden" value="del_staff_form" name="form_meta" id="">
-</form>
 {% endblock %}

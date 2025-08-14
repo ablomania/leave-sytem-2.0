@@ -121,6 +121,7 @@
             animation-iteration-count: 1;
             width: 100%;
         }
+        
     }
 </style>
 
@@ -134,9 +135,9 @@
         {% for staff, approver_objs in approvers_list.items %}
         {% if approver_objs|any_active %}
             <div class="approver-item">
-                <h3 onclick="mySwitcher('.app356', '.appedit{{staff.id}}')" style="cursor: pointer;">
+                <a href="{% url 'setup_approver_edit' staff.id slug %}"><h3 style="cursor: pointer;">
                     {{ staff.first_name }} {{ staff.other_names }} {{ staff.last_name }}
-                </h3>
+                </h3></a>
 
                 <form action="{% url 'submit_inputs' slug %}" method="post">
                     {% csrf_token %}
@@ -196,7 +197,7 @@
                                 {% csrf_token %}
                                 <input type="hidden" name="form_meta" value="restore_approver">
                                 <input type="hidden" name="approver_id" value="{{ approver.id }}">
-                                <button type="submit">Restore</button>
+                                <button type="submit" id="appRes">Restore</button>
                             </form>
                         </div>
                     </li>

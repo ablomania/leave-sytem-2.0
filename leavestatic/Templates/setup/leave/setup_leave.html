@@ -9,62 +9,100 @@
     <div class="lvtheader">
         <h3>Leave Types</h3>
         <a href="{% url 'leavetype_add' slug %}"><button type="button">New Leave Type</button></a>
-        <!-- <button class="del56" onclick="show4('delete')" type="button"><img src="{% static 'images/trash1.png' %}" alt="" width="20px" height="20px"></button> -->
     </div>
-    <div class="lvtmid" style="display: none;">
-        <button type="button" class="lvtsve" onclick="show4('del_leave_type')">&check; save</button>
-        <button type="button" class="lvtdsd" onclick="lvtdell2('lvt_del')">&times; discard</button>
-    </div>
-    <div class="lvtbody">
-        {% for leave in all_leave %}
-        {% if leave.is_active %}
-        <div class="lvtlb">
-            <a href="{% url 'leave_type_edit' leave.id slug %}"><button type="button" class="lvtype_heading">
-                <p><b>{{leave.name}}</b></p>
-                <p>{{leave.days}} days</p>
-                <p>{{leave.seniority.name}}</p>
-            </button>
-            </a>
-            <input type="hidden" id="lvt{{leave.id}}" name="leave_type" value="{{leave.id}}">
-            <!-- <button type="button">&#9998;</button> -->
-            <button type="button" id="lvtdel_button" onclick="lvtdell(event, 'lvt_del')">select</button>
+
+    <form action="{% url 'submit_inputs' slug %}" method="post" id="leave_type_form">
+        {% csrf_token %}
+        <div class="mid" style="display: none;">
+            <div>
+                <label for="action">Action</label>
+                <div style="display: flex; flex-direction: row;">
+                    <select name="form_meta" id="mid_sel" required onchange="toggleGroupSelect(this.value, 'category_id')">
+                        <option value="" disabled selected>Select option</option>
+                        <option value="del_multi_lvt">Delete</option>
+                        <option value="change_category">Change Category</option>
+                    </select>
+                    <select name="new_category_id" id="category_id" class="mid_sel" disabled style="display: none; margin-left: 5px;">
+                        <option value="" disabled selected>Select Category</option>
+                        {% for c in categories %}
+                        <option value="{{c.id}}">{{c.name}}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div>
+                <input type="checkbox" class="multi" id="multi_lvt" onchange="selAllBoxes(this.checked,'lvt_item_ch')">
+                <label for="multi_lvt">Select All</label>
+            </div>
+            <span>
+                <span class="count_selected">0</span> of
+                <span class="count_total">{{ all_leave|length }}</span> selected
+            </span>
+            <div>
+                <button type="submit" class="lvtsve">Save</button>
+                <button type="button" class="lvtdsd"
+                    onclick="
+                    resetForm('leave_type_form'),
+                    resetCounter('count_selected'),
+                    hideMid('mid'),
+                    resetAndHideGroupSelect('category_id')
+                ">
+                    &times; Discard
+                </button>
+            </div>
         </div>
-        {% endif %}
-        {% endfor %}
-    </div>
+
+        <div class="lvtbody">
+            {% for leave in all_leave %}
+            {% if leave.is_active %}
+            <div class="lvtlb">
+                <input type="checkbox"
+                name="leave_type_ids"
+                value="{{leave.id}}"
+                class="lvt_item_ch"
+                id="lvt{{leave.id}}"
+                onchange="
+                    selectCheckBox(this.className, 'multi'),
+                    displayMid('mid'),
+                    updateCounter('count_selected', this.className)">
+                <label for="lvt{{leave.id}}" class="lvtype_heading">
+                    <p><b>{{leave.name}}</b></p>
+                    <p>{{leave.days}} days</p>
+                    <p>{{leave.seniority.name}}</p>
+                </label>
+                <a href="{% url 'leave_type_edit' leave.id slug %}"><button type="button">&#9998;</button></a>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </form>
 
     <div class="inactive_lvt">
         <div class="in_header">
             <button class="rot_lvt" type="button" style="transform: rotate(-90deg); border-radius: 50%;"
-            onclick="show1('in_body_lvt'), rotateMe('.rot_lvt')"
-            >&#10094;</button>
-            <p onclick="show1('in_body_lvt'), rotateMe('.rot_lvt')">Inactive Approvers (deleted)</p>
+                onclick="show1('in_body_lvt'), rotateMe('.rot_lvt')">&#10094;</button>
+            <p onclick="show1('in_body_lvt'), rotateMe('.rot_lvt')">Inactive Leave Types (deleted)</p>
         </div>
         <div class="in_body_lvt">
             {% for leave in all_leave %}
-            {% if leave.is_active == False %}
+            {% if not leave.is_active %}
             <form action="{% url 'submit_inputs' slug %}" method="post" class="lvtlb">
                 {% csrf_token %}
                 <input type="hidden" name="form_meta" value="res_lvt">
-                <input type="hidden" name="leave_id" value="{{leave.id}}" id="">
+                <input type="hidden" name="leave_id" value="{{leave.id}}">
                 <button type="button" class="lvtype_heading" onclick="mySwitcher('.leave_types', '.lvt_form_edit{{leave.id}}', true)">
                     <p><b>{{leave.name}}</b></p>
                     <p>{{leave.days}} days</p>
                     <p>{{leave.seniority.name}}</p>
                 </button>
-                <input type="hidden" class="lvt_res" id="lvt{{leave.id}}" name="leave_type" value="{{leave.id}}">
-                <!-- <button type="button">&#9998;</button> -->
-                <button type="submit"  class="lvt_res">Restore</button>
+                <button type="submit" class="lvt_res">Restore</button>
             </form>
             {% endif %}
             {% endfor %}
         </div>
     </div>
+
     <div class="pagination-bar" data-section="leave_types"></div>
-    
-    <form action="{% url 'submit_inputs' slug %}" class="lvt_del" method="post">
-        {% csrf_token %}
-        <input type="hidden" value="del_lvt" name="form_meta" id="">
-    </form>
 </div>
+
 {% endblock %}

@@ -42,7 +42,7 @@
                     <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
                     <p><strong>Role:</strong> {{ staff.role }}</p>
                     <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
-                    <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+                    <a href="{% url 'staff_edit' staff.id slug %}"><button type="button">Edit</button></a>
                 </div>
                 {% endif %}
                 {% endfor %}
@@ -61,7 +61,7 @@
                     <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
                     <p><strong>Role:</strong> {{ staff.role }}</p>
                     <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
-                    <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+                    <a href="{% url 'staff_edit' staff.id slug %}"><button type="button">Edit</button></a>
                 </div>
                 {% endif %}
                 {% endfor %}
@@ -79,7 +79,7 @@
                     <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
                     <p><strong>Role:</strong> {{ staff.role }}</p>
                     <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
-                    <button type="button" onclick="mySwitcher('.staff', '.staff_form_edit{{staff.id}}')">Edit</button>
+                    <a href="{% url 'staff_edit' staff.id slug %}"><button type="button">Edit</button></a>
                 </div>
                 {% endif %}
                 {% endfor %}
