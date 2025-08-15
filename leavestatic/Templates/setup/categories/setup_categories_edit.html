@@ -5,16 +5,35 @@
 {% endblock %}
 
 {% block setup %}
+<script>
+    window.addEventListener('DOMContentLoaded', function() {
+        // Get the element you want to scroll to
+        const targetElement = document.querySelector('.cat_form_edit'); 
+        
+        // Or, if you prefer using a class or other selector:
+        // const targetElement = document.querySelector('.yourClassName'); 
+
+        if (targetElement) {
+            targetElement.scrollIntoView({
+                behavior: 'smooth', // Optional: 'auto' for instant scroll, 'smooth' for animated scroll
+                block: 'center',    // Aligns the element to the vertical center of the viewport
+                inline: 'center'    // Aligns the element to the horizontal center of the viewport (if applicable)
+            });
+        } else {
+            console.warn("Target element not found for scrolling.");
+        }
+    });
+</script>
 <div class="cat_form_edit cat_form_edit{{sen.id}}" style="display: flex;">
     <div class="sf10">
         <div class="sf10h">
-            <a href="{% url 'setup_categories' slug %}"><button type="button"><b>Back</b> &rsaquo; Categories</button></a>
+            <a href="{% url 'setup_categories' %}"><button type="button"><b>Back</b> &rsaquo; Categories</button></a>
             <h2>Edit Category</h2>
         </div>
         <p>Edit the details of this category below.</p>
         <img src="{% static 'images/cat1.png' %}" style="border-radius: 50%; border: #ddd 2px dashed;" width="300px" alt="">
     </div>
-    <form class="sf12" action="{% url 'submit_inputs' slug %}" method="post">
+    <form class="sf12" action="{% url 'submit_inputs' %}" method="post">
         <input type="hidden" name="form_meta" value="edit_cat">
         <input type="hidden" name="cat_id" value="{{sen.id}}">
         {% csrf_token %}

@@ -30,9 +30,30 @@ def change_session(slug):
     return session.user.slug if session else None
 
 
+def get_login_session(slug):
+    session = (
+        LoginSession.objects
+        .filter(slug=slug)
+        .select_related('user')
+        .first()
+    )
+    if session:
+        session.date_to_expire = session.date_to_expire + timezone.timedelta(days=1)
+        session.save()
+        return True
+    else: return False
 
-def check_secure_connection(request):
-    if request.is_secure():
-        print("Secure connection established.")
-    else:
-        print("Insecure connection detected. Please use HTTPS.")
+def set_session_cookie(response, slug):
+    response.set_cookie('session_slug', slug, max_age=86400, secure=False, httponly=True)
+    # response.set_cookie('session_id', session_key, max_age=86400, secure=True, httponly=True)  # Use this for production
+    return response
+
+def get_user_from_session_cookie(request):
+    session_slug = request.COOKIES.get('session_slug')
+    loginSession = get_login_session(session_slug)
+    if loginSession:
+        return session_slug
+    return None
+    
+    
+    

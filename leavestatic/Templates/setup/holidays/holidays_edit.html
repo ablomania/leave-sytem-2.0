@@ -5,6 +5,25 @@
 {% endblock %}
 
 {% block setup %}
+<script>
+    window.addEventListener('DOMContentLoaded', function() {
+        // Get the element you want to scroll to
+        const targetElement = document.querySelector('.hol_form_edit'); 
+        
+        // Or, if you prefer using a class or other selector:
+        // const targetElement = document.querySelector('.yourClassName'); 
+
+        if (targetElement) {
+            targetElement.scrollIntoView({
+                behavior: 'smooth', // Optional: 'auto' for instant scroll, 'smooth' for animated scroll
+                block: 'center',    // Aligns the element to the vertical center of the viewport
+                inline: 'center'    // Aligns the element to the horizontal center of the viewport (if applicable)
+            });
+        } else {
+            console.warn("Target element not found for scrolling.");
+        }
+    });
+</script>
 <div class="hol_form_edit hol_form_edit{{holiday.id}}" style="display: flex;">
     <div class="hf233">
         <div class="hf243">
@@ -14,7 +33,7 @@
         <p>Edit the details of this holiday below.</p>
         <img src="{% static 'images/beach.png' %}" width="500px" alt="">
     </div>
-    <form action="{% url 'submit_inputs' slug %}" method="post">
+    <form action="{% url 'submit_inputs' %}" method="post">
         {% csrf_token %}
         <input type="hidden" value="edit_hol" name="form_meta" id="">
         <input type="hidden" name="hol_id" value="{{holiday.id}}" id="">

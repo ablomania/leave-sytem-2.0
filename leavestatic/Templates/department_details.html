@@ -33,7 +33,7 @@ Department Details
         <div class="dept-buttons">
             <button id="edit-button" onclick="editDepartment()" type="button">edit</button>
             <button id="delete-button" onclick="deleteDepartment()" type="button">delete</button>
-            <a href="{% url 'signup' slug %}">
+            <a href="{% url 'signup' %}">
                 <button id="add-button" type="button">add a staff</button>
             </a>
         </div>
@@ -44,7 +44,7 @@ Department Details
             <img id="i1" src="{% static 'images/2997438.jpg' %}" width="300px" height="300px" alt="">
         </div>
         <div id="edit">
-            <form action="{% url 'department_details' department.id slug %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'department_details' department.id %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="input">
                     <label for="department_name">Name</label>
@@ -93,7 +93,7 @@ Department Details
                 {% endfor %}
             </ul>
             <p>Please select one of the options below:</p>
-            <form action="{% url 'department_details' department.id slug %}" method="post" id="delete-department-form">
+            <form action="{% url 'department_details' department.id %}" method="post" id="delete-department-form">
                 {% csrf_token %}
                 <div>
                     <input type="radio" value="reassign" onchange="deleteVariant(event, value)" required name="delete-option" id="reassign">
@@ -143,7 +143,7 @@ Department Details
 
         {% else %}
         <div class="empty_staff">
-            <form action="{% url 'department_details' department.id slug %}" method="post">
+            <form action="{% url 'department_details' department.id %}" method="post">
                 {% csrf_token %}
                 <p>The departmentment with name {{ department.department_name }} has no staff members at this moment.</p>
                 <div class="delete-button-wrapper">

@@ -91,16 +91,16 @@
 </style>
 <div class="setup_page">
     <div class="{% if general %}nav001{% else %}nav56{% endif %}" id="nav001">
-        <a href="{% url 'setup' slug %}"><button type="button" class="navgen nav" style="display: {% if general %}none {% else %} block {% endif %};">General</button></a>
-        <a href="{% url 'setup_groups' slug %}"><button type="button" class="navgp nav">Groups</button></a>
-        <a href="{% url 'setup_staff' slug %}"><button type="button" class="navst nav">Staff</button></a>
-        <a href="{% url 'setup_approvers' slug %}"><button type="button" class="navapp nav">Approvers</button></a>
-        <a href="{% url 'setup_leave_types' slug %}"><button type="button" class="navlt nav">Leave Types</button></a>
-        <a href="{% url 'setup_holidays' slug %}"><button type="button" class="navh nav">Holidays</button></a>
-        <a href="{% url 'setup_genders' slug %}"><button type="button" class="navgend nav">Genders</button></a>
-        <a href="{% url 'setup_categories' slug %}"><button type="button" class="navcat nav">Categories</button></a>
-        <a href="{% url 'setup_levels' slug %}"><button type="button" class="navl nav">Levels</button></a>
-        <button type="button" class="navem nav">Emails</button>
+        <a href="{% url 'setup' %}"><button type="button" class="navgen nav" style="display: {% if general %}none {% else %} block {% endif %};">General</button></a>
+        <a href="{% url 'setup_groups' %}"><button type="button" class="navgp nav">Groups</button></a>
+        <a href="{% url 'setup_staff' %}"><button type="button" class="navst nav">Staff</button></a>
+        <a href="{% url 'setup_approvers' %}"><button type="button" class="navapp nav">Approvers</button></a>
+        <a href="{% url 'setup_leave_types' %}"><button type="button" class="navlt nav">Leave Types</button></a>
+        <a href="{% url 'setup_holidays' %}"><button type="button" class="navh nav">Holidays</button></a>
+        <a href="{% url 'setup_genders' %}"><button type="button" class="navgend nav">Genders</button></a>
+        <a href="{% url 'setup_categories' %}"><button type="button" class="navcat nav">Categories</button></a>
+        <a href="{% url 'setup_levels' %}"><button type="button" class="navl nav">Levels</button></a>
+        <!-- <button type="button" class="navem nav">Emails</button> -->
     </div>
     {% block setup %}
     {% endblock %}

@@ -5,16 +5,36 @@
 {% endblock %}
 
 {% block setup %}
+<script>
+    window.addEventListener('DOMContentLoaded', function() {
+        // Get the element you want to scroll to
+        const targetElement = document.querySelector('.staff_form_add2'); 
+        
+        // Or, if you prefer using a class or other selector:
+        // const targetElement = document.querySelector('.yourClassName'); 
+
+        if (targetElement) {
+            targetElement.scrollIntoView({
+                behavior: 'smooth', // Optional: 'auto' for instant scroll, 'smooth' for animated scroll
+                block: 'center',    // Aligns the element to the vertical center of the viewport
+                inline: 'center'    // Aligns the element to the horizontal center of the viewport (if applicable)
+            });
+        } else {
+            console.warn("Target element not found for scrolling.");
+        }
+    });
+</script>
+
 <div class="staff_form_add2 staff_form_add2{{group.id}}" style="display: flex;">
     <div class="sf10">
         <div class="sf10h">
-            <a href="{% url 'setup_staff' slug %}"><button type="button"><b>Back</b> &rsaquo; {{group.name}}</button></a>
+            <a href="{% url 'setup_staff' %}"><button type="button"><b>Back</b> &rsaquo; {{group.name}}</button></a>
             <h2>New Staff</h2>
         </div>
         <p>Fill the form below to add a new staff member to the <b>{{group.name}}</b> group</p>
         <img src="{% static 'images/add-contact.png' %}" width="400px" alt="">
     </div>
-    <form class="sf12 staff_form_add2_form" action="{% url 'submit_inputs' slug %}" method="post">
+    <form id="staff_add2" class="sf12 staff_form_add2_form" action="{% url 'submit_inputs' %}" method="post">
         <input type="hidden" name="form_meta" value="add_staff" id="">
         <input type="hidden" name="group" value="{{group.id}}">
         {% csrf_token %}
@@ -65,7 +85,10 @@
         </div>
         <div class="bt23">
             <button class="save" type="button" onclick="submitMyForm4('.staff_form_add2_form', '.gpd{{group.id}}')">Save</button>
-            <button class="saaave" type="button" onclick="submitMyForm4('.staff_form_add2_form', '.staff_form_add2{{group.id}}')">Save and add another</button>
+            <button class="saaave" type="button" onclick="
+            addAnotherToMyForm('staff_add2', 'again', 'staff_group')
+            ">Save and add another</button>
+            <input type="hidden" name="again" value="false" id="again">
         </div>
     </form>
 </div>

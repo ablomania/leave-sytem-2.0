@@ -181,6 +181,30 @@ function toggleGroupSelect(value, groupSelectId) {
 }
 
 
+function addAnotherToMyForm(formId, inputObjId, value) {
+    let form = document.getElementById(formId);
+    if (form) {
+        let inputObj = document.getElementById(inputObjId);
+        if (inputObj) {
+            inputObj.value = value;
+        } else {
+            console.error(`Input object with ID ${inputObjId} not found.`);
+            return;
+        }
+
+        // Optional: validate required fields before submitting
+        if (form.checkValidity()) {
+            form.submit();
+        } else {
+            console.warn("Form validation failed.");
+            form.reportValidity(); // Show native validation messages
+        }
+    } else {
+        console.error(`Form with ID ${formId} not found.`);
+    }
+}
+
+
 
 
 

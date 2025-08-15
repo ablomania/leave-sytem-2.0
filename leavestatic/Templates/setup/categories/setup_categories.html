@@ -8,7 +8,7 @@
 <div class="categories" style="display: flex;">
     <div class="genders_header">
         <h3>Categories / Types Of Staff</h3>
-        <a href="{% url 'setup_category_add' slug %}"><button type="button">New Category</button></a>
+        <a href="{% url 'setup_category_add' %}"><button type="button">New Category</button></a>
     </div>
     <div class="genders_list">
     {% for sen in a_seniority %}
@@ -18,8 +18,8 @@
                 <p><strong>Rank:</strong> {{ sen.rank }}</p>
             </div>
             <div class="gender-actions">
-                <a href="{% url 'setup_category_edit' sen.id slug %}"><button type="button">Edit</button></a>
-                <form action="{% url 'submit_inputs' slug %}" method="post">
+                <a href="{% url 'setup_category_edit' sen.id %}"><button type="button">Edit</button></a>
+                <form action="{% url 'submit_inputs' %}" method="post">
                     {% csrf_token %}
                     <input type="hidden" name="form_meta" value="del_sen" id="">
                     <input type="hidden" name="sen_id" value="{{sen.id}}" id="">
@@ -48,7 +48,7 @@
             </div>
             <div class="gender-actions">
                 <!-- <button type="button" onclick="mySwitcher('.genders', '.gender_form_edit{{gender.id}}')">Edit</button> -->
-                <form action="{% url 'submit_inputs' slug %}" method="post">
+                <form action="{% url 'submit_inputs' %}" method="post">
                     {% csrf_token %}
                     <input type="hidden" name="form_meta" value="res_sen" id="">
                     <input type="hidden" name="sen_id" value="{{sen.id}}" id="">

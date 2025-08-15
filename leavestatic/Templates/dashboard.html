@@ -12,14 +12,14 @@
                 <h1>Welcome</h1>
                 <h4>Applicant: {{ user_name }}</h4>
             </div>
-            <a href="{% url 'logout1' slug %}" class="logout-button">
+            <a href="{% url 'logout1' %}" class="logout-button">
                 <img src="{% static 'images/power-button.png' %}" width="20px" height="20px" alt="logout" title="Log out">
             </a>
         </div>
         
         <div class="grid_main">
             {% if resume_obj %}
-            <a href="{% url 'leaveComplete' resume_obj.id slug %}">
+            <a href="{% url 'leaveComplete' resume_obj.id %}">
                 <div class="grid_item">
                     <img src="{% static 'images/job-seeker.png' %}" height="100px" width="100px" alt="icon">
                     <p>Confirm Resumption Of Duty</p>
@@ -27,7 +27,7 @@
             </a>
             {% endif %}
 
-            <a href="{% url 'leave_request' slug %}">
+            <a href="{% url 'leave_request' %}">
                 <div class="grid_item">
                     <img src="{% static 'images/ask.png' %}" height="100px" width="100px" alt="icon">
                     <p>Request for leave</p>
@@ -35,7 +35,7 @@
             </a>
             
             {% if r_ack %}
-            <a href="{% url 'relieve_ack' r_ack.id slug %}">
+            <a href="{% url 'relieve_ack' r_ack.id %}">
                 <div class="grid_item">
                     <img src="{% static 'images/like.png' %}" height="100px" width="100px" alt="">
                     <p>Relieve assignments ({{count}})</p>
@@ -44,7 +44,7 @@
            {% endif %}
             
            {% if self_ack %}
-            <a href="{% url 'confirm_leave_view' self_ack.id slug %}">
+            <a href="{% url 'confirm_leave_view' self_ack.id %}">
                 <div class="grid_item">
                     <img src="{% static 'images/checkmark.png' %}"  height="100px" width="100px" alt="">
                     <p>Leave Acknowledgement</p>
@@ -53,7 +53,7 @@
             {% endif %}
 
             {% if is_approver %}
-            <a href="{% url 'leave_requests' slug %}">
+            <a href="{% url 'leave_requests' %}">
                 <div class="grid_item">
                     <img src="{% static 'images/qtions.png' %}"  height="100px" width="100px" alt="">
                     <p>Approvals</p>
@@ -61,7 +61,7 @@
             </a>
             {% endif %}
 
-            <a href="{% url 'staff_on_leave' slug %}">
+            <a href="{% url 'staff_on_leave' %}">
                 <div class="grid_item">
                     <img src="{% static 'images/calf.png' %}"  height="100px" width="100px" alt="">
                     <p>On Leave</p>
@@ -69,7 +69,7 @@
             </a>
             
             {% if leaves_count > 0 %}
-            <a href="{% url 'leave_history' slug %}">
+            <a href="{% url 'leave_history' %}">
                 <div class="grid_item">
                     <img src="{% static 'images/past.png' %}"  height="100px" width="100px" alt="">
                     <p>History</p>
@@ -78,7 +78,7 @@
             {% endif %}
 
             {% if on_leave %}
-            <a href="{% url 'cancel_leave' on_leave.id slug %}">
+            <a href="{% url 'cancel_leave' on_leave.id %}">
                 <div class="grid_item">
                     <img src="{% static 'images/cncl.gif' %}"  height="100px" width="100px" alt="">
                     <p>Cancel Leave</p>
@@ -86,7 +86,7 @@
             </a>
             {% endif %}
 
-            <a href="{% url 'profile' slug %}">
+            <a href="{% url 'profile' %}">
                 <div class="grid_item">
                     <img src="{% static 'images/user.png' %}"  height="100px" width="100px" alt="">
                     <p>Profile</p>

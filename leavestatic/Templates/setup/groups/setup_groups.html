@@ -228,12 +228,12 @@
         <h2>Groups</h2>
        
         <div>
-            <a href="{% url 'staff_add' slug %}"><button type="button">New Staff</button></a>
-            <a href="{% url 'group_add' slug %}"><button type="button" style="margin-right: 5px;">New Group</button></a>
+            <a href="{% url 'staff_add' %}"><button type="button">New Staff</button></a>
+            <a href="{% url 'group_add' %}"><button type="button" style="margin-right: 5px;">New Group</button></a>
         </div>
         
     </div>
-    <form action="{% url 'submit_inputs' slug %}" method="post" id="group_form" class="groups_form">
+    <form action="{% url 'submit_inputs' %}" method="post" id="group_form" class="groups_form">
         {% csrf_token %}
         <div class="mid" style="display: none;">
              <div>
@@ -286,7 +286,7 @@
                     updateCounter('count_selected', this.className)"
                 " 
                 style="position:absolute; left:10px; top:10px;">
-                <a class="top" href="{% url 'group_detail' group.id slug %}"><button type="button" class="dept-info">
+                <a class="top" href="{% url 'group_detail' group.id %}"><button type="button" class="dept-info">
                     <h3 class="heading_pos">{{ group.name }}</h3>
                     <p class="count">
                         {% with staff_list=groups_list|get_item:group %}
@@ -294,7 +294,7 @@
                         {% endwith %}
                     </p>
                 </button></a>
-                <a class="bot" href="{% url 'group_edit' group.id slug %}"><button type="button" class="np">Edit</button></a>
+                <a class="bot" href="{% url 'group_edit' group.id %}"><button type="button" class="np">Edit</button></a>
             </div>
             {% empty %}
             <div class="no-groups">No groups found.</div>
@@ -314,15 +314,10 @@
             <div class="a_groups">
                 {% for group in all_groups %}
                 {% if not group.is_active %}
-                <form class="group_item" action="{% url 'submit_inputs' slug %}" method="post">
+                <form class="group_item" action="{% url 'submit_inputs' %}" method="post">
                     {% csrf_token %}
-                    <a class="top" href="{% url 'group_detail' group.id slug %}"><button type="button" class="dept-info">
+                    <a class="top" href="{% url 'group_detail' group.id %}"><button type="button" class="dept-info">
                         <h3 class="heading_pos">{{ group.name }}</h3>
-                        <p class="count">
-                            {% with staff_list=groups_list|get_item:group %}
-                                {{ staff_list|length }} staff
-                            {% endwith %}
-                        </p>
                     </button></a>
                     <input type="hidden" name="form_meta" value="restore_group" id="">
                     <input type="hidden" value="{{group.id}}" name="group_ids">
@@ -338,7 +333,7 @@
     </div>
     <div class="pagination-bar" data-section="groups"></div>
 
-    <form action="{% url 'submit_inputs' slug %}" method="post" id="group_form" class="group_form" style="display: none;">
+    <form action="{% url 'submit_inputs' %}" method="post" id="group_form" class="group_form" style="display: none;">
         {% csrf_token %}
         <input type="hidden" value="del_group" name="form_meta" id="">
     </form>

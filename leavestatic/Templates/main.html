@@ -11,7 +11,23 @@
         <link rel="stylesheet" href="{% static 'style.css' %}">
     </head>
     <script src="{% static 'behavior.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                const flash = document.querySelector('.flash');
+                if (flash) {
+                    flash.style.display = 'none';
+                }
+            }, 3000); // 3 seconds delay
+        });
+    </script>
     <body>
+        {% if message %}
+        <div class="flash">
+            <p>{{ message }}</p>
+        </div>
+        {% endif %}
+
          {% if form_status_message %}
         <div class="form-status flash">{{ form_status_message }}</div>
         {% endif %}
@@ -30,12 +46,12 @@
         {% endif %}
         {% if not index %}
         <div class="main-nav">
-            <a href="{% url 'dashboard' slug %}" class="{% if loc == 'dashboard' %}active{% endif %}">Dashboard</a>
-            <a href="{% url 'leave_request' slug %}" class="{% if loc == 'request' %}active{% endif %}">New Leave Request</a>
-            <a href="{% url 'leave_requests' slug %}" class="{% if loc == 'approvals' %}active{% endif %}">Approvals</a>
-            <a href="{% url 'staff_on_leave' slug %}" class="{% if loc == 'on_leave' %}active{% endif %}">On Leave</a>
-            <a href="{% url 'leave_history' slug %}" class="{% if loc == 'history' %}active{% endif %}">History</a>
-            <a href="{% url 'profile' slug %}" class="{% if loc == 'profile' %}active{% endif %}">Profile</a>
+            <a href="{% url 'dashboard' %}" class="{% if loc == 'dashboard' %}active{% endif %}">Dashboard</a>
+            <a href="{% url 'leave_request' %}" class="{% if loc == 'request' %}active{% endif %}">New Leave Request</a>
+            <a href="{% url 'leave_requests' %}" class="{% if loc == 'approvals' %}active{% endif %}">Approvals</a>
+            <a href="{% url 'staff_on_leave' %}" class="{% if loc == 'on_leave' %}active{% endif %}">On Leave</a>
+            <a href="{% url 'leave_history' %}" class="{% if loc == 'history' %}active{% endif %}">History</a>
+            <a href="{% url 'profile' %}" class="{% if loc == 'profile' %}active{% endif %}">Profile</a>
         </div>
         {% endif %}
         <div class="body" id="body">

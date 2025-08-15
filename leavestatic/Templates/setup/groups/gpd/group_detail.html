@@ -9,12 +9,12 @@
 {% block setup %}
 <div class="gpd gpd{{group.id}}" style="display: flex;">
     <div class="gpd_header">
-        <a href="{% url 'setup_groups' slug %}"><button class="bk" type="button"><b>Back</b> &rsaquo; Groups</button></a>
+        <a href="{% url 'setup_groups' %}"><button class="bk" type="button"><b>Back</b> &rsaquo; Groups</button></a>
         <h2>{{group.name}}</h2>
-        <a href="{% url 'group_edit' group.id slug %}"><button type="button" class="np">Edit</button></a>
-        <a href="{% url 'staff_add_group' group.id slug %}"><button type="button" class="np">New Staff</button></a>
+        <a href="{% url 'group_edit' group.id %}"><button type="button" class="np">Edit</button></a>
+        <a href="{% url 'staff_add_group' group.id %}"><button type="button" class="np">New Staff</button></a>
     </div>
-    <form action="{% url 'submit_inputs' slug %}" id="group_detail_form" method="post">
+    <form action="{% url 'submit_inputs' %}" id="group_detail_form" method="post">
         {% csrf_token %}
         <div class="mid" style="display: none;">
             <div>
@@ -84,7 +84,7 @@
                                     updateCounter('count_selected', this.className)"
                                     >
                                 <label for="staff{{staff.id}}" class="staff_label">{{staff.first_name}} {{staff.last_name}}</label>
-                                <a href="{% url 'staff_edit' staff.id slug %}"><button type="button">&#9998;</button></a>
+                                <a href="{% url 'staff_edit' staff.id %}"><button type="button">&#9998;</button></a>
                             </div>
                             {% endif %}
                         {% endfor %}
@@ -109,7 +109,7 @@
                     {% if staff_list %}
                         {% for staff in staff_list %}
                             {% if not staff.is_active %}
-                            <form method="post" action="{% url 'submit_inputs' slug %}" class="staff_item staff_item_{{group.id}}'">
+                            <form method="post" action="{% url 'submit_inputs' %}" class="staff_item staff_item_{{group.id}}'">
                                 {% csrf_token %}
                                 <input type="hidden" name="form_meta" value="restore_staff" id="">
                                 <input type="hidden"

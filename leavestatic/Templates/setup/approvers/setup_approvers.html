@@ -129,17 +129,17 @@
 <div class="app356">
     <div class="app3561">
         <h3 class="app356h">Approvers</h3>
-        <a href="{% url 'setup_approver_add' slug %}"><button type="button">New Approver</button></a>
+        <a href="{% url 'setup_approver_add' %}"><button type="button">New Approver</button></a>
     </div>
     <div class="approver-list">
         {% for staff, approver_objs in approvers_list.items %}
         {% if approver_objs|any_active %}
             <div class="approver-item">
-                <a href="{% url 'setup_approver_edit' staff.id slug %}"><h3 style="cursor: pointer;">
+                <a href="{% url 'setup_approver_edit' staff.id %}"><h3 style="cursor: pointer;">
                     {{ staff.first_name }} {{ staff.other_names }} {{ staff.last_name }}
                 </h3></a>
 
-                <form action="{% url 'submit_inputs' slug %}" method="post">
+                <form action="{% url 'submit_inputs' %}" method="post">
                     {% csrf_token %}
                     <input type="hidden" name="form_meta" value="del_approver">
                     <input type="hidden" name="staff_id" value="{{ staff.id }}">
@@ -193,7 +193,7 @@
                             {{ approver.group_to_approve.name }} - {{ approver.level.name }}
                         </div>
                         <div class="approver-actions">
-                            <form action="{% url 'submit_inputs' slug %}" method="post">
+                            <form action="{% url 'submit_inputs' %}" method="post">
                                 {% csrf_token %}
                                 <input type="hidden" name="form_meta" value="restore_approver">
                                 <input type="hidden" name="approver_id" value="{{ approver.id }}">

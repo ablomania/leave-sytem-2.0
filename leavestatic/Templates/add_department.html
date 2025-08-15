@@ -12,13 +12,13 @@
                 <h1>Welcome</h1>
                 <h4>Applicant: {{ user_name }}</h4>
             </div>
-            <a href="{% url 'logout1' slug %}" class="logout-button">
+            <a href="{% url 'logout1' %}" class="logout-button">
                 <img src="{% static 'images/power-button.png' %}" width="20px" height="20px" alt="logout" title="Log out">
             </a>
         </div>
                 
         <div class="grid_main">
-            <a href="{% url 'leave_request' slug %}">
+            <a href="{% url 'leave_request' %}">
                 <div class="grid_item">
                     <img src="{% static 'images/ask.png' %}" height="100px" width="100px" alt="icon">
                     <p>Request for leave</p>
@@ -26,7 +26,7 @@
             </a>
             
             {% if ack.count > 0 %}
-            <a href="{% url 'relieve_ack' r_ack.id slug %}">
+            <a href="{% url 'relieve_ack' r_ack.id %}">
                 <div class="grid_item">
                     <img src="{% static 'images/like.png' %}" height="100px" width="100px" alt="">
                     <p>Relieve assignments ({{count}})</p>
@@ -35,7 +35,7 @@
            {% endif %}
             
            {% if self_ack.count > 0 %}
-            <a href="{% url 'staff_ack' slug %}">
+            <a href="{% url 'staff_ack' %}">
                 <div class="grid_item">
                     <img src="{% static 'images/checkmark.png' %}"  height="100px" width="100px" alt="">
                     <p>Leave Acknowledgement</p>
@@ -44,7 +44,7 @@
             {% endif %}
 
             {% if is_approver %}
-            <a href="{% url 'leave_requests' slug %}">
+            <a href="{% url 'leave_requests' %}">
                 <div class="grid_item">
                     <img src="{% static 'images/qtions.png' %}"  height="100px" width="100px" alt="">
                     <p>Leave Requests</p>
@@ -59,14 +59,14 @@
                 </div>
             </a>
             
-            <a href="{% url 'leave_history' slug %}">
+            <a href="{% url 'leave_history' %}">
                 <div class="grid_item">
                     <img src="{% static 'images/past.png' %}"  height="100px" width="100px" alt="">
                     <p>History</p>
                 </div>
             </a>
 
-            <a href="{% url 'profile' slug %}">
+            <a href="{% url 'profile' %}">
                 <div class="grid_item">
                     <img src="{% static 'images/user.png' %}"  height="100px" width="100px" alt="">
                     <p>Profile</p>

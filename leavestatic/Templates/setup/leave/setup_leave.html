@@ -8,10 +8,10 @@
 <div class="leave_types" style="display: flex;">
     <div class="lvtheader">
         <h3>Leave Types</h3>
-        <a href="{% url 'leavetype_add' slug %}"><button type="button">New Leave Type</button></a>
+        <a href="{% url 'leavetype_add' %}"><button type="button">New Leave Type</button></a>
     </div>
 
-    <form action="{% url 'submit_inputs' slug %}" method="post" id="leave_type_form">
+    <form action="{% url 'submit_inputs' %}" method="post" id="leave_type_form">
         {% csrf_token %}
         <div class="mid" style="display: none;">
             <div>
@@ -70,7 +70,7 @@
                     <p>{{leave.days}} days</p>
                     <p>{{leave.seniority.name}}</p>
                 </label>
-                <a href="{% url 'leave_type_edit' leave.id slug %}"><button type="button">&#9998;</button></a>
+                <a href="{% url 'leave_type_edit' leave.id %}"><button type="button">&#9998;</button></a>
             </div>
             {% endif %}
             {% endfor %}
@@ -86,7 +86,7 @@
         <div class="in_body_lvt">
             {% for leave in all_leave %}
             {% if not leave.is_active %}
-            <form action="{% url 'submit_inputs' slug %}" method="post" class="lvtlb">
+            <form action="{% url 'submit_inputs' %}" method="post" class="lvtlb">
                 {% csrf_token %}
                 <input type="hidden" name="form_meta" value="res_lvt">
                 <input type="hidden" name="leave_id" value="{{leave.id}}">

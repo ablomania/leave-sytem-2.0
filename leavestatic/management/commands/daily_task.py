@@ -40,3 +40,19 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f'Task "{task_name}" created'))
         else:
             self.stdout.write(self.style.WARNING(f'Task "{task_name}" already exists'))    
+
+
+        # Schedule the task to delete expired login sessions every hour
+        schedule, _ = CrontabSchedule.objects.get_or_create(
+            minute='0', hour='*', day_of_week='*', day_of_month='*', month_of_year='*',
+        )
+        task_name = 'delete_expired_loginsessions'
+        if not PeriodicTask.objects.filter(name=task_name).exists():
+            PeriodicTask.objects.create(
+                crontab=schedule,
+                name=task_name,
+                task='leavestatic.tasks.delete_expired_loginsessions',
+                args=json.dumps([]),
+                enabled=True,
+            )
+            self.stdout.write(self.style.SUCCESS(f'Task "{task_name}" created'))

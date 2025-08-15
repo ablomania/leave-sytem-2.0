@@ -5,16 +5,35 @@
 {% endblock %}
 
 {% block setup %}
+<script>
+    window.addEventListener('DOMContentLoaded', function() {
+        // Get the element you want to scroll to
+        const targetElement = document.querySelector('.gender_form_edit'); 
+        
+        // Or, if you prefer using a class or other selector:
+        // const targetElement = document.querySelector('.yourClassName'); 
+
+        if (targetElement) {
+            targetElement.scrollIntoView({
+                behavior: 'smooth', // Optional: 'auto' for instant scroll, 'smooth' for animated scroll
+                block: 'center',    // Aligns the element to the vertical center of the viewport
+                inline: 'center'    // Aligns the element to the horizontal center of the viewport (if applicable)
+            });
+        } else {
+            console.warn("Target element not found for scrolling.");
+        }
+    });
+</script>
 <div class="gender_form_edit gender_form_edit{{gender.id}}" style="display: flex;">
     <div class="sf10">
         <div class="sf10h">
-            <a href="{% url 'setup_genders' slug %}"><button type="button"><b>Back</b> &rsaquo; Genders</button></a>
+            <a href="{% url 'setup_genders' %}"><button type="button"><b>Back</b> &rsaquo; Genders</button></a>
             <h2>Edit Gender</h2>
         </div>
         <p>Edit the details of this gender below.</p>
         <img src="{% static 'images/gender2.png' %}" width="300px" alt="">
     </div>
-    <form class="sf12" action="{% url 'submit_inputs' slug %}" method="post">
+    <form class="sf12" action="{% url 'submit_inputs' %}" method="post">
         <input type="hidden" name="form_meta" value="edit_gender">
         <input type="hidden" name="gender_id" value="{{gender.id}}">
         {% csrf_token %}

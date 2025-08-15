@@ -95,16 +95,36 @@
     }
 </style>
 
+<script>
+    window.addEventListener('DOMContentLoaded', function() {
+        // Get the element you want to scroll to
+        const targetElement = document.querySelector('.app_form_add'); 
+        
+        // Or, if you prefer using a class or other selector:
+        // const targetElement = document.querySelector('.yourClassName'); 
+
+        if (targetElement) {
+            targetElement.scrollIntoView({
+                behavior: 'smooth', // Optional: 'auto' for instant scroll, 'smooth' for animated scroll
+                block: 'center',    // Aligns the element to the vertical center of the viewport
+                inline: 'center'    // Aligns the element to the horizontal center of the viewport (if applicable)
+            });
+        } else {
+            console.warn("Target element not found for scrolling.");
+        }
+    });
+</script>
+
 <div class="app_form_add">
     <div class="app_form_header">
         <div class="apfh">
-            <a href="{% url 'setup_approvers' slug %}"><button type="button"><b>Back</b> &rsaquo; Approvers</button></a>
+            <a href="{% url 'setup_approvers' %}"><button type="button"><b>Back</b> &rsaquo; Approvers</button></a>
             <h2>New Approver</h2>
         </div>
         <p>Fill the form below to add a new approver to the {{group.name}} group</p>
         <img src="{% static 'images/agree.png' %}" width="400px" alt="">
     </div>
-    <form class="app_form" action="{% url 'submit_inputs' slug %}" method="post">
+    <form id="app_form" class="app_form" action="{% url 'submit_inputs' %}" method="post">
         <input type="hidden" name="form_meta" value="add_approver" id="">
         {% csrf_token %}
 
@@ -148,7 +168,10 @@
 
         <div class="bt23">
             <button class="save" type="button" onclick="submitMyForm4('.app_form', '.app356')">Save</button>
-            <button class="saaave" type="button" onclick="submitMyForm4('.app_form', '.app_form_add')">Save and add another</button>
+            <button class="saaave" type="button" 
+            onclick="addAnotherToForm('app_form', 'again', 'approver')"
+            >Save and add another</button>
+            <input type="hidden" name="again" value="false" id="again">
         </div>
     </form>
 </div>

@@ -10,7 +10,7 @@
 <div class="staff" style="display: flex;">
     <div class="staff_nav_button">
         <h3>All staff</h3>
-        <a href="{% url 'staff_add' slug %}"><button type="button">New Staff</button></a>
+        <a href="{% url 'staff_add' %}"><button type="button">New Staff</button></a>
     </div>
     <!-- Navigation Tabs -->
     <div class="staff_nav">
@@ -42,7 +42,7 @@
                     <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
                     <p><strong>Role:</strong> {{ staff.role }}</p>
                     <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
-                    <a href="{% url 'staff_edit' staff.id slug %}"><button type="button">Edit</button></a>
+                    <a href="{% url 'staff_edit' staff.id %}"><button type="button">Edit</button></a>
                 </div>
                 {% endif %}
                 {% endfor %}
@@ -61,7 +61,7 @@
                     <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
                     <p><strong>Role:</strong> {{ staff.role }}</p>
                     <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
-                    <a href="{% url 'staff_edit' staff.id slug %}"><button type="button">Edit</button></a>
+                    <a href="{% url 'staff_edit' staff.id %}"><button type="button">Edit</button></a>
                 </div>
                 {% endif %}
                 {% endfor %}
@@ -79,7 +79,7 @@
                     <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
                     <p><strong>Role:</strong> {{ staff.role }}</p>
                     <p><strong>Seniority:</strong> {{ staff.seniority.name }}</p>
-                    <a href="{% url 'staff_edit' staff.id slug %}"><button type="button">Edit</button></a>
+                    <a href="{% url 'staff_edit' staff.id %}"><button type="button">Edit</button></a>
                 </div>
                 {% endif %}
                 {% endfor %}
@@ -91,7 +91,7 @@
             <div class="staff_cards">
                 {% for staff in all_staff %}
                 {% if not staff.is_active %}
-                <form method="post" action="{% url 'submit_inputs' slug %}" class="staff_card-i">
+                <form method="post" action="{% url 'submit_inputs' %}" class="staff_card-i">
                     {% csrf_token %}
                     <h4>{{ staff.first_name }} {{ staff.last_name }}</h4>
                     <p><strong>Role:</strong> {{ staff.role }}</p>

@@ -9,13 +9,13 @@
     <div id="admin-dashboard">
         <div class="heading">
             <h3>{{user_name}}</h3>
-            <a href="{% url 'logout1' slug %}" class="logout-button">
+            <a href="{% url 'logout1' %}" class="logout-button">
                 <img src="{% static 'images/power-button.png' %}" width="20px" height="20px" alt="logout" title="Log out">
             </a>
         </div>
         <div class="tiles">
             {% if st_ack %}
-            <a href="{% url 'staff_ack' slug %}">
+            <a href="{% url 'staff_ack' %}">
                 <div class="image">
                     <img src="{% static 'images/checkmark.png' %}"  height="100px" width="100px" alt="">
                 </div>
@@ -24,7 +24,7 @@
                 </div>
             </a>
             {% endif %}
-            <!-- <a href="{% url 'signup' slug %}">
+            <!-- <a href="{% url 'signup' %}">
                 <div class="tile" title="{% if user_type == 'HOD' %}click to add a staff to your department{% elif user_type == 'HOHR' %}click to add a staff or HOD to a department{% else %}click to add a staff or HOD{% endif %}">
                     <div class="image">
                         <img src="{% static 'images/user1.png' %}" alt="add-user-logo">
@@ -45,7 +45,7 @@
                     </div>
                 </div>
             </a> -->
-            <!-- <a href="{% url 'all_staff' slug %}">
+            <!-- <a href="{% url 'all_staff' %}">
                 <div class="tile">
                     <div class="image">
                         <img src="{% static 'images/group.svg' %}" alt="">
@@ -67,7 +67,7 @@
                 </div>
             </a>
             {% endif %}
-            <a href="{% url 'leave_request' slug %}">
+            <a href="{% url 'leave_request' %}">
                 <div class="tile">
                     <div class="image">
                         <img src="{% static 'images/ask.png' %}" height="100px" width="100px" alt="icon">
@@ -77,7 +77,7 @@
                     </div>
                 </div>
             </a>
-            <a href="{% url 'leave_requests' slug %}">
+            <a href="{% url 'leave_requests' %}">
                 <div class="tile">
                     <div class="image">
                         <img src="{% static 'images/leave.png' %}" alt="leave requests">
@@ -87,7 +87,7 @@
                     </div>
                 </div>
             </a>
-            <a href="{% url 'staff_on_leave' slug %}">
+            <a href="{% url 'staff_on_leave' %}">
                 <div class="tile">
                     <div class="image">
                         <img src="{% static 'images/on-leave.png' %}" alt=" users on leave">
@@ -97,7 +97,7 @@
                     </div>
                 </div>
             </a>
-            <a href="{% url 'leave_history' slug %}">
+            <a href="{% url 'leave_history' %}">
                 <div class="tile">
                     <div class="image">
                        <img src="{% static 'images/past.png' %}"  height="100px" width="100px" alt="">
@@ -107,7 +107,7 @@
                     </div>
                 </div>
             </a>
-            <a href="{% url 'profile' slug %}">
+            <a href="{% url 'profile' %}">
                 <div class="tile">
                     <div class="image">
                         <img src="{% static 'images/user.png' %}"  height="100px" width="100px" alt="">

@@ -5,10 +5,29 @@
 {% endblock %}
 
 {% block setup %}
+<script>
+    window.addEventListener('DOMContentLoaded', function() {
+        // Get the element you want to scroll to
+        const targetElement = document.querySelector('.level_form_add'); 
+        
+        // Or, if you prefer using a class or other selector:
+        // const targetElement = document.querySelector('.yourClassName'); 
+
+        if (targetElement) {
+            targetElement.scrollIntoView({
+                behavior: 'smooth', // Optional: 'auto' for instant scroll, 'smooth' for animated scroll
+                block: 'center',    // Aligns the element to the vertical center of the viewport
+                inline: 'center'    // Aligns the element to the horizontal center of the viewport (if applicable)
+            });
+        } else {
+            console.warn("Target element not found for scrolling.");
+        }
+    });
+</script>
 <div class="level_form_add" style="display: flex;">
     <div class="sf10">
         <div class="sf10h">
-        <a href="{% url 'setup_levels' slug %}"><button type="button">
+        <a href="{% url 'setup_levels' %}"><button type="button">
             <b>Back</b> &rsaquo; Levels
         </button></a>
         <h2>New Level</h2>
@@ -17,7 +36,7 @@
         <img src="{% static 'images/cat1.png' %}" width="300px" alt=""
             style="border-radius: 50%; border: 1px solid #ddd;">
     </div>
-    <form class="sf12" action="{% url 'submit_inputs' slug %}" method="post">
+    <form class="sf12" action="{% url 'submit_inputs' %}" method="post">
         <input type="hidden" name="form_meta" value="add_level">
         {% csrf_token %}
         <div class="sf45">

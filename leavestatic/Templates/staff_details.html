@@ -7,18 +7,18 @@
 
 {% block content %}
 <div class="staff_details">
-    <form action="{% url 'staff_delete' slug %}" method="post" id="staff-delete-form" class="staff-delete-form">
+    <form action="{% url 'staff_delete' %}" method="post" id="staff-delete-form" class="staff-delete-form">
         {% csrf_token %}
-        <input type="hidden" name="slug" id="user_slug" value="{{ slug }}">
+        <input type="hidden" name="slug" id="user_slug" value="{{ }}">
         <input type="hidden" name="staff_id" id="staff_id" value="{{ staff.id }}">
     </form>
-    <form action="{% url 'staff_password_reset' slug %}" method="post" id="password-reset-form" class="password-reset-form">
+    <form action="{% url 'staff_password_reset' %}" method="post" id="password-reset-form" class="password-reset-form">
         {% csrf_token %}
-        <input type="hidden" name="slug" id="user_slug" value="{{ slug }}">
+        <input type="hidden" name="slug" id="user_slug" value="{{ }}">
         <input type="hidden" name="staff_id" id="staff_id" value="{{ staff.id }}">
     </form>
     <div class="staff-details-header">
-        <a href="{% url 'all_staff' slug %}">
+        <a href="{% url 'all_staff' %}">
             <img src="{% static 'images/back.png' %}" width="25px" height="25px" alt="back_image" class="back-image">
         </a>
         <h2>Details of {{ staff.first_name }}</h2>
@@ -71,7 +71,7 @@
         </div>
         
         <div class="staff-details-forms-wrapper">
-            <form action="{% url 'staff_details' staff.slug slug %}" method="post" id="staff-details-form" class="staff-details-form">
+            <form action="{% url 'staff_details' staff.slug %}" method="post" id="staff-details-form" class="staff-details-form">
                 {% csrf_token %}
                 <div class="personal">
                     <div class="pp">

@@ -10,7 +10,7 @@
 <div class="levels" style="display: flex;">
     <div class="levels_header">
         <h3>Levels</h3>
-        <a href="{% url 'level_add' slug %}"><button type="button">New Level</button></a>
+        <a href="{% url 'level_add' %}"><button type="button">New Level</button></a>
     </div>
 
     <div class="levels_list" style="margin-bottom: 20px;">
@@ -22,8 +22,8 @@
             <p><strong>Level Rank:</strong> {{ level.level }}</p>
             </div>
             <div class="level-actions">
-            <a href="{% url 'level_edit' level.id slug %}"><button type="button">Edit</button></a>
-            <form action="{% url 'submit_inputs' slug %}" method="post">
+            <a href="{% url 'level_edit' level.id %}"><button type="button">Edit</button></a>
+            <form action="{% url 'submit_inputs' %}" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="form_meta" value="del_level">
                 <input type="hidden" name="level_id" value="{{ level.id }}">
@@ -52,7 +52,7 @@
                 <p><strong>Level Rank:</strong> {{ level.level }}</p>
             </div>
             <div class="level-actions">
-                <form action="{% url 'submit_inputs' slug %}" method="post">
+                <form action="{% url 'submit_inputs' %}" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="form_meta" value="res_level">
                 <input type="hidden" name="level_id" value="{{ level.id }}">

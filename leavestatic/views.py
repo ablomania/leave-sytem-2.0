@@ -40,6 +40,17 @@ def index(request):
     return HttpResponse(template.render(context, request))
 
 
+def get_client_ip_address(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        # The 'X-Forwarded-For' header can contain a comma-separated list of IPs.
+        # The first IP in the list is typically the original client's IP.
+        ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+
 def login_user(request, next_page=None):
     next_page = next_page or '0'
     form = LoginForm(request.POST or None)
@@ -51,6 +62,7 @@ def login_user(request, next_page=None):
 
         if not staff:
             form.add_error(None, "Invalid username or password")
+            print("Staff not found for email:", email)
         else:
             user = authenticate(request, username=staff.username, password=password)
             if user:
@@ -66,36 +78,29 @@ def login_user(request, next_page=None):
 
                 LoginSession.objects.create(
                     user=user,
-                    session_key=request.session.session_key,
-                    status=LoginSession.Status.ACTIVE,
                     slug=slug,
                 )
 
-                request.session.update({
-                    'user_slug': user.slug,
-                    'user_email': user.email
-                })
-
                 # Check if user is an active admin
                 if hasattr(user, 'admin_profile') and user.admin_profile.is_active:
-                    redirect_path = reverse('setup', args=[slug])
+                    redirect_path = reverse('setup')
                 elif next_page.isdigit() and int(next_page) > 0:
-                    redirect_path = reverse('relieve_ack', args=[next_page, slug])
+                    redirect_path = reverse('relieve_ack', args=[next_page])
                 elif next_page != '0':
-                    redirect_path = reverse(next_page, args=[slug])
+                    redirect_path = reverse(next_page)
                 else:
-                    redirect_path = reverse('dashboard', args=[slug])
+                    redirect_path = reverse('dashboard')
 
                 response = redirect(redirect_path)
-                response.set_cookie('session_id', request.session.session_key, max_age=86400, secure=True, httponly=True)
+                response = set_session_cookie(response)
                 return response
             else:
+                print("Authentication failed for user:", email)
                 form.add_error(None, "Invalid username or password")
 
     context = {'form': form, 'login': True, 'next_page': next_page, 'index': True}
     template = loader.get_template('login.html')
     response = HttpResponse(template.render(context, request))
-    response.set_cookie('session_id', request.session.session_key, max_age=86400, secure=True, httponly=True)
     return response
 
 
@@ -177,8 +182,8 @@ def trigger_leave_update(request):
     return HttpResponse(html)
 
 
-def dashboard(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def dashboard(request):
+    user_slug = get_user_from_session_cookie(request)
 
     if not user_slug:
         return redirect(reverse("login", args=["leave_list"]))
@@ -202,7 +207,7 @@ def dashboard(request, slug):
     }
 
     response = render(request, "dashboard.html", context)
-    response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+    response = set_session_cookie(response, user_slug)
 
     return response
 
@@ -265,10 +270,12 @@ def password_reset(request):
 # Add / Edit setup views
 # --- STAFF ADD/EDIT ---
 
-def staff_add(request, slug, group_id=None):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def staff_add(request, group_id=None):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_staff"]))
+    
+    message = request.COOKIES.get('message', None)
     all_groups = Group.objects.order_by('name')
     all_genders = Gender.objects.all().order_by("name")
     seniority = Seniority.objects.filter(is_active=True).order_by("name")
@@ -278,16 +285,20 @@ def staff_add(request, slug, group_id=None):
         "all_genders": all_genders,
         "seniority": seniority,
         "group": group,
-        "slug": slug,
+        'message': message,
         "index": True,
     }
     template = loader.get_template("setup/staff/staff_add.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
-def staff_add_group(request, group_id, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def staff_add_group(request, group_id):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_staff"]))
+    
+    message = request.COOKIES.get('message', None)
     all_groups = Group.objects.order_by('name')
     group = Group.objects.get(id=group_id)
     all_genders = Gender.objects.all().order_by("name")
@@ -296,17 +307,22 @@ def staff_add_group(request, group_id, slug):
         "all_groups": all_groups,
         "all_genders": all_genders,
         "seniority": seniority,
-        "slug": slug,
+        'message': message,
         "group": group,
         "index": True,
     }
     template = loader.get_template("setup/staff/staff_add_group.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
-def staff_edit(request, slug, staff_id):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+
+def staff_edit(request, staff_id):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_staff"]))
+    
+    message = request.COOKIES.get('message', None)
     staff = get_object_or_404(Staff, id=staff_id)
     all_groups = Group.objects.order_by('name')
     all_genders = Gender.objects.all().order_by("name")
@@ -318,18 +334,22 @@ def staff_edit(request, slug, staff_id):
         "all_genders": all_genders,
         "seniority": seniority,
         "group": group,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/staff/staff_edit.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 # --- APPROVER ADD/EDIT ---
 
-def approver_add(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def approver_add(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_approvers"]))
+    
+    message = request.COOKIES.get('message', None)
     all_staff = Staff.objects.filter(is_superuser=False).order_by("last_name", "first_name")
     all_groups = Group.objects.order_by('name')
     all_levels = Level.objects.filter(is_active=True).order_by("name")
@@ -339,16 +359,22 @@ def approver_add(request, slug):
         "all_groups": all_groups,
         "all_levels": all_levels,
         "groups_list": groups_list,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/approvers/setup_approver_add.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
-def approver_edit(request, slug, staff_id):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+
+
+def approver_edit(request, staff_id):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_approvers"]))
+    
+    message = request.COOKIES.get('message', None)
     staff = get_object_or_404(Staff, id=staff_id)
     all_staff = Staff.objects.filter(is_superuser=False).order_by("last_name", "first_name")
     all_groups = Group.objects.order_by('name')
@@ -361,178 +387,240 @@ def approver_edit(request, slug, staff_id):
         "all_groups": all_groups,
         "all_levels": all_levels,
         "approver_objs": approver_objs,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/approvers/setup_approver_edit.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 # --- CATEGORY (SENIORITY) ADD/EDIT ---
 
-def category_add(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def category_add(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_categories"]))
+    
+    message = request.COOKIES.get('message', None)
     context = {
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/categories/setup_categories_add.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
-def category_edit(request, slug, cat_id):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+
+
+def category_edit(request, cat_id):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_categories"]))
+    
+    message = request.COOKIES.get('message', None)
     category = get_object_or_404(Seniority, id=cat_id)
     context = {
         "sen": category,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/categories/setup_categories_edit.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 # --- GENDER ADD/EDIT ---
 
-def gender_add(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def gender_add(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_genders"]))
+    
+    message = request.COOKIES.get('message', None)
     context = {
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/gender/gender_add.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
-def gender_edit(request, slug, gender_id):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+
+
+def gender_edit(request, gender_id):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_genders"]))
+    
+    message = request.COOKIES.get('message', None)
     gender = get_object_or_404(Gender, id=gender_id)
     context = {
         "gender": gender,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/gender/gender_edit.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 # --- HOLIDAY ADD/EDIT ---
 
-def holiday_add(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def holiday_add(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_holidays"]))
+    message = request.COOKIES.get('message', None)
     context = {
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/holidays/holidays_add.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
-def holiday_edit(request, slug, hol_id):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+
+
+def holiday_edit(request, hol_id):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_holidays"]))
+    
+    message = request.COOKIES.get('message', None)
     holiday = get_object_or_404(Holiday, id=hol_id)
     context = {
         "holiday": holiday,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/holidays/holidays_edit.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 # --- GROUP ADD/EDIT ---
 
-def group_add(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def group_add(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_groups"]))
+    
+    message = request.COOKIES.get('message', None)
     context = {
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/groups/group_add.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
-def group_edit(request, slug, group_id):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+
+
+def group_edit(request, group_id):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_groups"]))
+    
+    message = request.COOKIES.get('message', None)
     group = get_object_or_404(Group, id=group_id)
     context = {
         "group": group,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/groups/group_edit.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 # --- LEVEL ADD/EDIT ---
 
-def level_add(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def level_add(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_levels"]))
+    
+    message = request.COOKIES.get('message', None)
     context = {
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/levels/level_add.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
-def level_edit(request, slug, level_id):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+
+
+def level_edit(request, level_id):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_levels"]))
+    
+    message = request.COOKIES.get('message', None)
     level = get_object_or_404(Level, id=level_id)
     context = {
         "lvl": level,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/levels/level_edit.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 # --- LEAVE TYPE ADD/EDIT ---
 
-def leavetype_add(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def leavetype_add(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_leave_types"]))
+    
+    message = request.COOKIES.get('message', None)
     seniority = Seniority.objects.filter(is_active=True).order_by("name")
     context = {
         "seniority": seniority,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/leave/leavetype_add.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
-def leavetype_edit(request, slug, leave_id):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+
+
+def leavetype_edit(request, leave_id):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_leave_types"]))
+    
+    message = request.COOKIES.get('message', None)
     leave = get_object_or_404(LeaveType, id=leave_id)
     seniority = Seniority.objects.filter(is_active=True).order_by("name")
     context = {
         "leave": leave,
         "seniority": seniority,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/leave/leavetype_edit.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 
-def setup_groups(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def setup_groups(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_groups"]))
 
+    message = request.COOKIES.get('message', None)
     groups = Group.objects.filter(is_active=True).order_by('name')
     all_groups = Group.objects.order_by('name')
     staff_dict = {id: Staff.objects.filter(group_id=id).count() for id in all_groups.values_list("id", flat=True)}
@@ -547,19 +635,52 @@ def setup_groups(request, slug):
         "all_groups": all_groups,
         "staff_dict": staff_dict,
         "active_groups": active_groups,
-        "slug": slug,
+        "message": message,
         "groups_list": groups_list,
         "index": True,
     }
     template = loader.get_template("setup/groups/setup_groups.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 
-def setup_staff(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+# def setup_staff(request):
+#     user_slug = get_user_from_session_cookie(request)
+#     if not user_slug:
+#         return redirect(reverse("login", args=["setup_staff"]))
+
+#     all_staff = Staff.objects.filter(is_superuser=False).order_by("last_name", "first_name")
+#     active_groups = Group.objects.filter(is_active=True).order_by("name")
+#     all_groups = Group.objects.order_by('name')
+#     seniority = Seniority.objects.filter(is_active=True).order_by("name")
+#     all_genders = Gender.objects.all().order_by("name")
+#     groups_list = {group: Staff.objects.filter(group=group) for group in active_groups}
+
+#     context = {
+#         "all_staff": all_staff,
+#         "active_groups": active_groups,
+#         "all_groups": all_groups,
+#         "seniority": seniority,
+#         "all_genders": all_genders,
+#         "groups_list": groups_list,
+#         
+#         "index": True,
+#     }
+#     template = loader.get_template("setup/staff/setup_staff.html")
+#     response = HttpResponse(template.render(context, request))
+#     response = set_session_cookie(response, user_slug)
+#     return response
+
+
+def setup_staff(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_staff"]))
-
+    
+    message = request.COOKIES.get('message', None)
+    food = request.COOKIES.get("food", "default_value")
+    print("the food is:", food)
     all_staff = Staff.objects.filter(is_superuser=False).order_by("last_name", "first_name")
     active_groups = Group.objects.filter(is_active=True).order_by("name")
     all_groups = Group.objects.order_by('name')
@@ -574,45 +695,23 @@ def setup_staff(request, slug):
         "seniority": seniority,
         "all_genders": all_genders,
         "groups_list": groups_list,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/staff/setup_staff.html")
-    return HttpResponse(template.render(context, request))
-
-
-def setup_staff(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
-    if not user_slug:
-        return redirect(reverse("login", args=["setup_staff"]))
-
-    all_staff = Staff.objects.filter(is_superuser=False).order_by("last_name", "first_name")
-    active_groups = Group.objects.filter(is_active=True).order_by("name")
-    all_groups = Group.objects.order_by('name')
-    seniority = Seniority.objects.filter(is_active=True).order_by("name")
-    all_genders = Gender.objects.all().order_by("name")
-    groups_list = {group: Staff.objects.filter(group=group) for group in active_groups}
-
-    context = {
-        "all_staff": all_staff,
-        "active_groups": active_groups,
-        "all_groups": all_groups,
-        "seniority": seniority,
-        "all_genders": all_genders,
-        "groups_list": groups_list,
-        "slug": slug,
-        "index": True,
-    }
-    template = loader.get_template("setup/staff/setup_staff.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 
 
-def setup_approvers(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def setup_approvers(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_approvers"]))
 
+    message = request.COOKIES.get('message', None)
+    # Fetch all staff, groups, and levels
     all_staff = Staff.objects.filter(is_superuser=False).order_by("last_name", "first_name")
     all_groups = Group.objects.order_by('name')
     all_levels = Level.objects.filter(is_active=True).order_by("name")
@@ -629,18 +728,22 @@ def setup_approvers(request, slug):
         "all_groups": all_groups,
         "all_levels": all_levels,
         "approvers_list": approvers_list,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/approvers/setup_approvers.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 
-def setup_leave_types(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def setup_leave_types(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_leave_types"]))
 
+    message = request.COOKIES.get('message', None)
+    # Fetch all active seniority categories, leave types, and levels
     categories = Seniority.objects.filter(is_active=True).order_by("name")
     all_leave = LeaveType.objects.all().order_by('name', 'seniority__name')
     seniority = Seniority.objects.filter(is_active=True).order_by("name")
@@ -650,19 +753,23 @@ def setup_leave_types(request, slug):
         "all_leave": all_leave,
         "seniority": seniority,
         "all_levels": all_levels,
-        "slug": slug,
+        "message": message,
         "index": True,
         "categories": categories,
     }
     template = loader.get_template("setup/leave/setup_leave.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 
-def setup_holidays(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def setup_holidays(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_holidays"]))
 
+    message = request.COOKIES.get('message', None)
+    # Fetch all active fixed and variable holidays
     f_holidays = Holiday.objects.filter(type='Fixed', is_active=True).order_by("name")
     v_holidays = Holiday.objects.filter(type='Variable', is_active=True).order_by("name")
     all_holidays = Holiday.objects.all().order_by("name")
@@ -671,34 +778,41 @@ def setup_holidays(request, slug):
         "f_holidays": f_holidays,
         "v_holidays": v_holidays,
         "all_holidays": all_holidays,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/holidays/setup_holidays.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 
-def setup_genders(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def setup_genders(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_genders"]))
 
+    message = request.COOKIES.get('message', None)
     all_genders = Gender.objects.all().order_by("name")
 
     context = {
         "all_genders": all_genders,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/gender/setup_gender.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 
-def setup_categories(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def setup_categories(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_categories"]))
 
+    message = request.COOKIES.get('message', None)
+    # Fetch all active and inactive seniority categories
     seniority = Seniority.objects.filter(is_active=True).order_by("name")
     i_seniority = Seniority.objects.filter(is_active=False).order_by("name")
     a_seniority = seniority
@@ -707,168 +821,225 @@ def setup_categories(request, slug):
         "seniority": seniority,
         "i_seniority": i_seniority,
         "a_seniority": a_seniority,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/categories/setup_categories.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 
-def setup_levels(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def setup_levels(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_levels"]))
 
+    message = request.COOKIES.get('message', None)
+    # Fetch all active and inactive levels
     all_levels = Level.objects.filter(is_active=True).order_by("name")
     i_levels = Level.objects.filter(is_active=False).order_by("name")
 
     context = {
         "all_levels": all_levels,
         "i_levels": i_levels,
-        "slug": slug,
+        "message": message,
         "index": True,
     }
     template = loader.get_template("setup/levels/setup_levels.html")
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 
-def submit_inputs(request, slug):
+def submit_inputs(request):
     if request.method == "POST":
         form_data = request.POST
         meta = form_data.get('form_meta')
         page = None
+        message = None
 
         if meta == "add_group":
             add_group(form_data)
-            page = "setup_groups"
+            message = f"Group {form_data['group_name']} was added successfully."
+            if form_data.get('again') == "false":
+                page = "setup_groups"
+            elif form_data.get('again') == "group":
+                page = "group_add"
         elif meta == "edit_group":
             edit_group(form_data)
+            message = f"Group {form_data['name']} was updated successfully."
             page = "setup_groups"
         elif meta == "del_group":
             del_group(dict(form_data))
+            message = f"Group deleted successfully."
             page = "setup_groups"
         elif meta == "restore_group":
             restore_group(dict(form_data))
+            message = f"Group restored successfully."
             page = "setup_groups"
 
         elif meta == "add_staff":
             add_staff(form_data, request)
-            page = "setup_staff"
+            message = f"Staff {form_data['first_name']} {form_data['last_name']} was added successfully."
+            if form_data.get('again') == "false":
+                page = "setup_staff"  
+            elif form_data.get('again') == "staff":
+                page = "staff_add"
+            elif form_data.get('again') == "staff_group":
+                page = "staff_add_group"
         elif meta == "edit_staff":
             edit_staff(form_data)
+            message = f"Staff {form_data['first_name']} {form_data['last_name']} was updated successfully."
             page = "setup_staff"
         elif meta == "rem_staff":
             rem_staff(form_data)
+            message = f"Staff removed successfully."
             page = "setup_staff"
         elif meta == "del_staff_form":
             del_staff(dict(form_data))
+            message = f"Staff deleted successfully."
             page = "setup_staff"
         elif meta == "restore_staff":
             restore_staff(dict(form_data))
+            message = f"Staff restored successfully."
             page = "setup_staff"
 
         elif meta == "add_approver":
             add_approver(form_data)
-            page = "setup_approvers"
+            message = f"Approver added successfully."
+            if form_data.get('again') == "false":
+                page = "setup_approvers"
+            elif form_data.get('again') == "approver":
+                page = "approver_add"
         elif meta == "edit_app":
             edit_approver(dict(form_data))
+            message = f"Approver updated successfully."
             page = "setup_approvers"
         elif meta == "del_approver":
             del_approver(form_data)
+            message = f"Approver deleted successfully."
             page = "setup_approvers"
         elif meta == "restore_approver":
             res_approver(form_data)
+            message = f"Approver restored successfully."
             page = "setup_approvers"
 
         elif meta == "add_lvt":
             add_leave_type(form_data)
+            message = f"Leave type {form_data['name']} was added successfully."
             page = "setup_leave_types"
         elif meta == "edit_lvt":
             edit_leave(form_data)
+            message = f"Leave type {form_data['name']} was updated successfully."
             page = "setup_leave_types"
         elif meta == "del_lvt":
             del_leave(dict(form_data))
+            message = f"Leave type deleted successfully."
             page = "setup_leave_types"
         elif meta == "res_lvt":
             res_leave(form_data)
+            message = f"Leave type restored successfully."
             page = "setup_leave_types"
 
         elif meta == "add_hol":
             add_holiday(form_data)
+            message = f"Holiday {form_data['name']} was added successfully."
             page = "setup_holidays"
         elif meta == "edit_hol":
             edit_holiday(form_data)
+            message = f"Holiday {form_data['name']} was updated successfully."
             page = "setup_holidays"
         elif meta == "del_hol":
             del_holiday(form_data)
+            message = f"Holiday deleted successfully."
             page = "setup_holidays"
         elif meta == "res_hol":
             res_holiday(form_data)
+            message = f"Holiday restored successfully."
             page = "setup_holidays"
 
         elif meta == "add_gender":
             add_gender(form_data)
+            message = f"Gender {form_data['name']} was added successfully."
             page = "setup_genders"
         elif meta == "edit_gender":
             edit_gender(form_data)
+            message = f"Gender {form_data['name']} was updated successfully."
             page = "setup_genders"
         elif meta == "del_gender":
             del_gender(form_data)
+            message = f"Gender deleted successfully."
             page = "setup_genders"
         elif meta == "res_gender":
             res_gender(form_data)
+            message = f"Gender restored successfully."
             page = "setup_genders"
 
         elif meta == "add_cat":
             add_sen(form_data)
+            message = f"Category {form_data['name']} was added successfully."
             page = "setup_categories"
         elif meta == "edit_cat":
             edit_sen(form_data)
+            message = f"Category {form_data['name']} was updated successfully."
             page = "setup_categories"
         elif meta == "del_sen":
             del_sen(form_data)
+            message = f"Category deleted successfully."
             page = "setup_categories"
         elif meta == "res_sen":
             res_sen(form_data)
+            message = f"Category restored successfully."
             page = "setup_categories"
 
         elif meta == "add_level":
             add_lvl(form_data)
+            message = f"Level {form_data['name']} was added successfully."
             page = "setup_levels"
         elif meta == "edit_level":
             edit_lvl(form_data)
+            message = f"Level {form_data['name']} was updated successfully."
             page = "setup_levels"
         elif meta == "del_level":
             del_lvl(form_data)
+            message = f"Level deleted successfully."
             page = "setup_levels"
         elif meta == "res_level":
             res_lvl(form_data)
+            message = f"Level restored successfully."
             page = "setup_levels"
 
         elif meta == "del_multi_staff":
             del_multi_staff(dict(form_data))
+            message = f"Staff deleted successfully."
             page = "setup_staff"
         elif meta == "change_group":
             multi_change_group(dict(form_data))
+            message = f"Group changed successfully."
             page = "setup_groups"
         elif meta == "change_group_group":
             multi_change_group_group(dict(form_data))
+            message = f"Group changed successfully."
             page = "setup_groups"
         elif meta == "change_category":
             multi_change_category(dict(form_data))
+            message = f"Category changed successfully."
             page = "setup_leave_types"
 
-        print(form_data)
-        return redirect(reverse(page if page else "setup", args=[slug]))
+        response = HttpResponseRedirect(reverse(page if page else "setup"))
+        response.set_cookie('message', message, max_age=1, secure=False, httponly=True)
+        return response
 
 
 
-def group_detail(request, group_id, slug):
+def group_detail(request, group_id):
     # Maintain session consistency (mirrors setup view behavior)
-    user_slug = request.session.get("user_slug") or change_session(slug)
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["setup_groups"]))
 
+    message = request.COOKIES.get('message', None)
     group = get_object_or_404(Group, id=group_id)
     groups = Group.objects.filter(is_active=True).exclude(id=group_id).order_by('name')
 
@@ -899,18 +1070,20 @@ def group_detail(request, group_id, slug):
         "group": group,
         "groups_list": groups_list,
         "staff_dict": staff_dict,
-        "slug": slug,
+        "message": message,
         'index': True,
         'groups': groups,
     }
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
 
 
 
-def setup(request, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def setup(request):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
-        return redirect(reverse("login", args=["leave_request"]))
+        return redirect(reverse("login", args=["setup"]))
     
     template = loader.get_template("setup.html")
     groups = Group.objects.filter(is_active=True)
@@ -951,6 +1124,7 @@ def setup(request, slug):
         users = Staff.objects.filter(group=group)
         groups_list[group] = users
 
+    
     context = {
         'first_time': False, 'groups_list': groups_list,
         'approvers_list': approvers_list, 'all_staff': all_staff,
@@ -962,9 +1136,13 @@ def setup(request, slug):
         'seniority': seniority, 'staff_dict': staff_dict,
         'active_groups': active_groups, 'i_seniority': i_seniority,
         'a_seniority': a_seniority, "i_levels" : i_levels,
-        'index': True, 'slug': slug, "general": True,
+        'index': True, "general": True,
     }
-    return HttpResponse(template.render(context, request))
+    response = HttpResponse(template.render(context, request))
+    response = set_session_cookie(response, user_slug)
+    return response
+
+
 
 def sys_admin(request):
     template = loader.get_template("system_admin.html")
@@ -976,10 +1154,10 @@ def sys_admin(request):
 
 
 
-def leave_request(request, slug):
+def leave_request(request):
     """Handles leave request submission with session validation and message feedback."""
 
-    user_slug = request.session.get("user_slug") or change_session(slug)
+    user_slug = get_user_from_session_cookie(request)
 
     if not user_slug:
         return redirect(reverse("login", args=["leave_request"]))
@@ -1028,7 +1206,7 @@ def leave_request(request, slug):
 
     if request.method == "POST":
         form_data = request.POST
-        result = leaveRequestHandler(form_data, user, request, slug)
+        result = leaveRequestHandler(form_data, user, request)
 
         # You can refine how result is structured if needed
         if result:
@@ -1046,21 +1224,21 @@ def leave_request(request, slug):
         "staff_leave_data": staff_leave_data,
         "officers": relieving_officers,
         "form_status_message": form_status_message,
-        "slug": slug,
+        
         'loc': 'request',
         "holiday_json": json.dumps(list(holiday_data.values()))  # just the date list
     }
 
     response = render(request, "leave_form.html", context)
-    response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+    response = set_session_cookie(response, user_slug)
 
     return response
 
 
 
-def confirm_leave_view(request, id, slug):
+def confirm_leave_view(request, id):
     # Validate session
-    user_slug = request.session.get("user_slug") or change_session(slug)
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=[id]))
 
@@ -1120,28 +1298,28 @@ def confirm_leave_view(request, id, slug):
             )
 
         response = redirect(reverse("dashboard", args=[slug]))
-        response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+        response = set_session_cookie(response, user_slug)
         return response
 
     # Render confirmation form
     context = {
         "leave_request": leave_request,
-        "slug": slug,
+        
         "date": timezone.now().date(),
         "id": id
     }
     response = render(request, "self_ack.html", context)
-    response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+    response = set_session_cookie(response, user_slug)
     return response
 
 
 
-def cancelLeave(request, id, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def cancelLeave(request, id):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["cancel_leave"]))
 
-    staff = get_object_or_404(Staff, slug=user_slug)
+    staff = get_object_or_404(Staff=user_slug)
     leave = get_object_or_404(
         Leave.objects.select_related("request", "request__type", "request__applicant"),
         id=id,
@@ -1160,18 +1338,18 @@ def cancelLeave(request, id, slug):
     context = {
         "leave_request": leave.request,
         "leave": leave,
-        "slug": slug,
+        
     }
 
     return render(request, "cancel_leave.html", context)
 
 
-def leaveComplete(request, id, slug):
-    user_slug = request.session.get("user_slug") or change_session(slug)
+def leaveComplete(request, id):
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["leave_complete"]))
 
-    user = get_object_or_404(Staff, slug=user_slug)
+    user = get_object_or_404(Staff=user_slug)
     leave_request = get_object_or_404(
         LeaveRequest.objects.select_related("applicant"),
         id=id,
@@ -1198,7 +1376,7 @@ def leaveComplete(request, id, slug):
 
     context = {
         "leave_request": leave_request,
-        "slug": slug,
+        
         "resumption_date": leave_request.return_date
     }
 
@@ -1206,9 +1384,9 @@ def leaveComplete(request, id, slug):
     
 
 
-def relieve_ack(request, id, slug):
+def relieve_ack(request, id):
     # 1. Validate session
-    user_slug = request.session.get("user_slug") or change_session(slug)
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=[id]))
 
@@ -1241,7 +1419,7 @@ def relieve_ack(request, id, slug):
         if form_data['form_meta'] == "approve": approve_ack(form_data, ack.request)
         elif form_data['form_meta'] == "deny": deny_ack(form_data, request)
         response = HttpResponseRedirect(reverse("dashboard", args=[slug]))
-        response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+        response = set_session_cookie(response, user_slug)
         return response
 
     # 7. Render template
@@ -1249,22 +1427,22 @@ def relieve_ack(request, id, slug):
         "date": timezone.now().date(),
         "ack": ack,
         "id": id,
-        "slug": slug,
+        
     }
     response = render(request, "relieve_ack.html", context)
-    response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+    response = set_session_cookie(response, user_slug)
     return response
 
 
 
 
-def leave_history(request, slug):
+def leave_history(request):
     """Displays a user's leave history with approval and acknowledgment progress."""
-    user_slug = request.session.get("user_slug") or change_session(slug)
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["leave_history"]))
 
-    user = get_object_or_404(Staff, slug=user_slug)
+    user = get_object_or_404(Staff=user_slug)
 
     # Prefetch related approvals and acknowledgments
     leave_requests = (
@@ -1309,22 +1487,22 @@ def leave_history(request, slug):
     context = {
         "grouped_leave": grouped_leave,
         "terminated_leaves": terminated_leaves,
-        "slug": slug,
+        
         "year_page": year_page,
         "loc": "history"
     }
 
     response = render(request, "leave_history.html", context)
-    response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+    response = set_session_cookie(response, user_slug)
     return response
 
 
 
 
-def user_logout(request, slug):
+def user_logout(request):
     """Handles secure user logout with session validation."""
 
-    user_slug = request.session.get("user_slug") or change_session(slug)
+    user_slug = get_user_from_session_cookie(request)
 
     if not user_slug:
         return redirect(reverse("login"))
@@ -1345,14 +1523,14 @@ def user_logout(request, slug):
 
 
 
-def users_on_leave(request, slug):
+def users_on_leave(request):
     """Lists all users currently on leave, grouped by their department (group)."""
 
-    user_slug = request.session.get("user_slug") or change_session(slug)
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["staff_on_leave"]))
 
-    user = get_object_or_404(Staff, slug=user_slug)
+    user = get_object_or_404(Staff=user_slug)
     today = timezone.now().date()
 
     # Fetch all active leave objects with related request and applicant
@@ -1372,27 +1550,27 @@ def users_on_leave(request, slug):
         dept_group[group].append(leave)
 
     context = {
-        "slug": slug,
+        
         "dept_group": dict(dept_group),
         'loc': 'on_leave'
     }
 
     response = render(request, "on_leave.html", context)
-    response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+    response = set_session_cookie(response, user_slug)
     return response
 
 
 
 
 
-def profile(request, slug):
+def profile(request):
     """Displays and manages a staff profile with leave stats and approver status."""
 
-    user_slug = request.session.get("user_slug") or change_session(slug)
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["profile"]))
 
-    user = get_object_or_404(Staff, slug=user_slug)
+    user = get_object_or_404(Staff=user_slug)
 
     # Fetch all leave details for this staff
     leave_details = StaffLeaveDetail.objects.filter(staff=user, is_active=True).select_related("leave_type")
@@ -1434,12 +1612,12 @@ def profile(request, slug):
         "user": user,
         "leave_details": leave_details,
         "is_approver": is_approver,
-        "slug": slug,
+        
         'loc': 'profile'
     }
 
     response = render(request, "profile.html", context)
-    response.set_cookie("session_id", request.session.session_key, max_age=86400, secure=True, httponly=True)
+    response = set_session_cookie(response, user_slug)
     return response
 
 
@@ -1448,9 +1626,9 @@ def profile(request, slug):
 
 
 
-def leave_requests(request, slug):
+def leave_requests(request):
     # 1. Session check
-    user_slug = request.session.get("user_slug") or change_session(slug)
+    user_slug = get_user_from_session_cookie(request)
     if not user_slug:
         return redirect(reverse("login", args=["leave_requests"]))
 
@@ -1496,7 +1674,7 @@ def leave_requests(request, slug):
         return redirect(reverse("leave_requests", args=[slug,]))
     # 6. Render
     context = {
-        "slug": slug,
+        
         "approval_groups": approvers,
         "pending_approvals": pending_approvals,
         "approved_approvals": approved_approvals,

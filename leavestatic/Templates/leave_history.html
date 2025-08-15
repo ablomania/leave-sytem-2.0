@@ -22,7 +22,7 @@
 
             {% for leave in req.leave_set.all %}
               {% if leave.status == "On Leave" and leave.is_active %}
-                <form method="post" action="{% url 'cancel_leave' leave.id slug %}">
+                <form method="post" action="{% url 'cancel_leave' leave.id %}">
                   {% csrf_token %}
                   <button type="submit" class="terminate-btn">Terminate Leave</button>
                 </form>

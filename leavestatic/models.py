@@ -327,21 +327,11 @@ class Email(models.Model):
    
 
 class LoginSession(models.Model):
-    class Status(models.TextChoices):
-        ACTIVE = 'ACTIVE', 'active'
-        INACTIVE = 'INACTIVE', 'inactive'
     user = models.ForeignKey('Staff', on_delete=models.CASCADE, related_name='login_session')
     session_key = models.CharField(max_length=255, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
     date_to_expire = models.DateTimeField(default=timezone.now() + timezone.timedelta(days=1))
-    first_time = models.BooleanField(default=True, null=True)
     last_activity = models.DateTimeField(auto_now=True)
-    status = models.CharField(max_length=8, choices=Status.choices, default=Status.INACTIVE)
     slug = models.SlugField(max_length=50, unique=True, blank=True)
-    prev_page = models.CharField(max_length=255, null=True)
-    button = models.CharField(max_length=255, null=True)
-    next_page = models.CharField(max_length=255, null=True)
-    next_btn = models.CharField(max_length=255, null=True)
-    message = models.CharField(max_length=255, null=True)
     def __str__(self):
         return f"{self.user} - {self.session_key} - {self.status}"

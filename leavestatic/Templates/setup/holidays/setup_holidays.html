@@ -8,7 +8,7 @@
 <div class="holidays" style="display: flex;">
     <div class="hol341">
         <h3>Holidays</h3>
-        <a href="{% url 'holiday_add' slug %}"><button type="button">New Holiday</button></a>
+        <a href="{% url 'holiday_add' %}"><button type="button">New Holiday</button></a>
     </div>
     <!-- <div class="holmid" style="display: none;">
         <button type="button" class="lvtsve" onclick="confirmAction(event, '.conf167', '.confheader', '.confmsg1', '.confmsg2')">&check; save</button>
@@ -24,9 +24,9 @@
             <div class="vhol253">
                 {% for holiday in v_holidays %}
                 {% if holiday.is_active %}
-                <form action="{% url 'submit_inputs' slug %}" class="vholitem" method="post">
+                <form action="{% url 'submit_inputs' %}" class="vholitem" method="post">
                     {% csrf_token %}
-                    <a href="{% url 'holiday_edit' holiday.id slug %}"><button class="tt" type="button">
+                    <a href="{% url 'holiday_edit' holiday.id %}"><button class="tt" type="button">
                         <h2>{{holiday.name}}</h2>
                         <p>{{holiday.date}}</p>
                     </button></a>
@@ -47,9 +47,9 @@
             <div class="fhol253">
                 {% for holiday in f_holidays %}
                 {% if holiday.is_active %}
-                <form action="{% url 'submit_inputs' slug %}" class="fholitem" method="post">
+                <form action="{% url 'submit_inputs' %}" class="fholitem" method="post">
                     {% csrf_token %}
-                    <a href="{% url 'holiday_edit' holiday.id slug %}"><button class="tt" type="button">
+                    <a href="{% url 'holiday_edit' holiday.id %}"><button class="tt" type="button">
                         <h2>{{holiday.name}}</h2>
                         <p>{{holiday.date}}</p>
                     </button></a>
@@ -75,7 +75,7 @@
         <div class="in_body_hol">
             {% for holiday in all_holidays %}
             {% if not holiday.is_active %}
-            <form action="{% url 'submit_inputs' slug %}" class="holitem" method="post">
+            <form action="{% url 'submit_inputs' %}" class="holitem" method="post">
                 {% csrf_token %}
                 <button class="tt" type="button" onclick="mySwitcher('.holidays', '.hol_form_edit{{holiday.id}}', true)">
                     <h2>{{holiday.name}}</h2>

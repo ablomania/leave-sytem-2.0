@@ -120,3 +120,13 @@ def notify_new_admin(staff_email, staff_name):
         [staff_email],
         fail_silently=True
     )
+
+
+# Task to delete expired LoginSession objects
+@shared_task(name="leavestatic.tasks.delete_expired_loginsessions")
+def delete_expired_loginsessions():
+    from django.utils import timezone
+    expired_sessions = LoginSession.objects.filter(date_to_expire__lt=timezone.now())
+    count = expired_sessions.count()
+    expired_sessions.delete()
+    return f"Deleted {count} expired LoginSession objects."

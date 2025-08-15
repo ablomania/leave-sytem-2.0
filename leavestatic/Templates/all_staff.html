@@ -13,7 +13,7 @@ Staff Of GCPS
 {% block content %}
 <div class="all_staff" id="all-staff">
     <div class="all_staff_header">
-        <a href="{% url 'admin_dashboard' slug2 %}">
+        <a href="{% url 'admin_dashboard'2 %}">
             <img src="{% static 'images/back.png' %}" width="25px" height="25px" alt="back_image" class="back-image">
         </a>
         <h1>Staff Info</h1>
@@ -43,7 +43,7 @@ Staff Of GCPS
                     </div>
                     {% endif %}
                     <div class="HOD_item">
-                        <!-- <a href="{% url 'staff_details' staff.slug slug2 %}"> -->
+                        <!-- <a href="{% url 'staff_details' staff.slug2 %}"> -->
                             <p class="p-link" title="Click to view the details of {{ staff.first_name }}">
                                 <img class="i1" src="{% static 'images/user.png' %}" alt="">
                             {{ staff.last_name }}, {{ staff.first_name }} {{ staff.other_names }}
@@ -72,7 +72,7 @@ Staff Of GCPS
     {% if user_type == 'HOHR' or user_type == 'RECTOR' %}
     <div class="staff-grid">
         {% for department, members in group.items %}
-            <div class="dept-info g3" onclick="showList(event, '{{ department.department_name }}','{{department.id}}', '{{slug}}', `{% url 'department_details' department.id slug %}`, `{% cycle '0' '1' '2' '3' '4' '5' '6' '7' '8' '9' '10' '11' %}`)">
+            <div class="dept-info g3" onclick="showList(event, '{{ department.department_name }}','{{department.id}}', '{{slug}}', `{% url 'department_details' department.id %}`, `{% cycle '0' '1' '2' '3' '4' '5' '6' '7' '8' '9' '10' '11' %}`)">
                 <img class="dept-image" {% if department.department_image %} src="{{ department.department_image.url }}" {% else %} src="{% static 'images/hierarchy.png' %}" {% endif %} alt="Department Icon">
                 <p class="all-staff-dept" id="all-staff-dept">{{ department.department_name }}</p>
             </div>
@@ -115,7 +115,7 @@ Staff Of GCPS
                         {% endif %}                         
                         <div class="staff-cell">
                             <div class="staff-name">
-                                <a href="{% url 'staff_details' staff.slug slug2 %}">
+                                <a href="{% url 'staff_details' staff.slug2 %}">
                                     <p class="class_name">{{ staff.first_name }} {{ staff.last_name }}, {{ staff.other_names }}</p>
                                 </a>
                                 
@@ -148,7 +148,7 @@ Staff Of GCPS
             <p>Unassigned Staff</p>
         </div>
         {% endif %}
-        <a href="{% url 'add_department' slug2 %}">
+        <a href="{% url 'add_department'2 %}">
             <div class="add-department-button g3">
                 <img src="{% static 'images/plus.png' %}" alt="add department image" width="80px" height="80px">
                 <p>Add New Department</p>
