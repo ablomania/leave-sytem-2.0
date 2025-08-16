@@ -104,7 +104,7 @@ def notify_new_admin(staff_email, staff_name):
     if not staff_email:
         return
 
-    subject = "🎉 You've Been Granted Admin Access"
+    subject = "You've Been Granted Admin Access"
     message = (
         f"Dear {staff_name},\n\n"
         f"You have been added as a system administrator.\n"
@@ -130,3 +130,54 @@ def delete_expired_loginsessions():
     count = expired_sessions.count()
     expired_sessions.delete()
     return f"Deleted {count} expired LoginSession objects."
+
+
+# Task to assign new approval objects to active leave requests of a specific group
+# For each active leave request, check if there are appovers for it
+# If there are approvers, check if each approver has an active approval object
+# If not, create a new approval object for that approver
+@shared_task(name="leavestatic.tasks.assign_new_approvals")
+def assign_new_approvals():
+    all_groups = Group.objects.filter(is_active=True)
+    for group in all_groups:
+        # Get all active leave requests for the specified group
+        active_requests = LeaveRequest.objects.filter(applicant__group_id=group.id, status=LeaveRequest.Status.PENDING, is_active=True)
+        for request in active_requests:
+            # Get all active approvers for this group
+            approvers = Approver.objects.filter(group_to_approve_id=group.id, is_active=True)
+            for approver in approvers:
+                # Check if an active Approval object exists for this request and approver
+                exists = Approval.objects.filter(
+                    request=request,
+                    approver=approver,
+                    is_active=True
+                ).exists()
+                if not exists:
+                    # Create a new Approval object for this approver and request
+                    Approval.objects.create(
+                        request=request,
+                        approver=approver,
+                        status=Approval.ApprovalStatus.Pending,
+                        is_active=True
+                    )
+                    # Send email notification to the approver
+                    if hasattr(approver, 'user') and approver.user and approver.user.email:
+                        subject = f"New Leave Approval Request for {request.applicant}"
+                        body = (
+                            f"Dear {approver.user.get_full_name() if hasattr(approver.user, 'get_full_name') else approver.user.username},\n\n"
+                            f"You have a new leave request to approve for {request.applicant}.\n"
+                            f"Leave Type: {request.leave_type}\n"
+                            f"Dates: {request.start_date} to {request.end_date}\n"
+                            f"Please log in to the system to review and take action.\n\n"
+                            f"Regards,\nGCPS Leave Management System"
+                        )
+                        try:
+                            EmailMessage(
+                                subject=subject,
+                                body=body,
+                                from_email=settings.EMAIL_HOST_USER,
+                                to=[approver.user.email]
+                            ).send(fail_silently=True)
+                        except Exception as e:
+                            print(f"[assign_new_approvals] Failed to send email to {approver.user.email}: {e}")
+    

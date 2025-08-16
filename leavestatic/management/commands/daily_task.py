@@ -56,3 +56,19 @@ class Command(BaseCommand):
                 enabled=True,
             )
             self.stdout.write(self.style.SUCCESS(f'Task "{task_name}" created'))
+
+
+        # Schedule task to check for active leaverequests that do not have approval objects ever 12 hours
+        schedule, _ = CrontabSchedule.objects.get_or_create(
+            minute='0', hour='*/12', day_of_week='*', day_of_month='*', month_of_year='*',
+        )
+        task_name = 'check_for_active_leaverequests_without_approval'
+        if not PeriodicTask.objects.filter(name=task_name).exists():
+            PeriodicTask.objects.create(
+                crontab=schedule,
+                name=task_name,
+                task='leavestatic.tasks.assign_new_approvals',
+                args=json.dumps([]),
+                enabled=True,
+            )
+            self.stdout.write(self.style.SUCCESS(f'Task "{task_name}" created'))

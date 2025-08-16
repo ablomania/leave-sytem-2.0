@@ -11,14 +11,14 @@
     <div class="profile-view">
         <div class="profile-header">
             <div class="profile-header-title">
-                <a href="{% url 'dashboard' slug %}" class="back-link">
+                <a href="{% url 'dashboard' %}" class="back-link">
                     <img src="{% static 'images/back.png' %}" width="25" height="25" alt="Back" class="back-image">
                 </a>
                 <h1>Profile</h1>
             </div>
             <div class="profile-buttons">
                 <button type="button" class="edit-btn" onclick="document.querySelector('.profile-change').scrollIntoView({ behavior: 'smooth' })">Edit Profile</button>
-                <a href="" class="reset-password-btn button-secondary">Reset Password</a>
+                <!-- <a href="" class="reset-password-btn button-secondary">Reset Password</a> -->
             </div>
         </div>
 

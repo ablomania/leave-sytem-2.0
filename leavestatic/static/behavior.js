@@ -439,8 +439,6 @@ window.onload = function dd() {
 } 
 
 const loadLeave = (someValue ,leaveTypes, staffData) => {
-    console.log("CC", leaveTypes)
-    console.log("CC1", staffData)
     let leaveType = leaveTypes[someValue]
     let staffLeaveData = staffData[someValue]
     document.getElementById("leave_type").value = someValue;
@@ -457,16 +455,34 @@ const loadLeave = (someValue ,leaveTypes, staffData) => {
     document.querySelectorAll(".optional").forEach((e) => {
         e.style.display = "none";
     })
+    document.querySelectorAll(".optionalInput").forEach((e) => {
+        e.disabled = true;
+    })
+
     if(leaveType.i_date == "True") {
-        document.getElementById("m-due-date").style.display = "flex";
-    } else if (leaveType.i_note == "True") {
-        document.getElementById("med-note-container").style.display = "flex";
-    } else if (leaveType.i_institution == "True") {
-        document.getElementById("institution-container").style.display = "flex";
-    } else if (leaveType.i_course == "True") {
-        document.getElementById("course-container").style.display = "flex";
-    } else if (leaveType.i_letter == "True") {
-        document.getElementById("letter-container").style.display = "flex";
+        let obj = document.getElementById("m-due-date")
+        obj.style.display = "flex";
+        document.getElementById("due-date").disabled = false;
+    }
+    if (leaveType.i_note == "True") {
+        let obj = document.getElementById("med-note-container");
+        obj.style.display = "flex";
+        document.getElementById("med-note").disabled = false;
+    }
+    if (leaveType.i_institution == "True") {
+        let obj = document.getElementById("institution-container")
+        obj.style.display = "flex";
+        document.getElementById("institution").disabled = false;
+    }
+    if (leaveType.i_course == "True") {
+        let obj = document.getElementById("course-container");
+        obj.style.display = "flex";
+        document.getElementById("course").disabled = false;
+    }
+    if (leaveType.i_letter == "True") {
+        let obj = document.getElementById("letter-container");
+        obj.style.display = "flex";
+        document.getElementById("letter").disabled = false;
     }
 
     const daysSelect = document.getElementById('days_requested');

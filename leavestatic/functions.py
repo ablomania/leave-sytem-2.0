@@ -54,6 +54,17 @@ def get_user_from_session_cookie(request):
     if loginSession:
         return session_slug
     return None
+
+
+def get_user_id_from_login_session(session_slug):
+    loginSession_obj = LoginSession.objects.filter(slug=session_slug).first()
+    if loginSession_obj:
+        return loginSession_obj.user_id
+    return None
     
+
+def check_for_approver(user_id):
+    approver = Approver.objects.filter(staff_id=user_id, is_active=True)
+    return True if approver.count() > 0 else False
     
     

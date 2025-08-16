@@ -99,9 +99,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 <span class="status-label">{{ approval.get_status_display }}</span>
               </header>
               <div class="card-body">
-                <p><strong>Date:</strong> {{ approval.request.application_date }}</p>
+                <p><strong>Date Applied:</strong> {{ approval.request.application_date }}</p>
                 <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
                 <p><strong>Days Requested:</strong> {{ approval.request.days_requested }}</p>
+                <p><strong>Start Date:</strong> {{approval.request.start_date}}</p>
+                <p><strong>End Date:</strong> {{approval.request.end_date}}</p>
+                <p><strong>Return Date:</strong> {{approval.request.return_date}}</p>
+                {% if approval.request.institution %}
+                <p><strong>Institution:</strong> {{approval.request.institution}}</p>
+                {% endif %}
+                {% if approval.request.course %}
+                <p><strong>Course:</strong> {{approval.request.course}}</p>
+                {% endif %}
+                {% if approval.request.letter or approval.request.med_note %}<p><strong>Document:</strong></p>{% endif %}
+                {% if approval.request.med_note %}
+                <a style="text-decoration: underline; color: #0074d9;" href="{{ approval.request.med_note.url }}" target="_blank">
+                  Medical note
+                </a>
+                {% endif %}<br />
+                {% if approval.request.letter %}
+                <a style="text-decoration: underline; color: #0074d9;" href="{{ approval.request.letter.url }}" target="_blank">
+                  Admission letter
+                </a>
+                {% endif %}
               </div>
               <footer class="card-actions">
                 <form action="" method="post" class="inline-form">

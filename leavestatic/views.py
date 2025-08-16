@@ -92,7 +92,7 @@ def login_user(request, next_page=None):
                     redirect_path = reverse('dashboard')
 
                 response = redirect(redirect_path)
-                response = set_session_cookie(response)
+                response = set_session_cookie(response, slug)
                 return response
             else:
                 print("Authentication failed for user:", email)
@@ -102,18 +102,6 @@ def login_user(request, next_page=None):
     template = loader.get_template('login.html')
     response = HttpResponse(template.render(context, request))
     return response
-
-
-# for staff in Staff.objects.filter(slug__isnull=True):
-#     base_slug = slugify(f"{staff.first_name}-{staff.phone_number}")
-#     slug = base_slug
-#     counter = 1
-#     while Staff.objects.filter(slug=slug).exists():
-#         slug = f"{base_slug}-{counter}"
-#         counter += 1
-#     staff.slug = slug
-#     staff.save()
-#     print()
 
 
 def trigger_leave_update(request):
@@ -183,13 +171,13 @@ def trigger_leave_update(request):
 
 
 def dashboard(request):
-    user_slug = get_user_from_session_cookie(request)
+    session_slug = get_user_from_session_cookie(request)
 
-    if not user_slug:
-        return redirect(reverse("login", args=["leave_list"]))
+    if not session_slug:
+        return redirect(reverse("login", args=["dashboard"]))
 
-    user = Staff.objects.get(slug=user_slug)
-    is_approver = True if Approver.objects.filter(staff_id=user.id, is_active=True).count() > 0 else False
+    user = Staff.objects.get(id=get_user_id_from_login_session(session_slug))
+    is_approver = check_for_approver(user.id)
     
     self_ack = Ack.objects.filter(staff_id=user.id, type=Ack.Type.SELF, status=Ack.Status.Pending).first()
     r_ack = Ack.objects.filter(staff_id=user.id, type=Ack.Type.RELIEF, status=Ack.Status.Pending).first()
@@ -199,7 +187,6 @@ def dashboard(request):
 
     context = {
         "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
-        'slug': slug,
         'is_approver': is_approver, "self_ack": self_ack,
         "r_ack": r_ack, "leaves_count": leaves_count,
         "on_leave": on_leave, "resume_obj": resume_obj,
@@ -207,7 +194,7 @@ def dashboard(request):
     }
 
     response = render(request, "dashboard.html", context)
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
 
     return response
 
@@ -271,8 +258,8 @@ def password_reset(request):
 # --- STAFF ADD/EDIT ---
 
 def staff_add(request, group_id=None):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_staff"]))
     
     message = request.COOKIES.get('message', None)
@@ -290,12 +277,12 @@ def staff_add(request, group_id=None):
     }
     template = loader.get_template("setup/staff/staff_add.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 def staff_add_group(request, group_id):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_staff"]))
     
     message = request.COOKIES.get('message', None)
@@ -313,13 +300,13 @@ def staff_add_group(request, group_id):
     }
     template = loader.get_template("setup/staff/staff_add_group.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 def staff_edit(request, staff_id):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_staff"]))
     
     message = request.COOKIES.get('message', None)
@@ -339,14 +326,14 @@ def staff_edit(request, staff_id):
     }
     template = loader.get_template("setup/staff/staff_edit.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 # --- APPROVER ADD/EDIT ---
 
 def approver_add(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_approvers"]))
     
     message = request.COOKIES.get('message', None)
@@ -364,14 +351,14 @@ def approver_add(request):
     }
     template = loader.get_template("setup/approvers/setup_approver_add.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 
 def approver_edit(request, staff_id):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_approvers"]))
     
     message = request.COOKIES.get('message', None)
@@ -392,14 +379,14 @@ def approver_edit(request, staff_id):
     }
     template = loader.get_template("setup/approvers/setup_approver_edit.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 # --- CATEGORY (SENIORITY) ADD/EDIT ---
 
 def category_add(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_categories"]))
     
     message = request.COOKIES.get('message', None)
@@ -409,14 +396,14 @@ def category_add(request):
     }
     template = loader.get_template("setup/categories/setup_categories_add.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 
 def category_edit(request, cat_id):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_categories"]))
     
     message = request.COOKIES.get('message', None)
@@ -428,14 +415,14 @@ def category_edit(request, cat_id):
     }
     template = loader.get_template("setup/categories/setup_categories_edit.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 # --- GENDER ADD/EDIT ---
 
 def gender_add(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_genders"]))
     
     message = request.COOKIES.get('message', None)
@@ -445,14 +432,14 @@ def gender_add(request):
     }
     template = loader.get_template("setup/gender/gender_add.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 
 def gender_edit(request, gender_id):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_genders"]))
     
     message = request.COOKIES.get('message', None)
@@ -464,14 +451,14 @@ def gender_edit(request, gender_id):
     }
     template = loader.get_template("setup/gender/gender_edit.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 # --- HOLIDAY ADD/EDIT ---
 
 def holiday_add(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_holidays"]))
     message = request.COOKIES.get('message', None)
     context = {
@@ -480,14 +467,14 @@ def holiday_add(request):
     }
     template = loader.get_template("setup/holidays/holidays_add.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 
 def holiday_edit(request, hol_id):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_holidays"]))
     
     message = request.COOKIES.get('message', None)
@@ -499,14 +486,14 @@ def holiday_edit(request, hol_id):
     }
     template = loader.get_template("setup/holidays/holidays_edit.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 # --- GROUP ADD/EDIT ---
 
 def group_add(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_groups"]))
     
     message = request.COOKIES.get('message', None)
@@ -516,14 +503,14 @@ def group_add(request):
     }
     template = loader.get_template("setup/groups/group_add.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 
 def group_edit(request, group_id):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_groups"]))
     
     message = request.COOKIES.get('message', None)
@@ -535,14 +522,14 @@ def group_edit(request, group_id):
     }
     template = loader.get_template("setup/groups/group_edit.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 # --- LEVEL ADD/EDIT ---
 
 def level_add(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_levels"]))
     
     message = request.COOKIES.get('message', None)
@@ -552,14 +539,14 @@ def level_add(request):
     }
     template = loader.get_template("setup/levels/level_add.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 
 def level_edit(request, level_id):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_levels"]))
     
     message = request.COOKIES.get('message', None)
@@ -571,14 +558,14 @@ def level_edit(request, level_id):
     }
     template = loader.get_template("setup/levels/level_edit.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 # --- LEAVE TYPE ADD/EDIT ---
 
 def leavetype_add(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_leave_types"]))
     
     message = request.COOKIES.get('message', None)
@@ -590,14 +577,14 @@ def leavetype_add(request):
     }
     template = loader.get_template("setup/leave/leavetype_add.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 
 def leavetype_edit(request, leave_id):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_leave_types"]))
     
     message = request.COOKIES.get('message', None)
@@ -611,13 +598,13 @@ def leavetype_edit(request, leave_id):
     }
     template = loader.get_template("setup/leave/leavetype_edit.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 def setup_groups(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_groups"]))
 
     message = request.COOKIES.get('message', None)
@@ -641,41 +628,14 @@ def setup_groups(request):
     }
     template = loader.get_template("setup/groups/setup_groups.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
-# def setup_staff(request):
-#     user_slug = get_user_from_session_cookie(request)
-#     if not user_slug:
-#         return redirect(reverse("login", args=["setup_staff"]))
-
-#     all_staff = Staff.objects.filter(is_superuser=False).order_by("last_name", "first_name")
-#     active_groups = Group.objects.filter(is_active=True).order_by("name")
-#     all_groups = Group.objects.order_by('name')
-#     seniority = Seniority.objects.filter(is_active=True).order_by("name")
-#     all_genders = Gender.objects.all().order_by("name")
-#     groups_list = {group: Staff.objects.filter(group=group) for group in active_groups}
-
-#     context = {
-#         "all_staff": all_staff,
-#         "active_groups": active_groups,
-#         "all_groups": all_groups,
-#         "seniority": seniority,
-#         "all_genders": all_genders,
-#         "groups_list": groups_list,
-#         
-#         "index": True,
-#     }
-#     template = loader.get_template("setup/staff/setup_staff.html")
-#     response = HttpResponse(template.render(context, request))
-#     response = set_session_cookie(response, user_slug)
-#     return response
-
 
 def setup_staff(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_staff"]))
     
     message = request.COOKIES.get('message', None)
@@ -700,14 +660,14 @@ def setup_staff(request):
     }
     template = loader.get_template("setup/staff/setup_staff.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 
 def setup_approvers(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_approvers"]))
 
     message = request.COOKIES.get('message', None)
@@ -733,13 +693,13 @@ def setup_approvers(request):
     }
     template = loader.get_template("setup/approvers/setup_approvers.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 def setup_leave_types(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_leave_types"]))
 
     message = request.COOKIES.get('message', None)
@@ -759,13 +719,13 @@ def setup_leave_types(request):
     }
     template = loader.get_template("setup/leave/setup_leave.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 def setup_holidays(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_holidays"]))
 
     message = request.COOKIES.get('message', None)
@@ -783,13 +743,13 @@ def setup_holidays(request):
     }
     template = loader.get_template("setup/holidays/setup_holidays.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 def setup_genders(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_genders"]))
 
     message = request.COOKIES.get('message', None)
@@ -802,13 +762,13 @@ def setup_genders(request):
     }
     template = loader.get_template("setup/gender/setup_gender.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 def setup_categories(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_categories"]))
 
     message = request.COOKIES.get('message', None)
@@ -826,13 +786,13 @@ def setup_categories(request):
     }
     template = loader.get_template("setup/categories/setup_categories.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 def setup_levels(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_levels"]))
 
     message = request.COOKIES.get('message', None)
@@ -848,7 +808,7 @@ def setup_levels(request):
     }
     template = loader.get_template("setup/levels/setup_levels.html")
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
@@ -1035,8 +995,8 @@ def submit_inputs(request):
 
 def group_detail(request, group_id):
     # Maintain session consistency (mirrors setup view behavior)
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup_groups"]))
 
     message = request.COOKIES.get('message', None)
@@ -1075,14 +1035,14 @@ def group_detail(request, group_id):
         'groups': groups,
     }
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 
 def setup(request):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["setup"]))
     
     template = loader.get_template("setup.html")
@@ -1139,7 +1099,7 @@ def setup(request):
         'index': True, "general": True,
     }
     response = HttpResponse(template.render(context, request))
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
@@ -1157,21 +1117,16 @@ def sys_admin(request):
 def leave_request(request):
     """Handles leave request submission with session validation and message feedback."""
 
-    user_slug = get_user_from_session_cookie(request)
+    session_slug = get_user_from_session_cookie(request)
 
-    if not user_slug:
+    if not session_slug:
         return redirect(reverse("login", args=["leave_request"]))
 
-    # Update LoginSession context
-    LoginSession.objects.filter(slug=user_slug).update(
-        prev_page="leave_request",
-        button="Request For Another Leave",
-        next_page=f"leave_list",
-        next_btn="Back to Dashboard",
-        message="Leave Request successful. Pending approval. For more information, please contact your administrator."
-    )
-
-    user = Staff.objects.get(slug=user_slug)
+    user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
+    if not user:
+        return redirect(reverse("login", args=["staff_on_leave"]))
+    
+    is_approver = check_for_approver(user.id)
     allowed_leave_types = LeaveType.objects.filter(seniority_id=user.seniority_id, is_active=True)
     staff_leave_data = {
         ld.leave_type_id: {
@@ -1202,7 +1157,7 @@ def leave_request(request):
         is_active=True, group_id=user.group.id
     ).exclude(id=user.id).order_by("first_name", "last_name")
 
-    form_status_message = ""
+    message = ""
 
     if request.method == "POST":
         form_data = request.POST
@@ -1210,9 +1165,9 @@ def leave_request(request):
 
         # You can refine how result is structured if needed
         if result:
-            form_status_message = "✅ Leave request submitted successfully."
+            message = "Leave request submitted successfully."
         else:
-            form_status_message = result.get("error", "❌ There was an issue submitting your request.")
+            message = result.get("error", "There was an issue submitting your request.")
 
     context = {
         "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
@@ -1223,14 +1178,15 @@ def leave_request(request):
         "allowed_leave_types_dict": allowed_leave_type_dict,
         "staff_leave_data": staff_leave_data,
         "officers": relieving_officers,
-        "form_status_message": form_status_message,
-        
+        "is_approver": is_approver,
         'loc': 'request',
+        'message': message,
         "holiday_json": json.dumps(list(holiday_data.values()))  # just the date list
     }
 
     response = render(request, "leave_form.html", context)
-    response = set_session_cookie(response, user_slug)
+    response.set_cookie('message', message, max_age=1, secure=False, httponly=True)
+    response = set_session_cookie(response, session_slug)
 
     return response
 
@@ -1238,9 +1194,12 @@ def leave_request(request):
 
 def confirm_leave_view(request, id):
     # Validate session
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=[id]))
+    
+    user = Staff.objects.get(id=get_user_id_from_login_session(session_slug))
+    is_approver = check_for_approver(user.id)
 
     # Fetch LeaveRequest and ensure applicant matches session
     ack_obj = get_object_or_404(
@@ -1250,22 +1209,6 @@ def confirm_leave_view(request, id):
         is_active=True
     )
     leave_request = ack_obj.request
-
-
-
-    if user_slug != leave_request.applicant.slug:
-        return redirect(reverse("login", args=[id]))
-
-    # Update session and LoginSession (optional)
-    session_updates = {
-        "prev_page": "not",
-        "message": "Please confirm your approval of the leave assignment.",
-        "button": "not",
-        "next_page": "leave_list",
-        "next_btn": "Back to Dashboard",
-    }
-    request.session.update(session_updates)
-    LoginSession.objects.filter(slug=user_slug).update(**session_updates)
 
     # Handle submission
     if request.method == "POST":
@@ -1297,33 +1240,37 @@ def confirm_leave_view(request, id):
                 }
             )
 
-        response = redirect(reverse("dashboard", args=[slug]))
-        response = set_session_cookie(response, user_slug)
+        response = redirect(reverse("dashboard"))
+        response = set_session_cookie(response, session_slug)
         return response
 
     # Render confirmation form
     context = {
         "leave_request": leave_request,
-        
+        "is_approver": is_approver,
         "date": timezone.now().date(),
         "id": id
     }
     response = render(request, "self_ack.html", context)
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
 
 def cancelLeave(request, id):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["cancel_leave"]))
 
-    staff = get_object_or_404(Staff=user_slug)
+    user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
+    if not user:
+        return redirect(reverse("login", args=["staff_on_leave"]))
+    
+    is_approver = check_for_approver(user.id)
     leave = get_object_or_404(
         Leave.objects.select_related("request", "request__type", "request__applicant"),
         id=id,
-        request__applicant=staff,
+        request__applicant=user,
         is_active=True,
         status=Leave.LeaveStatus.On_Leave
     )
@@ -1331,25 +1278,29 @@ def cancelLeave(request, id):
 
     if request.method == "POST":
         reason = request.POST.get("reason", "").strip()
-        handle_leave_cancellation(leave, staff, reason)
+        handle_leave_cancellation(leave, user, reason)
         messages.success(request, "Your leave cancellation has been logged and your balance updated.")
-        return redirect(reverse("dashboard", args=[slug]))
+        return redirect(reverse("dashboard"))
 
     context = {
         "leave_request": leave.request,
         "leave": leave,
-        
+        "is_approver": is_approver
     }
 
     return render(request, "cancel_leave.html", context)
 
 
 def leaveComplete(request, id):
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["leave_complete"]))
 
-    user = get_object_or_404(Staff=user_slug)
+    user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
+    if not user:
+        return redirect(reverse("login", args=["staff_on_leave"]))
+    
+    is_approver = check_for_approver(user.id)
     leave_request = get_object_or_404(
         LeaveRequest.objects.select_related("applicant"),
         id=id,
@@ -1372,11 +1323,11 @@ def leaveComplete(request, id):
         )
 
         messages.success(request, "Resumption form submitted successfully.")
-        return redirect(reverse("dashboard", args=[slug]))
+        return redirect(reverse("dashboard"))
 
     context = {
         "leave_request": leave_request,
-        
+        "is_approver": is_approver,
         "resumption_date": leave_request.return_date
     }
 
@@ -1386,40 +1337,23 @@ def leaveComplete(request, id):
 
 def relieve_ack(request, id):
     # 1. Validate session
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
-        return redirect(reverse("login", args=[id]))
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
+        return redirect(reverse("login", args=["dashboard"]))
 
     # 2. Fetch Ack and related staff in one query
     ack = get_object_or_404(Ack.objects.select_related("staff"), id=id)
     user = ack.staff
 
-    # 3. Ensure the session user matches the Ack's staff
-    if user_slug != user.slug:
-        return redirect(reverse("login", args=[id]))
-
-    # 4. Determine next page based on user type
-    next_page = "leave_list" if getattr(user, "type", "STAFF") == "STAFF" else "admin_dashboard"
-
-    # 5. Update session and LoginSession
-    session_updates = {
-        "prev_page": "not",
-        "message": "Your response has been received and will be reviewed. For more information, please contact your administrator.",
-        "button": "not",
-        "next_page": next_page,
-        "next_btn": "Back to Dashboard",
-    }
-    request.session.update(session_updates)
-
-    LoginSession.objects.filter(slug=user_slug).update(**session_updates)
-
+    is_approver = check_for_approver(user.id)
+   
     # 6. Handle POST submission
     if request.method == "POST":
         form_data = request.POST
         if form_data['form_meta'] == "approve": approve_ack(form_data, ack.request)
         elif form_data['form_meta'] == "deny": deny_ack(form_data, request)
-        response = HttpResponseRedirect(reverse("dashboard", args=[slug]))
-        response = set_session_cookie(response, user_slug)
+        response = HttpResponseRedirect(reverse("dashboard"))
+        response = set_session_cookie(response, session_slug)
         return response
 
     # 7. Render template
@@ -1427,10 +1361,10 @@ def relieve_ack(request, id):
         "date": timezone.now().date(),
         "ack": ack,
         "id": id,
-        
+        "is_approver": is_approver
     }
     response = render(request, "relieve_ack.html", context)
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
@@ -1438,11 +1372,15 @@ def relieve_ack(request, id):
 
 def leave_history(request):
     """Displays a user's leave history with approval and acknowledgment progress."""
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["leave_history"]))
 
-    user = get_object_or_404(Staff=user_slug)
+    user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
+    if not user:
+        return redirect(reverse("login", args=["staff_on_leave"]))
+    
+    is_approver = check_for_approver(user.id)
 
     # Prefetch related approvals and acknowledgments
     leave_requests = (
@@ -1470,7 +1408,7 @@ def leave_history(request):
     try:
         year_page = paginator.page(page_number)
     except (PageNotAnInteger, EmptyPage):
-        return redirect(f"{reverse('leave_history', args=[slug])}?page=1")
+        return redirect(f"{reverse('leave_history')}?page=1")
 
     # Safely extract the current year
     current_year = year_page.object_list[0] if year_page.object_list else None
@@ -1487,13 +1425,13 @@ def leave_history(request):
     context = {
         "grouped_leave": grouped_leave,
         "terminated_leaves": terminated_leaves,
-        
+        "is_approver": is_approver,
         "year_page": year_page,
         "loc": "history"
     }
 
     response = render(request, "leave_history.html", context)
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
@@ -1502,18 +1440,17 @@ def leave_history(request):
 def user_logout(request):
     """Handles secure user logout with session validation."""
 
-    user_slug = get_user_from_session_cookie(request)
+    session_slug = get_user_from_session_cookie(request)
 
-    if not user_slug:
+    if not session_slug:
         return redirect(reverse("login"))
 
     logout(request)
-    LoginSession.objects.filter(slug=user_slug).update(
-                status='INACTIVE',
-                date_to_expire=timezone.now(),
-                last_activity=timezone.now()
-            )
-    response = HttpResponseRedirect(reverse("login", args=["0",]))
+    LoginSession.objects.filter(slug=session_slug).update(
+        date_to_expire=timezone.now(),
+        last_activity=timezone.now()
+    )
+    response = HttpResponseRedirect(reverse("login", args=["0"]))
     response.delete_cookie("session_id")
 
     return response
@@ -1526,11 +1463,15 @@ def user_logout(request):
 def users_on_leave(request):
     """Lists all users currently on leave, grouped by their department (group)."""
 
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["staff_on_leave"]))
 
-    user = get_object_or_404(Staff=user_slug)
+    user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
+    if not user:
+        return redirect(reverse("login", args=["staff_on_leave"]))
+    
+    is_approver = check_for_approver(user.id)
     today = timezone.now().date()
 
     # Fetch all active leave objects with related request and applicant
@@ -1550,13 +1491,13 @@ def users_on_leave(request):
         dept_group[group].append(leave)
 
     context = {
-        
+        "is_approver": is_approver,
         "dept_group": dict(dept_group),
         'loc': 'on_leave'
     }
 
     response = render(request, "on_leave.html", context)
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
@@ -1566,37 +1507,20 @@ def users_on_leave(request):
 def profile(request):
     """Displays and manages a staff profile with leave stats and approver status."""
 
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["profile"]))
 
-    user = get_object_or_404(Staff=user_slug)
-
+    user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
+    if not user:
+        return redirect(reverse("login", args=["profile"]))
+    
+    is_approver = check_for_approver(user.id)
     # Fetch all leave details for this staff
     leave_details = StaffLeaveDetail.objects.filter(staff=user, is_active=True).select_related("leave_type")
 
     # Check if user is an approver
     is_approver = Approver.objects.filter(staff=user, is_active=True).exists()
-
-    # Update session metadata
-    request.session.update({
-        "prev_page": "profile",
-        "message": "Profile updated successfully",
-        "button": "Back to Profile",
-        "next_page": "leaveapplications" if user.is_staff else "admin_dashboard",
-        "next_btn": "Back to Dashboard",
-    })
-
-    # Update login session
-    LoginSession.objects.filter(slug=user_slug).update(
-        prev_page="profile",
-        button="Back to Profile",
-        next_page="leave_list" if user.is_staff else "admin_dashboard",
-        next_btn="Back to Dashboard",
-        message="Profile updated successfully",
-        last_activity=timezone.now(),
-        date_to_expire=timezone.now() + timezone.timedelta(days=1),
-    )
 
     # Handle profile update
     if request.method == "POST":
@@ -1612,12 +1536,12 @@ def profile(request):
         "user": user,
         "leave_details": leave_details,
         "is_approver": is_approver,
-        
+        "is_approver": is_approver,
         'loc': 'profile'
     }
 
     response = render(request, "profile.html", context)
-    response = set_session_cookie(response, user_slug)
+    response = set_session_cookie(response, session_slug)
     return response
 
 
@@ -1628,17 +1552,18 @@ def profile(request):
 
 def leave_requests(request):
     # 1. Session check
-    user_slug = get_user_from_session_cookie(request)
-    if not user_slug:
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
         return redirect(reverse("login", args=["leave_requests"]))
 
     # 2. Load user
     try:
-        user = Staff.objects.get(slug=user_slug)
+        user = Staff.objects.get(id=get_user_id_from_login_session(session_slug))
     except Staff.DoesNotExist:
         return redirect(reverse("login", args=["leave_requests"]))
 
     # 3. Ensure approver
+    is_approver = check_for_approver(user.id)
     approvers = (
         Approver.objects
         .filter(staff=user, is_active=True)
@@ -1671,10 +1596,10 @@ def leave_requests(request):
         form_data = request.POST
         if form_data['form_meta'] == "approve": approve_leave(form_data)
         elif form_data["form_meta"] == "deny": deny_leave(form_data)
-        return redirect(reverse("leave_requests", args=[slug,]))
+        return redirect(reverse("leave_requests"))
     # 6. Render
     context = {
-        
+        "is_approver": is_approver,
         "approval_groups": approvers,
         "pending_approvals": pending_approvals,
         "approved_approvals": approved_approvals,
@@ -1684,11 +1609,5 @@ def leave_requests(request):
     response = render(request, "leave_requests.html", context)
 
     # 7. Mirror session key into a cookie
-    response.set_cookie(
-        "session_id",
-        request.session.session_key,
-        max_age=86400,
-        secure=True,
-        httponly=True
-    )
+    response = set_session_cookie(response, session_slug)
     return response

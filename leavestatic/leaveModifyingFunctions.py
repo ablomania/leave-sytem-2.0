@@ -160,10 +160,10 @@ def update_leave_progress():
                     f"Dear {staff.first_name},\n\n"
                     f"As part of the scheduled {leave_type.reset_period.lower()} leave quota reset, "
                     f"your available leave balance for '{leave_type.name}' has been adjusted.\n\n"
-                    f"🗓️ Reset Date: {today}\n"
-                    f"🔢 New Quota: {new_entitlement} day(s)\n"
-                    f"🕒 Days Used So Far: {used_days} day(s)\n"
-                    f"✅ Updated Balance: {detail.days_remaining} day(s) remaining\n\n"
+                    f"Reset Date: {today}\n"
+                    f"New Quota: {new_entitlement} day(s)\n"
+                    f"Days Used So Far: {used_days} day(s)\n"
+                    f"Updated Balance: {detail.days_remaining} day(s) remaining\n\n"
                     f"This reset applies to all staff equally and ensures alignment with organizational policy. "
                     f"For questions, contact HR.\n\n"
                     f"Regards,\nGCPS Leave Management System"
@@ -181,7 +181,7 @@ def update_leave_progress():
                 cc=mail.get("cc", [])
             ).send(fail_silently=True)
         except Exception as e:
-            print(f"❗ Email failed: {mail['subject']} → {mail['to']}\nError: {e}")
+            print(f"Email failed: {mail['subject']} → {mail['to']}\nError: {e}")
 
 
 def restore_original_approvers():
