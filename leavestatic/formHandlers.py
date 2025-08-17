@@ -95,6 +95,7 @@ def handle_leave_cancellation(leave, staff, reason):
 
     # 🎯 Send email asynchronously
     send_leave_email.delay(subject, message, [staff.email], cc_emails)
+    print("Leave cancellation processed and notifications sent.")
 
 
 
@@ -121,6 +122,7 @@ def delegate_approver_role(applicant, relieving_staff, leave):
         leave_obj=leave,
         is_active=True
     )
+    print(f"Delegated approver role from {applicant.get_full_name()} to {relieving_staff.get_full_name()} for leave {leave.id}.")
 
 
 
@@ -203,6 +205,7 @@ def createLeave(user, leave_request, ack_id):
             cc_emails.append(relieving_ack.staff.email)
 
         send_leave_email.delay(subject, message, [user.email], cc_emails)
+        print("Leave created and applicant notified.")
 
 
 
@@ -212,7 +215,7 @@ def update_ack_status(form_data, status):
     try:
         ack_id = int(form_data.get("ack_id"))
         updated = Ack.objects.filter(id=ack_id).update(status=status)
-        return updated > 0  # True if update succeeded
+        return True  # True if update succeeded
     except (ValueError, TypeError):
         return False  # Invalid ack_id
 
@@ -220,33 +223,84 @@ def update_ack_status(form_data, status):
 
 def approve_ack(form_data, request_obj):
     updated = update_ack_status(form_data, Ack.Status.Approved)
+    ack_id = int(form_data.get("ack_id"))
     if updated:
         finalize_leave_approval(request_obj)
         staff = request_obj.applicant
-
-        subject = f'Confirmation of Approved Leave Assignment To: {staff.get_full_name()}, {staff.other_names}'
+        ack_obj = Ack.objects.filter(id=ack_id).first()
+        subject = f'Relieving Officer Approval — {request_obj.type.name.split()[0]} Leave'
         message = (
-            f"Date: {timezone.now().strftime('%A, %d %B %Y')} \n\n"
-            f"Dear {staff.first_name},\n\n"
-            f"We are pleased to inform you that your leave application for {request_obj.type.name.split()[0]} Leave — scheduled from \n\t"
-            f"{request_obj.start_date} to {request_obj.end_date}\n — has been officially approved following review by all relevant parties.\n\n"
-            f"Kindly acknowledge your acceptance of this approved leave and confirm your availability for the specified period. "
-            f"If, for any reason, you are unable to proceed with the leave as approved, please notify the administration immediately.\n\n"
-            f"**Additional Notes:**\n"
-            f"• Ensure all work handovers and transitional arrangements are completed prior to departure.\n"
-            f"• Relieving officers assigned will be notified accordingly.\n"
-            f"• For any updates or further assistance, feel free to reach out to the HR department.\n\n"
-            f"Sincerely,\nGCPS Leave System"
+            f"Dear { staff.first_name },"
+            f"\n\nYour assigned relieving officer, { ack_obj.staff.get_full_name }, has reviewed your leave request for { request_obj.type.name.split()[0] } Leave and has officially approved to act in your stead during your absence."
+            f"\nLeave Period: { request_obj.start_date } to { request_obj.end_date }."
+            f"\n\nThis approval confirms that your responsibilities will be temporarily delegated and continuity of operations will be maintained."
+            f"Please ensure all necessary handover notes and access permissions are in place before your departure."
+            f"\n\nBest wishes during your leave."
+            f"\nSincerely, "
+            f"\nGCPS Leave System"
         )
-
         send_leave_email.delay(subject, message, [staff.email])
-
     return updated
 
 
 
-def deny_ack(form_data, request):
-    return update_ack_status(form_data, Ack.Status.Denied)
+def deny_ack(form_data, request_obj):
+    updated = update_ack_status(form_data, Ack.Status.Denied)
+    ack_id = int(form_data.get("ack_id"))
+    if updated:
+        finalize_leave_approval(request_obj)
+        staff = request_obj.applicant
+        ack_obj = Ack.objects.filter(id=ack_id).first()
+
+        trigger = {
+            "name": f"{ ack_obj.staff.first_name } {ack_obj.staff.last_name} {ack_obj.staff.other_names}",
+            "role": "Relieving Officer",
+            "date": timezone.now(),
+            "reason": ack_obj.reason
+        }
+        cancel_leave_request(request_obj, trigger)
+
+        subject = f'Relieving Officer Disapproval — {request_obj.type.name.split()[0]} Leave'
+        message = (
+            f"Dear { staff.first_name },"
+            f"\n\nYour assigned relieving officer, { ack_obj.staff.get_full_name }, has reviewed your leave request for {request_obj.type.name.split()[0]} Leave and has declined to act in your stead during the requested period."
+            f"\n\nLeave Period: { request_obj.start_date } to { request_obj.end_date }" 
+            f"\nReason for Disapproval: { ack_obj.reason if ack_obj.reason != "" else "No reason"}."
+            f"\n\nThis decision may affect the approval process of your leave. Kindly consult your supervisor or HR to discuss alternative arrangements or reassignment of relieving duties."
+            f"We understand this may be inconvenient and appreciate your cooperation in resolving it promptly."
+            f"\n\nSincerely," 
+            f"\nGCPS Leave System"
+        )
+        send_leave_email.delay(subject, message, [staff.email])
+        return updated
+
+
+def cancel_leave_request(request_obj, triggered_by):
+    """
+    Cancels a leave request based on the response of approvers, relieving officer
+    """
+    request_obj.status = LeaveRequest.Status.DENIED
+    request_obj.save()
+    staff = request_obj.applicant
+    subject = f'Leave Request Denied {request_obj.type.name.split()[0]} Leave, { request_obj.start_date } to { request_obj.end_date }'
+    message = (
+        f"Dear { staff.first_name },"
+        f"\n\n**Details of the decision:**"
+        f"\n- **Leave Type**: {request_obj.type.name.split()[0]} Leave" 
+        f"\n- **Requested Dates**: {request_obj.start_date} to {request_obj.end_date}."
+        f"\n- **Decision By**: { triggered_by["name"] }."
+        f"\n- **Role**: { triggered_by["role"] }."
+        f"\n- **Date of Decision**: { triggered_by['date']}" 
+        f"\n\n- **Reason Provided**: { triggered_by['reason'] if triggered_by['reason'] != "" else "no reason" }"
+        f"\n\nYou may revise and resubmit your request if needed, or reach out to your supervisor for further clarification."
+        f"\nThank you for using the GCPS Leave System."
+        f"\n\nWarm regards,"
+        f"\nGCPS Leave System"
+    )
+    send_leave_email.delay(subject, message, [staff.email])
+    print(f"Leave request {request_obj.id} cancelled by {triggered_by['name']} ({triggered_by['role']}) on {triggered_by['date']}. Reason: {triggered_by['reason']}")
+   
+    
 
 
 def finalize_leave_approval(request_obj):
@@ -255,20 +309,26 @@ def finalize_leave_approval(request_obj):
     Sets LeaveRequest status to APPROVED and triggers any downstream logic.
     """
     # Ensure all approvals are approved
-    if Approval.objects.filter(request=request_obj, status__in=["Pending", "Denied"]).exists():
+    if (Approval.objects.filter(request=request_obj, status=Approval.ApprovalStatus.Pending) | Approval.objects.filter(request=request_obj, status=Approval.ApprovalStatus.Denied)).exists():
+        print("Leave request cannot be finalized: pending or denied approvals exist.")
         return False
 
     # Ensure all acks are approved
-    if Ack.objects.filter(request=request_obj, status__in=["Pending", "Denied"]).exists():
+    if (Ack.objects.filter(request=request_obj, type=Ack.Type.RELIEF, status=Ack.Status.Pending) | Ack.objects.filter(request=request_obj, type=Ack.Type.RELIEF, status=Ack.Status.Denied)).exists():
+        print("Leave request not finalized, exit 2")
         return False
 
     # Update request status
-    request_obj.status = LeaveRequest.Status.APPROVED
+    request_obj.status = LeaveRequest.Status.READY
     request_obj.save(update_fields=["status"])
+
+    ack_obj = Ack.objects.filter(request=request_obj, type=Ack.Type.SELF).first()
+    ack_obj.status = Ack.Status.Ready
+    ack_obj.save()
 
     # Optionally notify applicant here
     # ...
-
+    print("Leave request finalized.")
     return True
 
 
@@ -292,33 +352,38 @@ def approve_leave(form_data):
         )
 
         if next_approval:
-            subject = f'Confirmation of Approved Leave Assignment To: {staff.get_full_name()}, {staff.other_names}'
+            next_approver = next_approval.approver
+            subject = 'Leave Application Pending Approval'
             message = (
-                f"Date: {timezone.now().strftime('%A, %d %B %Y')} \n\n"
-                f"Dear {staff.first_name},\n\n"
-                f"We are pleased to inform you that your leave application for {request_obj.type.name.split()[0]} Leave — scheduled from \n\t"
-                f"{request_obj.start_date} to {request_obj.end_date}\n — has been officially approved following review by all relevant parties.\n\n"
-                f"Kindly acknowledge your acceptance of this approved leave and confirm your availability for the specified period. "
-                f"If, for any reason, you are unable to proceed with the leave as approved, please notify the administration immediately.\n\n"
-                f"**Additional Notes:**\n"
-                f"• Ensure all work handovers and transitional arrangements are completed prior to departure.\n"
-                f"• Relieving officers assigned will be notified accordingly.\n"
-                f"• For any updates or further assistance, feel free to reach out to the HR department.\n\n"
-                f"Sincerely,\nGCPS Leave System"
+                f"Dear {next_approver.staff.first_name},\n\n"
+                f"A leave application from {staff.get_full_name()} is pending your approval.\n"
+                f"Submitted on: {request_obj.application_date}\n\n"
+                f"Please review it at your earliest convenience.\n\n"
+                f"Thank you."
             )
             send_leave_email.delay(subject, message, [staff.email])
+            print(f"Leave request approved by {approval.approver.staff.get_full_name()} and next approver notified: {next_approver.staff.get_full_name()}.")
 
         else:
             # No more approvers – finalize if acks are approved
             if finalize_leave_approval(request_obj):
-                subject = f'Leave Fully Approved: {staff.get_full_name()}'
+                subject = f'Confirmation of Approved Leave Assignment To: {staff.get_full_name()}, {staff.other_names}'
                 message = (
+                    f"Date: {timezone.now().strftime('%A, %d %B %Y')} \n\n"
                     f"Dear {staff.first_name},\n\n"
-                    f"Your leave application for {request_obj.type.name} from {request_obj.start_date} to {request_obj.end_date} "
-                    f"has been fully approved.\n\nPlease confirm your availability and handover responsibilities before departure.\n\nRegards,\nLeave Management System"
+                    f"We are pleased to inform you that your leave application for {request_obj.type.name.split()[0]} Leave — scheduled from \n\t"
+                    f"{request_obj.start_date} to {request_obj.end_date}\n — has been officially approved following review by all relevant parties.\n\n"
+                    f"Kindly acknowledge your acceptance of this approved leave and confirm your availability for the specified period. "
+                    f"If, for any reason, you are unable to proceed with the leave as approved, please notify the administration immediately.\n\n"
+                    f"** Additional Notes: **\n"
+                    f"• Ensure all work handovers and transitional arrangements are completed prior to departure.\n"
+                    f"• Relieving officers assigned will be notified accordingly.\n"
+                    f"• For any updates or further assistance, feel free to reach out to the HR department.\n\n"
+                    f"Sincerely,\nGCPS Leave System"
                 )
                 send_leave_email.delay(subject, message, [staff.email])
-
+                print("Leave request approved and applicant notified.")
+            else: print(f"WAiting for finalizing actions for leave request {request_obj.id}.")
         return True
     except (ValueError, TypeError, Approval.DoesNotExist):
         return False
@@ -327,8 +392,18 @@ def approve_leave(form_data):
 def deny_leave(form_data):
     try:
         approval_id = int(form_data.get('approval_id'))
-        updated = Approval.objects.filter(id=approval_id).update(status=Approval.ApprovalStatus.Denied)
-        return updated > 0
+        approval_obj = Approval.objects.filter(id=approval_id).first()
+        approval_obj.status=Approval.ApprovalStatus.Denied
+        approval_obj.save(update_fields=["status"])
+
+        trigger = {
+            "name": f"{ approval_obj.approver.staff.first_name } { approval_obj.approver.staff.last_name } { approval_obj.approver.staff.other_names }",
+            "role": f"Approver, Level: {approval_obj.approver.level.name}",
+            "date": timezone.now(),
+            "reason": approval_obj.reason
+        }
+        cancel_leave_request(approval_obj.request, trigger)
+        return True
     except (ValueError, TypeError):
         return False
 
@@ -418,24 +493,26 @@ def leaveRequestHandler(form_data, user, request):
         f"Thank you."
     )
     send_leave_email.delay(relief_subject, relief_msg, [relieving_officer.email])
-    if no_approver_available == True:
-        pass
-    else:
-        # First Approver Notification
-        first_approver = (
-            approvers.order_by("level__level").first()
-            if approvers.exists() else fallback_approver
-        )
-        if created_approvals and first_approver:
-            approver_subject = 'Leave Application Pending Approval'
-            approver_msg = (
-                f"Dear {first_approver.staff.first_name},\n\n"
-                f"A leave application from {user.get_full_name()} is pending your approval.\n"
-                f"Submitted on: {leave_request.application_date}\n\n"
-                f"Please review it at your earliest convenience.\n\n"
-                f"Thank you."
-            )
-            send_leave_email.delay(approver_subject, approver_msg, [first_approver.staff.email])
-            print("this way was called")
+    print("Leave request created successfully")
+    
+    # if no_approver_available == True:
+    #     pass
+    # else:
+    #     # First Approver Notification
+    #     first_approver = (
+    #         approvers.order_by("level__level").first()
+    #         if approvers.exists() else fallback_approver
+    #     )
+    #     if created_approvals and first_approver:
+    #         approver_subject = 'Leave Application Pending Approval'
+    #         approver_msg = (
+    #             f"Dear {first_approver.staff.first_name},\n\n"
+    #             f"A leave application from {user.get_full_name()} is pending your approval.\n"
+    #             f"Submitted on: {leave_request.application_date}\n\n"
+    #             f"Please review it at your earliest convenience.\n\n"
+    #             f"Thank you."
+    #         )
+    #         send_leave_email.delay(approver_subject, approver_msg, [first_approver.staff.email])
+    #         print("Leave request created and first approver notified.")
     return True
 

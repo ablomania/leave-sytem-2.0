@@ -26,9 +26,17 @@ def update_leave_progress():
     # 🗑️ Delete unapproved requests older than 2 weeks
     stale_requests = LeaveRequest.objects.filter(
         status=LeaveRequest.Status.PENDING,
-        application_date__lte=today - timedelta(days=14),
+        application_date__lte=today - timedelta(days=28),
         is_active=True
     )
+    if stale_requests.count() > 0:
+        for stale_request in stale_requests:
+            # Delete stale Acks related to the stale requests
+            stale_acks = Ack.objects.filter(request_id=stale_request.id)
+            stale_acks.delete()
+            # Delete stale Approvals related to the stale requests
+            stale_approvals = Approval.objects.filter(request_id=stale_request.id)
+            stale_approvals.delete()
     stale_requests.delete()
 
     # 🟡 Activate leaves starting today
@@ -182,6 +190,8 @@ def update_leave_progress():
             ).send(fail_silently=True)
         except Exception as e:
             print(f"Email failed: {mail['subject']} → {mail['to']}\nError: {e}")
+
+
 
 
 def restore_original_approvers():

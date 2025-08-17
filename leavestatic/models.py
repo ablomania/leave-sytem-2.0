@@ -228,6 +228,7 @@ class Ack(models.Model):
         SELF = "SELF", "self"
     class Status(models.TextChoices):
         Pending = "Pending", "pending"
+        Ready = "Ready", "ready"
         Approved = "Approved", "approved"
         Denied = "Denied", "denied"
     request = models.ForeignKey("LeaveRequest", on_delete=models.CASCADE, null=True)
@@ -249,6 +250,7 @@ class ApproverSwitch(models.Model):
 class LeaveRequest(models.Model):
     class Status(models.TextChoices):
         PENDING = 'PENDING', 'Pending'
+        READY = 'READY', 'Ready'
         APPROVED = 'APPROVED', 'Approved'
         DENIED = 'DENIED', 'Denied'
         DRAFT = 'DRAFT', 'Draft'
