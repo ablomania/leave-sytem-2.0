@@ -179,8 +179,9 @@ def dashboard(request):
     user = Staff.objects.get(id=get_user_id_from_login_session(session_slug))
     is_approver = check_for_approver(user.id)
     
-    self_ack = Ack.objects.filter(staff_id=user.id, type=Ack.Type.SELF, status=Ack.Status.Pending).first()
-    r_ack = Ack.objects.filter(staff_id=user.id, type=Ack.Type.RELIEF, status=Ack.Status.Pending).first()
+    self_ack = Ack.objects.filter(staff_id=user.id, type=Ack.Type.SELF, status=Ack.Status.Ready, is_active=True).first()
+    all_relief_acks = Ack.objects.filter(staff_id=user.id, type=Ack.Type.RELIEF, status=Ack.Status.Pending, is_active=True)   
+    r_ack = all_relief_acks.first()
     leaves_count = LeaveRequest.objects.filter(applicant_id=user.id).count()
     on_leave = Leave.objects.filter(request__applicant_id=user.id, status=Leave.LeaveStatus.On_Leave).first()
     resume_obj = Resumption.objects.filter(staff_id=user.id, is_active=True, confirmed=False).first()
@@ -190,7 +191,7 @@ def dashboard(request):
         'is_approver': is_approver, "self_ack": self_ack,
         "r_ack": r_ack, "leaves_count": leaves_count,
         "on_leave": on_leave, "resume_obj": resume_obj,
-        "loc": "dashboard"
+        "loc": "dashboard", "all_relief_acks": all_relief_acks.count(),
     }
 
     response = render(request, "dashboard.html", context)
@@ -1332,7 +1333,7 @@ def leaveComplete(request, id):
     }
 
     return render(request, "leave_complete_form.html", context)
-    
+
 
 
 def relieve_ack(request, id):
@@ -1351,7 +1352,7 @@ def relieve_ack(request, id):
     if request.method == "POST":
         form_data = request.POST
         if form_data['form_meta'] == "approve": approve_ack(form_data, ack.request)
-        elif form_data['form_meta'] == "deny": deny_ack(form_data, request)
+        elif form_data['form_meta'] == "deny": deny_ack(form_data, ack.request)
         response = HttpResponseRedirect(reverse("dashboard"))
         response = set_session_cookie(response, session_slug)
         return response
@@ -1382,14 +1383,15 @@ def leave_history(request):
     
     is_approver = check_for_approver(user.id)
 
-    # Prefetch related approvals and acknowledgments
+    # Prefetch related approvals, acknowledgments, and leave objects
     leave_requests = (
         LeaveRequest.objects
         .filter(applicant=user)
         .select_related("type")
         .prefetch_related(
             Prefetch("approval_set", queryset=Approval.objects.select_related("approver__staff")),
-            Prefetch("ack_set", queryset=Ack.objects.select_related("staff"))
+            Prefetch("ack_set", queryset=Ack.objects.select_related("staff")),
+            Prefetch("leave_set", queryset=Leave.objects.all())
         )
         .order_by("-application_date")
     )

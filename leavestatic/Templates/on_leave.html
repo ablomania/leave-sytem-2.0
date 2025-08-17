@@ -84,7 +84,7 @@
                     <h3>{{ leave.name }}</h3>
                     <p><strong>Staff:</strong> {{ leave.request.applicant.get_full_name }}</p>
                     <p><strong>Leave Type:</strong> {{ leave.request.type.name }}</p>
-                    <p><strong>Days Given:</strong> {{ leave.request.days_approved|default:leave.request.days_requested }}</p>
+                    <p><strong>Start Date:</strong> {{ leave.request.start_date }}</p>
                     <p><strong>Resumption Date:</strong> {{ leave.request.return_date }}</p>
                 </div>
                 {% endfor %}

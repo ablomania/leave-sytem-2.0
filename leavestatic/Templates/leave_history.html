@@ -14,7 +14,7 @@
         {% for req in requests %}
           <div class="leave-card">
             <h3>
-              {{ req.type.name }}
+              Leave Request - {{ req.type.name }}
               <span class="status-tag status-{{ req.status|lower }}">{{ req.status }}</span>
             </h3>
             <p><strong>Applied:</strong> {{ req.application_date|date:"M j, Y" }}</p>
@@ -46,7 +46,25 @@
             {% empty %}
               <p class="empty">No approvals yet.</p>
             {% endfor %}
+
+            <!-- Show corresponding Leave object if exists and request is approved -->
+            {% if req.status == 'APPROVED' and req.leave_set.all %}
+            <div class="leave-object-info">
+              <h4>Leave Record</h4>
+              {% for leave in req.leave_set.all %}
+                <div class="leave-object-details">
+                  <p><strong>Name:</strong> {{ leave.name }}</p>
+                  <p><strong>Status:</strong> {{ leave.status }}</p>
+                  <p><strong>Days Granted:</strong> {{ leave.days_granted }}</p>
+                  <p><strong>Days Remaining:</strong> {{ leave.days_remaining }}</p>
+                </div>
+              {% empty %}
+                <p class="empty">No leave record found.</p>
+              {% endfor %}
+            </div>
+            {% endif %}
           </div>
+          <!-- Show leave objects next to leave request objects -->
         {% endfor %}
       </div>
     {% endfor %}
@@ -60,7 +78,7 @@
     {% if year_page.has_previous %}
       <a class="pagination-button" href="?page={{ year_page.previous_page_number }}">« Previous Year</a>
     {% endif %}
-    <span class="pagination-info">Showing {{ year_page.object_list.0 }}</span>
+    <span class="pagination-info"><br>Showing {{ year_page.object_list.0 }}</span>
     {% if year_page.has_next %}
       <a class="pagination-button" href="?page={{ year_page.next_page_number }}">Next Year »</a>
     {% endif %}
@@ -68,9 +86,10 @@
   {% endif %}
 
   <!-- Terminated Leaves -->
+  {% if terminated_leaves %}
   <div class="terminated-leaves-section fade-in">
     <h2>Terminated Leave Records</h2>
-    {% if terminated_leaves %}
+    
       <div class="leave-card-grid">
         {% for cancelled in terminated_leaves %}
           <div class="leave-card cancelled-card">
