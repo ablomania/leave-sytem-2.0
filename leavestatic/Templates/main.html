@@ -48,7 +48,7 @@
         <div class="main-nav">
             <a href="{% url 'dashboard' %}" class="{% if loc == 'dashboard' %}active{% endif %}">Dashboard</a>
             <a href="{% url 'leave_request' %}" class="{% if loc == 'request' %}active{% endif %}">New Leave Request</a>
-            <a href="{% url 'leave_requests' %}" class="{% if loc == 'approvals' %}active{% endif %}">Approvals</a>
+            {% if is_approver %}<a href="{% url 'leave_requests' %}" class="{% if loc == 'approvals' %}active{% endif %}">Approvals</a>{% endif %}
             <a href="{% url 'staff_on_leave' %}" class="{% if loc == 'on_leave' %}active{% endif %}">On Leave</a>
             <a href="{% url 'leave_history' %}" class="{% if loc == 'history' %}active{% endif %}">History</a>
             <a href="{% url 'profile' %}" class="{% if loc == 'profile' %}active{% endif %}">Profile</a>

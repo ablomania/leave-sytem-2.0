@@ -1763,6 +1763,11 @@
             color: #555;
         }
 
+        .fileinputcontainer{
+            flex-direction: row;
+            align-items: center;
+        }
+
         textarea {
             min-height: 100px;
         }

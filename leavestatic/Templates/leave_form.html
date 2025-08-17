@@ -17,6 +17,7 @@
         };
         const all_holidays = JSON.parse('{{ holiday_json|safe }}');
     </script>
+
     
 
     <div class="leave-request-container">
@@ -56,9 +57,9 @@
                     <input type="date" name="disembarkation" id="disembarkation">
                 </div> -->
 
-                <div class="f1 optional" id="m-due-date" style="display: none;">
+                <div class="f1 optional fileinputcontainer" id="m-due-date" style="display: none;">
                     <label for="due-date">Date</label>
-                    <input type="date" name="due-date" id="due-date">
+                    <input type="date" class="optionalInput" name="due-date" id="due-date" required>
                 </div>
 
                 <div class="f1">
@@ -68,7 +69,7 @@
                     </select>
                 </div>
 
-                <div class="f1" id="start_date_container">
+                <div class="f1 fileinputcontainer" id="start_date_container">
                     <label for="start_date">Start date</label>
                     <input type="date" name="start_date" id="start_date" required onchange="calcEndDate(value, days_requested.value)">
                 </div>
@@ -88,7 +89,7 @@
 
                 <div class="f1">
                     <label for="relieving_officer">Relieving Officer</label>
-                    <select name="relieving_officer"  id="relieving_officer">
+                    <select name="relieving_officer"  id="relieving_officer" required>
                         <option value="" disabled selected>-- Select Officer to temporarily relieve you of your duties --</option>
                         {% for staff in officers %}
                         <option value="{{ staff.id }}">{{ staff.first_name }} {{ staff.last_name }} {{ staff.other_names }} ({{ staff.seniority.name }})</option>
@@ -96,24 +97,24 @@
                     </select>
                 </div>
 
-                <div class="f1 optional" id="med-note-container" style="display: none;">
+                <div class="f1 optional fileinputcontainer" id="med-note-container" style="display: none;">
                     <label for="med_note">Medical note</label>
-                    <input type="file" placeholder="Select medical note" name="med_note" id="med-note" accept=".pdf,.docx,.txt">
+                    <input type="file"  class="optionalInput" placeholder="Select medical note" name="med_note" id="med-note" accept=".pdf,.docx,.txt" required>
                 </div>
 
                 <div class="f1 optional" id="institution-container" style="display: none;">
                     <label for="institution">Institution Name</label>
-                    <input type="text" name="institution" id="institution">
+                    <input type="text" class="optionalInput" name="institution" id="institution" required>
                 </div>
 
                 <div class="f1 optional" id="course-container" style="display: none;">
                     <label for="course">Course Of Study</label>
-                    <input type="text" name="course" id="course">
+                    <input type="text" class="optionalInput" name="course" id="course" required>
                 </div>
 
-                <div class="f1 optional" id="letter-container" style="display: none;">
+                <div class="f1 optional fileinputcontainer" id="letter-container" style="display: none;">
                     <label for="letter">Admission Letter</label>
-                    <input type="file" name="letter" id="letter" accept=".pdf,.docx,.txt">
+                    <input type="file"  class="optionalInput" name="letter" id="letter" accept=".pdf,.docx,.txt" required>
                 </div>
 
                 <div class="f1">

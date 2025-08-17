@@ -296,7 +296,7 @@ def add_approver(form_data):
                 Approval(
                     approver=new_approver,
                     request=request,
-                    status=Approval.ApprovalStatus.PENDING,
+                    status=Approval.ApprovalStatus.Pending,
                     is_active=True
                 ) for request in pending_requests
             ])

@@ -333,8 +333,9 @@ def deny_leave(form_data):
         return False
 
 
-def leaveRequestHandler(form_data, user, request, slug):
+def leaveRequestHandler(form_data, user, request):
     from django.urls import reverse
+    no_approver_available = False
 
     # 1. Create Leave Request
     leave_request = LeaveRequest.objects.create(
@@ -348,8 +349,8 @@ def leaveRequestHandler(form_data, user, request, slug):
         date_of_occurence=form_data.get("due-date") or None,
         institution=form_data.get("institution") or None,
         course=form_data.get("course") or None,
-        med_note=form_data.get("med_note") or None,
-        letter=form_data.get("letter") or None
+        med_note=request.FILES.get("med_note") or None,
+        letter=request.FILES.get("letter") or None
     )
 
     # 2. Acknowledgment Setup
@@ -362,13 +363,11 @@ def leaveRequestHandler(form_data, user, request, slug):
         group_to_approve_id=user.group_id,
         is_active=True
     ).exclude(staff=user)
-
     # 4. Check if Applicant is Also an Approver
     applicant_approver = Approver.objects.filter(staff=user, is_active=True).first()
     if applicant_approver and applicant_approver.level:
         applicant_level_rank = applicant_approver.level.level
         approvers = approvers.filter(level__level__gt=applicant_level_rank)
-
     # 5. Create Approval Records
     created_approvals = False
     if approvers.exists():
@@ -379,7 +378,8 @@ def leaveRequestHandler(form_data, user, request, slug):
         created_approvals = True
     else:
         # 6. Fallback to Special Approver (Staff)
-        fallback_staff = Staff.objects.filter(is_special_approver=True, is_active=True).first()
+        fallback_staff = Staff.objects.filter(is_special_approver=True, is_active=True).first() or None
+        fallback_approver = None
         if fallback_staff:
             fallback_approver = Approver.objects.filter(staff=fallback_staff, is_active=True).first()
             if fallback_approver:
@@ -389,6 +389,9 @@ def leaveRequestHandler(form_data, user, request, slug):
                     status=Approval.ApprovalStatus.PENDING
                 )
                 created_approvals = True
+            # If there are no approvers or special approvers available, pass, when an approver is created, check for pending
+    if not approvers.exists() and not fallback_approver:
+        no_approver_available = True
 
     # 7. Emails ✉️
 
@@ -411,26 +414,28 @@ def leaveRequestHandler(form_data, user, request, slug):
         f"You are assigned to relieve {user.get_full_name()} during their {leave_type_name.lower()} leave "
         f"from {leave_request.start_date} to {leave_request.end_date}.\n\n"
         f"Acknowledge here:\n"
-        f"{request.build_absolute_uri(reverse('relieve_ack', args=[leave_request.id, slug]))}\n\n"
+        f"{request.build_absolute_uri(reverse('relieve_ack', args=[leave_request.id]))}\n\n"
         f"Thank you."
     )
     send_leave_email.delay(relief_subject, relief_msg, [relieving_officer.email])
-
-    # First Approver Notification
-    first_approver = (
-        approvers.order_by("level__level").first()
-        if approvers.exists() else fallback_approver
-    )
-    if created_approvals and first_approver:
-        approver_subject = 'Leave Application Pending Approval'
-        approver_msg = (
-            f"Dear {first_approver.staff.first_name},\n\n"
-            f"A leave application from {user.get_full_name()} is pending your approval.\n"
-            f"Submitted on: {leave_request.application_date}\n\n"
-            f"Please review it at your earliest convenience.\n\n"
-            f"Thank you."
+    if no_approver_available == True:
+        pass
+    else:
+        # First Approver Notification
+        first_approver = (
+            approvers.order_by("level__level").first()
+            if approvers.exists() else fallback_approver
         )
-        send_leave_email.delay(approver_subject, approver_msg, [first_approver.staff.email])
-
+        if created_approvals and first_approver:
+            approver_subject = 'Leave Application Pending Approval'
+            approver_msg = (
+                f"Dear {first_approver.staff.first_name},\n\n"
+                f"A leave application from {user.get_full_name()} is pending your approval.\n"
+                f"Submitted on: {leave_request.application_date}\n\n"
+                f"Please review it at your earliest convenience.\n\n"
+                f"Thank you."
+            )
+            send_leave_email.delay(approver_subject, approver_msg, [first_approver.staff.email])
+            print("this way was called")
     return True
 
