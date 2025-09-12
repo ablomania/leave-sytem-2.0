@@ -214,7 +214,7 @@ def createLeave(user, leave_request, ack_id):
 def update_ack_status(form_data, status):
     try:
         ack_id = int(form_data.get("ack_id"))
-        updated = Ack.objects.filter(id=ack_id).update(status=status)
+        updated = Ack.objects.filter(id=ack_id).update(status=status, reason=form_data.get("reason", ""))
         return True  # True if update succeeded
     except (ValueError, TypeError):
         return False  # Invalid ack_id
@@ -231,7 +231,7 @@ def approve_ack(form_data, request_obj):
         subject = f'Relieving Officer Approval — {request_obj.type.name.split()[0]} Leave'
         message = (
             f"Dear { staff.first_name },"
-            f"\n\nYour assigned relieving officer, { ack_obj.staff.get_full_name }, has reviewed your leave request for { request_obj.type.name.split()[0] } Leave and has officially approved to act in your stead during your absence."
+            f"\n\nYour assigned relieving officer, { ack_obj.staff.first_name } { ack_obj.staff.last_name }, has reviewed your leave request for { request_obj.type.name.split()[0] } Leave and has officially approved to act in your stead during your absence."
             f"\nLeave Period: { request_obj.start_date } to { request_obj.end_date }."
             f"\n\nThis approval confirms that your responsibilities will be temporarily delegated and continuity of operations will be maintained."
             f"Please ensure all necessary handover notes and access permissions are in place before your departure."
@@ -251,6 +251,8 @@ def deny_ack(form_data, request_obj):
         finalize_leave_approval(request_obj)
         staff = request_obj.applicant
         ack_obj = Ack.objects.filter(id=ack_id).first()
+        ack_obj.status = Ack.Status.Denied
+        ack_obj.save(update_fields=["status"])
 
         trigger = {
             "name": f"{ ack_obj.staff.first_name } {ack_obj.staff.last_name} {ack_obj.staff.other_names}",
@@ -263,7 +265,7 @@ def deny_ack(form_data, request_obj):
         subject = f'Relieving Officer Disapproval — {request_obj.type.name.split()[0]} Leave'
         message = (
             f"Dear { staff.first_name },"
-            f"\n\nYour assigned relieving officer, { ack_obj.staff.get_full_name }, has reviewed your leave request for {request_obj.type.name.split()[0]} Leave and has declined to act in your stead during the requested period."
+            f"\n\nYour assigned relieving officer, { ack_obj.staff.get_full_name() }, has reviewed your leave request for {request_obj.type.name.split()[0]} Leave and has declined to act in your stead during the requested period."
             f"\n\nLeave Period: { request_obj.start_date } to { request_obj.end_date }" 
             f"\nReason for Disapproval: { ack_obj.reason if ack_obj.reason != "" else "No reason"}."
             f"\n\nThis decision may affect the approval process of your leave. Kindly consult your supervisor or HR to discuss alternative arrangements or reassignment of relieving duties."
@@ -285,13 +287,13 @@ def cancel_leave_request(request_obj, triggered_by):
     subject = f'Leave Request Denied {request_obj.type.name.split()[0]} Leave, { request_obj.start_date } to { request_obj.end_date }'
     message = (
         f"Dear { staff.first_name },"
-        f"\n\n**Details of the decision:**"
-        f"\n- **Leave Type**: {request_obj.type.name.split()[0]} Leave" 
-        f"\n- **Requested Dates**: {request_obj.start_date} to {request_obj.end_date}."
-        f"\n- **Decision By**: { triggered_by["name"] }."
-        f"\n- **Role**: { triggered_by["role"] }."
-        f"\n- **Date of Decision**: { triggered_by['date']}" 
-        f"\n\n- **Reason Provided**: { triggered_by['reason'] if triggered_by['reason'] != "" else "no reason" }"
+        f"\n\nDetails of the decision:"
+        f"\n- Leave Type: {request_obj.type.name.split()[0]} Leave" 
+        f"\n- Requested Dates: {request_obj.start_date} to {request_obj.end_date}."
+        f"\n- Decision By: { triggered_by["name"] }."
+        f"\n- Role: { triggered_by["role"] }."
+        f"\n- Date of Decision: { triggered_by['date']}" 
+        f"\n\n- Reason Provided: { triggered_by['reason'] if triggered_by['reason'] != "" else "no reason" }"
         f"\n\nYou may revise and resubmit your request if needed, or reach out to your supervisor for further clarification."
         f"\nThank you for using the GCPS Leave System."
         f"\n\nWarm regards,"
@@ -375,7 +377,7 @@ def approve_leave(form_data):
                     f"{request_obj.start_date} to {request_obj.end_date}\n — has been officially approved following review by all relevant parties.\n\n"
                     f"Kindly acknowledge your acceptance of this approved leave and confirm your availability for the specified period. "
                     f"If, for any reason, you are unable to proceed with the leave as approved, please notify the administration immediately.\n\n"
-                    f"** Additional Notes: **\n"
+                    f" Additional Notes: \n"
                     f"• Ensure all work handovers and transitional arrangements are completed prior to departure.\n"
                     f"• Relieving officers assigned will be notified accordingly.\n"
                     f"• For any updates or further assistance, feel free to reach out to the HR department.\n\n"
