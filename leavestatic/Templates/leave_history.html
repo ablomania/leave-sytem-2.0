@@ -30,11 +30,21 @@
             {% endfor %}
 
             <h4>Relieving Officer Acknowledgment</h4>
+            
             {% for ack in req.ack_set.all %}
-              {% if not ack.status == ack.status.Denied %}
+            {% if ack.type == "RELIEF" %}
               <p>{{ ack.staff.first_name }}:
                 <span class="status-tag status-{{ ack.status|lower }}">{{ ack.status }}</span>
               </p>
+              {% endif %}
+              {% if ack.type == "SELF" %}
+              {% if req.status == "DENIED" %}
+              <p></p>
+              {% else %}
+              <p>{{ ack.staff.first_name }}:
+                <span class="status-tag status-{{ ack.status|lower }}">{{ ack.status }}</span>
+              </p>
+              {% endif %}
               {% endif %}
             {% empty %}
               <p class="empty">No acknowledgment yet.</p>

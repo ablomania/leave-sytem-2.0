@@ -251,8 +251,6 @@ def deny_ack(form_data, request_obj):
         finalize_leave_approval(request_obj)
         staff = request_obj.applicant
         ack_obj = Ack.objects.filter(id=ack_id).first()
-        ack_obj.status = Ack.Status.Denied
-        ack_obj.save(update_fields=["status"])
 
         trigger = {
             "name": f"{ ack_obj.staff.first_name } {ack_obj.staff.last_name} {ack_obj.staff.other_names}",

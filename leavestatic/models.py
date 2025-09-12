@@ -238,6 +238,9 @@ class Ack(models.Model):
     staff = models.ForeignKey("Staff", on_delete=models.CASCADE)
     status = models.CharField(max_length=13, choices=Status.choices, default=Status.Pending)
     is_active = models.BooleanField(default=True)
+    def __str__(self):
+        return f"{self.id}"
+
 
 class ApproverSwitch(models.Model):
     old_approver = models.ForeignKey("Approver", on_delete=models.CASCADE, null=True, related_name="real_approver")
