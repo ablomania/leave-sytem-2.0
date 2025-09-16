@@ -40,7 +40,7 @@
                 <ul>
                     <li><strong>Group:</strong> {{ user.group.name }}</li>
                     <li><strong>Seniority:</strong> {{ user.seniority.name }}</li>
-                    <li><strong>Status:</strong> {{ user.leave_status }}</li>
+                    <li style="text-transform: lowercase;"><strong>Status:</strong> {{ user.leave_status }}</li>
                     {% if is_approver %}
                     <li><strong>Approver:</strong> <span style="color: green;">Yes</span></li>
                     <li><strong>Level:</strong> {{ user.level.name }}</li>

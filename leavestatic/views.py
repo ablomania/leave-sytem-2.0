@@ -28,8 +28,26 @@ from django.contrib import messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
+# from datetime import date
 
+# first = current = date(date.today().year, 1, 1)
+# day = first.isoweekday()
+# print("the date is ", day)
+# my_count = 0
+# from dateutil.relativedelta import relativedelta
 
+# year = (date.today() + relativedelta(years=1)).year
+# while current.year < year:
+#     if current.isoweekday() <= 5:  # Monday to Friday are 1-5
+#         my_count += 1
+#     current += datetime.timedelta(days=1)
+# print("the year is ", year)
+# print("the count is ", my_count)
+# print("current is: ", current)
+
+# days = [True, True, False]
+# days_count = sum(1 for day in days if day)
+# print("the days count is ", days_count)
 
 def index(request):
     template = loader.get_template('index.html')
@@ -1295,19 +1313,25 @@ def cancelLeave(request, id):
 def leaveComplete(request, id):
     session_slug = get_user_from_session_cookie(request)
     if not session_slug:
-        return redirect(reverse("login", args=["leave_complete"]))
+        return redirect(reverse("login", args=["dashboard"]))
 
     user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
     if not user:
         return redirect(reverse("login", args=["staff_on_leave"]))
     
     is_approver = check_for_approver(user.id)
+    message = ""
+    resume_obj = Resumption.objects.filter(
+        staff=user,
+        id=id,
+        is_active=True
+    ).first()
     leave_request = get_object_or_404(
         LeaveRequest.objects.select_related("applicant"),
-        id=id,
+        id=resume_obj.leave_request_id,
         applicant=user,
         is_active=True,
-        status=LeaveRequest.Status.APPROVED
+        status=LeaveRequest.Status.COMPLETED
     )
 
     if request.method == "POST":
@@ -1315,24 +1339,38 @@ def leaveComplete(request, id):
         confirmed = request.POST.get("confirm") == "on"
 
         # Save resumption record
-        Resumption.objects.update_or_create(
-            staff=user,
-            leave_request=leave_request,
-            notes=notes,
-            confirmed=confirmed,
-            is_active=True
+        resume_obj.notes = notes
+        resume_obj.confirmed = confirmed
+        resume_obj.date_submitted = timezone.now()
+        resume_obj.save()
+        # Send confirmation email
+        subject = f"Resumption Confirmed: {leave_request.type.name.split()[0]} Leave"
+        to = [user.email]
+        body = (
+            f"Dear {user.first_name},\n\n"
+            f"This is to confirm that you have successfully submitted your Resumption of Duty form following your {leave_request.type.name.split()[0]} leave.\n"
+            f"Start Date: {leave_request.start_date}\n"
+            f"End Date: {leave_request.end_date}\n"
+            f"Resumption Date: {leave_request.return_date}\n\n"
+            f"Your return has been recorded in the system. Welcome back!\n\n"
+            f"Regards,\nLeave Management System"
         )
-
+        send_leave_email.delay(subject, body, [user.email])
+        message = "Resumption form submitted successfully."
         messages.success(request, "Resumption form submitted successfully.")
         return redirect(reverse("dashboard"))
 
     context = {
         "leave_request": leave_request,
         "is_approver": is_approver,
-        "resumption_date": leave_request.return_date
+        "resumption_date": leave_request.return_date,
+        "message": message
     }
 
-    return render(request, "leave_complete_form.html", context)
+    response = render(request, "leave_complete_form.html", context)
+    response.set_cookie('message', message, max_age=1, secure=False, httponly=True)
+    response = set_session_cookie(response, session_slug)
+    return response
 
 
 
@@ -1370,7 +1408,6 @@ def relieve_ack(request, id):
 
 
 
-
 def leave_history(request):
     """Displays a user's leave history with approval and acknowledgment progress."""
     session_slug = get_user_from_session_cookie(request)
@@ -1391,7 +1428,8 @@ def leave_history(request):
         .prefetch_related(
             Prefetch("approval_set", queryset=Approval.objects.select_related("approver__staff")),
             Prefetch("ack_set", queryset=Ack.objects.select_related("staff")),
-            Prefetch("leave_set", queryset=Leave.objects.all())
+            Prefetch("leave_set", queryset=Leave.objects.all()),
+            Prefetch("resumption_set", queryset=Resumption.objects.all()),
         )
         .order_by("-application_date")
     )

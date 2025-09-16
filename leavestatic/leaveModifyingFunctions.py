@@ -18,108 +18,155 @@ def get_reset_trigger(leave_type, today):
     return False
 
 
-def update_leave_progress():
+def delete_stale_requests():
     today = timezone.now().date()
-    holidays = set(Holiday.objects.filter(is_active=True).values_list("date", flat=True))
-    pending_emails = []
-
-    # 🗑️ Delete unapproved requests older than 2 weeks
     stale_requests = LeaveRequest.objects.filter(
         status=LeaveRequest.Status.PENDING,
         application_date__lte=today - timedelta(days=28),
         is_active=True
     )
+    no_errors, leave_obj_ids = True, []
     if stale_requests.count() > 0:
         for stale_request in stale_requests:
-            # Delete stale Acks related to the stale requests
-            stale_acks = Ack.objects.filter(request_id=stale_request.id)
-            stale_acks.delete()
-            # Delete stale Approvals related to the stale requests
-            stale_approvals = Approval.objects.filter(request_id=stale_request.id)
-            stale_approvals.delete()
+            try:
+                # Delete stale Acks related to the stale requests
+                stale_acks = Ack.objects.filter(request_id=stale_request.id)
+                stale_acks.delete()
+                # Delete stale Approvals related to the stale requests
+                stale_approvals = Approval.objects.filter(request_id=stale_request.id)
+                stale_approvals.delete()
+            except Exception as e:
+                no_errors = False
+                leave_obj_ids.append(stale_request.id)
+                print(f"Error deleting related records for LeaveRequest ID {stale_request.id}: {e}")
+                continue
     stale_requests.delete()
+    if no_errors:
+        print("Stale leave requests and related records deleted successfully.")
+        return True
+    else:
+        print(f"Stale leave requests deleted, but errors occurred for IDs: {leave_obj_ids}")
+        return False
 
-    # 🟡 Activate leaves starting today
-    for leave in Leave.objects.select_related("request", "request__applicant", "request__type").filter(
+
+def activate_todays_leaves():
+    today = timezone.now().date()
+    leaves_to_activate = Leave.objects.select_related("request", "request__applicant", "request__type").filter(
         is_active=True,
         status=Leave.LeaveStatus.Pending,
         request__status=LeaveRequest.Status.APPROVED,
         request__start_date=today
-    ):
-        update_obj = LeaveUpdate.objects.create(leaveobj=leave)
+    )
+    for leave in leaves_to_activate:
         leave.status = Leave.LeaveStatus.On_Leave
         leave.save(update_fields=["status"])
-        update_obj.status = "successful"
-        update_obj.save(update_fields=["status"])
+        update_obj = LeaveUpdate.objects.create(leaveobj=leave, type="activation", status="successful")
+        print(f"Activated leave ID: {leave.id} for staff: {leave.request.applicant}")
+    print(f"Activated {leaves_to_activate.count()} leaves starting today.")
+    return leaves_to_activate.count()
+
+
+def update_leave_progress():
+    today = timezone.now().date()
+    holidays = set(Holiday.objects.filter(is_active=True).values_list("date", flat=True))
+    pending_emails = []
+    entity = Entity.objects.filter(is_active=True).first()
+
+    # 🗑️ Delete unapproved requests older than 2 weeks
+    deleted_stale_requests = delete_stale_requests()
+
+    # 🟡 Activate leaves starting today
+    activate_todays_leaves()
 
     # 🟢 Update progress on active leaves
     active_leaves = Leave.objects.select_related("request", "request__applicant", "request__type").filter(
         is_active=True,
         status=Leave.LeaveStatus.On_Leave
     )
-
+    print("Updating leave progress")
     for leave in active_leaves:
-        update_obj = LeaveUpdate.objects.create(leaveobj=leave)
+        print(f"Processing leave ID: {leave.name} {leave.id}")
+        has_successfully_updated_log = LeaveUpdate.objects.filter(
+            leaveobj=leave,
+            date_modified__date=today,
+            status="successful",
+            type="update"
+        ).count() > 0
+        if not has_successfully_updated_log:
+            update_obj = LeaveUpdate.objects.create(leaveobj=leave, type="update", status="failed")
 
-        request = leave.request
-        staff = request.applicant
-        current = request.start_date
-        valid_days = []
+            request = leave.request
+            staff = request.applicant
+            current = request.start_date
+            valid_days = []
 
-        while current <= today and current <= request.end_date:
-            if current.weekday() < 5 and current not in holidays:
-                valid_days.append(current)
-            current += timedelta(days=1)
+            while current <= today:
+                if current.weekday() < 5 and current not in holidays:
+                    valid_days.append(current)
+                current += timedelta(days=1)
 
-        used_days = len(valid_days)
-        leave.days_remaining = max(leave.days_granted - used_days, 0)
-        leave.save(update_fields=["days_remaining"])
+            used_days = len(valid_days)
+            leave.days_remaining = max(leave.days_granted - used_days, 0)
+            leave.save(update_fields=["days_remaining"])
 
-        if leave.days_remaining % 5 == 0 or leave.days_remaining == 1:
-            pending_emails.append({
-                "subject": f"Leave Update: {request.type.name}",
-                "to": [staff.email],
-                "body": (
-                    f"Dear {staff.first_name},\n\n"
-                    f"You have {leave.days_remaining} day(s) remaining on your current leave.\n"
-                    f"Leave Type: {request.type.name}\n"
-                    f"Resumption Date: {request.return_date}\n\n"
-                    f"Please prepare accordingly.\n\n"
-                    f"Regards,\nLeave Management System"
+            if leave.days_remaining % 5 == 0 or leave.days_remaining == 1:
+                pending_emails.append({
+                    "subject": f"Leave Update: {request.type.name}",
+                    "to": [staff.email],
+                    "body": (
+                        f"Dear {staff.first_name},\n\n"
+                        f"You have {leave.days_remaining} day(s) remaining on your current leave.\n"
+                        f"Leave Type: {request.type.name}\n"
+                        f"Resumption Date: {request.return_date}\n\n"
+                        f"Please prepare accordingly.\n\n"
+                        f"Regards,\nLeave Management System"
+                    )
+                })
+
+            if leave.days_remaining == 0:
+                leave.status = Leave.LeaveStatus.Completed
+                leave.save(update_fields=["status"])
+
+                request.status = LeaveRequest.Status.COMPLETED
+                request.save(update_fields=["status"])
+
+                # Create a resumption record
+                print(f"Creating resumption record for staff: {staff}")
+                resumption_record = Resumption.objects.create(
+                    leave_request=request,
+                    staff=staff,
+                    confirmed=False,
+                    is_active=True
                 )
-            })
+                if resumption_record: print(f"Resumption record created: {resumption_record}")
+                else: print("Failed to create resumption record.")
 
-        if leave.days_remaining == 0:
-            leave.status = Leave.LeaveStatus.Completed
-            leave.is_active = False
-            leave.save(update_fields=["status", "is_active"])
+                approver_emails = [
+                    a.approver.staff.email
+                    for a in Approval.objects.filter(request=request, is_active=True)
+                    if a.approver and a.approver.staff.email
+                ]
 
-            request.status = LeaveRequest.Status.COMPLETED
-            request.save(update_fields=["status"])
+                pending_emails.append({
+                    "subject": f"Leave Completed: {request.type.name}",
+                    "to": [staff.email],
+                    "cc": approver_emails,
+                    "body": (
+                        f"Dear {staff.first_name},\n\n"
+                        f"Your leave for {request.type.name} has been marked as completed.\n"
+                        f"Start Date: {request.start_date}\n"
+                        f"End Date: {request.end_date}\n"
+                        f"Resumption Date: {request.return_date}\n\n"
+                        f"You currently have 0 days of leave remaining for this leave type.\n"
+                        f"Please confirm your return to duty by submitting the Resumption of Duty form.\n\n"
+                        f"Welcome back!\n\n"
+                        f"Regards,\nLeave Management System"
+                    )
 
-            approver_emails = [
-                a.approver.staff.email
-                for a in Approval.objects.filter(request=request, is_active=True)
-                if a.approver and a.approver.staff.email
-            ]
+                })
 
-            pending_emails.append({
-                "subject": f"Leave Completed: {request.type.name}",
-                "to": [staff.email],
-                "cc": approver_emails,
-                "body": (
-                    f"Dear {staff.first_name},\n\n"
-                    f"Your leave for {request.type.name} has been marked as completed.\n"
-                    f"Start Date: {request.start_date}\n"
-                    f"End Date: {request.end_date}\n"
-                    f"Resumption Date: {request.return_date}\n\n"
-                    f"Welcome back!\n\n"
-                    f"Regards,\nLeave Management System"
-                )
-            })
-
-        update_obj.status = "successful"
-        update_obj.save(update_fields=["status"])
+            update_obj.status = "successful"
+            update_obj.save(update_fields=["status"])
 
     # 🔄 Reset quotas if needed
     for detail in StaffLeaveDetail.objects.select_related("staff", "leave_type").filter(is_active=True):

@@ -1,7 +1,7 @@
 from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
-from .models import Holiday, Resumption, ApproverSwitch, LeaveRequest, CancelledLeave, StaffLeaveDetail, Leave, Ack, Approval, Approver, Staff
+from .models import Holiday, Resumption, ApproverSwitch, LeaveType, LeaveRequest, CancelledLeave, StaffLeaveDetail, Leave, Ack, Approval, Approver, Staff
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.utils import timezone
@@ -35,8 +35,9 @@ def handle_leave_cancellation(leave, staff, reason):
     # Update quota model
     detail = StaffLeaveDetail.objects.filter(staff=staff, leave_type=leave_request.type).first()
     if detail:
-        detail.days_taken += leave.days_remaining
-        detail.save(update_fields=["days_taken"])
+        detail.days_taken -= leave.days_remaining
+        detail.days_remaining += leave.days_remaining
+        detail.save(update_fields=["days_taken", "days_remaining"])
 
     # Log cancelled leave
     CancelledLeave.objects.create(
@@ -77,6 +78,7 @@ def handle_leave_cancellation(leave, staff, reason):
     if relief_ack and relief_ack.staff.email:
         cc_emails.append(relief_ack.staff.email)
 
+    is_approver = Approver.objects.filter(staff=staff, is_active=True).exists()
     # 🎯 Compose email
     subject = f"Leave Cancellation Notice: {leave_request.type.name}"
     message = (
@@ -86,8 +88,9 @@ def handle_leave_cancellation(leave, staff, reason):
         f"Days remaining at cancellation: {leave.days_remaining}\n\n"
         f"Reason provided: {reason or 'No reason specified.'}\n\n"
         f"Your leave balance has been updated accordingly.\n\n"
+        f"{leave_request.type.name.split()[0]} Leave Days Remaining: {detail.days_remaining if detail else 'N/A'}\n\n"
         f"— A system-generated resumption has been logged.\n"
-        f"— Your approving responsibilities have been restored.\n"
+        f"— Your approving responsibilities have been restored.\n" if is_approver else ""
         f"— Relieving officers have been notified.\n\n"
         f"For questions, contact HR.\n\n"
         f"Sincerely,\nGCPS Leave System"

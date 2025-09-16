@@ -60,9 +60,9 @@
             {% endfor %}
 
             <!-- Show corresponding Leave object if exists and request is approved -->
-            {% if req.status == 'APPROVED' and req.leave_set.all %}
+            {% if req.status == 'APPROVED' or req.status == 'COMPLETED' and req.leave_set.all %}
+            <h4>Leave Record</h4>
             <div class="leave-object-info">
-              <h4>Leave Record</h4>
               {% for leave in req.leave_set.all %}
                 <div class="leave-object-details">
                   <p><strong>Name:</strong> {{ leave.name }}</p>
@@ -73,6 +73,21 @@
               {% empty %}
                 <p class="empty">No leave record found.</p>
               {% endfor %}
+              {% if req.status == 'COMPLETED' and req.resumption_set %}
+                <div class="resumption-info">
+                  <h4>Resumption Details</h4>
+                  {% for resumption in req.resumption_set.all %}
+                    <p><strong>Date Submitted:</strong> {{ resumption.date_submitted|date:"M j, Y" }}</p>
+                    <p><strong>Confirmed:</strong> {{ resumption.confirmed }}</p>
+                    {% if resumption.notes %}
+                      <p><strong>Notes:</strong> {{ resumption.notes }}</p>
+                    {% endif %}
+                  {% empty %}
+                    <p class="empty">No resumption details found.</p>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
             </div>
             {% endif %}
           </div>

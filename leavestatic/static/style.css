@@ -39,11 +39,14 @@
 }
 /* --- Leave Object Info Styles --- */
 .leave-object-info {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    column-gap: 10px;
     background: #f7faff;
     border: 1px solid #e0e7ef;
     border-radius: 8px;
     margin: 18px 0 0 0;
-    padding: 14px 18px 10px 18px;
+    /* padding: 14px 18px 10px 18px; */
     box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     font-family: 'Segoe UI', Arial, sans-serif;
     transition: box-shadow 0.2s;
@@ -3641,8 +3644,9 @@
 
 
     .resumption-wrapper {
-        max-width: 700px;
+        width: 100%;
         margin: auto;
+        margin-top: 5px;
         background-color: #ffffff;
         padding: 30px;
         border-radius: 12px;
@@ -3652,6 +3656,8 @@
         h1 {
             color: #0077c0;
             margin-bottom: 20px;
+            width: 100%;
+            text-align: center;
         }
 
         .leave-summary p {
@@ -3758,17 +3764,31 @@
     }
 
     .cancel-leave-wrapper {
-        max-width: 700px;
+        width: 100%;
         margin: auto;
+        margin-top: 5px;
         background-color: #ffffff;
         padding: 30px;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         animation: fadeIn 0.5s ease-in-out;
 
-        .cancel-leave-wrapper h1 {
+        .top-heading {
             color: #d14343;
             margin-bottom: 20px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .leave-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            background-color: #f9f9f9;
+            border-left: 5px solid #d14343;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
 
         .leave-details p {
@@ -6782,7 +6802,8 @@
 
         .leave-card-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
+            column-gap: 10px;
             gap: 1.5rem;
             margin-top: 1rem;
         }

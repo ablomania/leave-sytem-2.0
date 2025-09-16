@@ -22,4 +22,5 @@ admin.site.register(Seniority)
 admin.site.register(Holiday)
 admin.site.register(CancelledLeave)
 admin.site.register(Resumption)
+admin.site.register(LeaveUpdate)
 

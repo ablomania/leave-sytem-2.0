@@ -1,0 +1,48 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+    Login
+{% endblock %}
+
+{% block content %}
+<div class="institution-container">
+    <div class="institution-form-wrapper">
+        <h2>Entity Form</h2>
+        <form action="" method="post" id="institution_form" enctype="multipart/form-data">
+            <div class="field-wrapper">
+                <label for="i-name">Name</label>
+                <input type="text" name="name" id="i-name" required>
+            </div>
+            <div class="field-wrapper">
+                <label for="logo">Logo</label>
+                <input type="file" name="logo" id="logo" accept="image/*">
+            </div>
+            <div>
+                <p>Working days</p>
+                <div class="field-wrapper">
+                    <input type="checkbox" value="true" name="working-days" class="working-days" id="monday">
+                    <label for="monday">Monday</label>
+                    <input type="checkbox" value="true" name="working-days" class="working-days" id="tuesday">
+                    <label for="tuesday">Tuesday</label>
+                    <input type="checkbox" value="true" name="working-days" class="working-days" id="wednesday">
+                    <label for="wednesday">Wednesday</label>
+                    <input type="checkbox" value="true" name="working-days" class="working-days" id="thursday">
+                    <label for="thursday">Thursday</label>
+                    <input type="checkbox" value="true" name="working-days" class="working-days" id="friday">
+                    <label for="friday">Friday</label>
+                    <input type="checkbox" value="true" name="working-days" class="working-days" id="saturday">
+                    <label for="saturday">Saturday</label>
+                    <input type="checkbox" value="true" name="working-days" class="working-days" id="sunday">
+                    <label for="sunday">Sunday</label>
+                </div>
+            </div>
+            
+            {% csrf_token %}
+            <div class="submit-button-wrapper">
+                <input type="submit" value="Submit" class="submit-button">
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

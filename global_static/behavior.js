@@ -1,3 +1,215 @@
+const paginationConfig = {
+    groups: { selector: ".groups .group_item", perPage: 10 },
+    staff_all: { selector: "#staff_all .staff_card", perPage: 10 },
+    gpd: { selector: ".gpd .staff_item", perPage: 10 },
+    app356: { selector: ".app356 .approver-item", perPage: 8 },
+    genders: { selector: ".genders .gender-card", perPage: 8 },
+    leave_types: { selector: ".leave_types .lvtlb", perPage: 5 },
+    holidays: { selector: ".holidays .vholitem, .holidays .fholitem", perPage: 5 },
+    levels: { selector: ".levels .level-card", perPage: 10 },
+    categories: { selector: ".categories .gender-card", perPage: 10 }
+};
+
+const sectionState = {};
+
+function initPagination(sectionName) {
+    const config = paginationConfig[sectionName];
+    if (!config) return;
+
+    const cards = document.querySelectorAll(config.selector);
+    if (cards.length <= config.perPage) return;
+
+    sectionState[sectionName] = { page: 1, cards, totalPages: Math.ceil(cards.length / config.perPage) };
+
+    const bar = document.querySelector(`.pagination-bar[data-section="${sectionName}"]`);
+    if (bar) {
+        bar.innerHTML = `
+        <button onclick="changePage('${sectionName}', -1)">« Prev</button>
+        <span id="${sectionName}_page_info"></span>
+        <button onclick="changePage('${sectionName}', 1)">Next »</button>
+        `;
+        bar.style.display = "flex";
+    }
+
+    renderPage(sectionName);
+}
+
+function renderPage(sectionName) {
+    const { page, cards, perPage, totalPages } = {
+        ...sectionState[sectionName],
+        perPage: paginationConfig[sectionName].perPage
+    };
+
+    cards.forEach((card, i) => {
+        card.style.display = (i >= (page - 1) * perPage && i < page * perPage) ? "block" : "none";
+    });
+
+    const info = document.getElementById(`${sectionName}_page_info`);
+    if (info) info.textContent = `Page ${page} of ${totalPages}`;
+    }
+
+    function changePage(sectionName, delta) {
+    const state = sectionState[sectionName];
+    if (!state) return;
+
+    state.page += delta;
+    if (state.page < 1) state.page = 1;
+    if (state.page > state.totalPages) state.page = state.totalPages;
+
+    renderPage(sectionName);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    Object.keys(paginationConfig).forEach(initPagination);
+});
+
+
+
+function selAllBoxes(boxState, boxClassName) {
+    let checkboxes = document.querySelectorAll(`.${boxClassName}`);
+    let count = 0;
+    checkboxes.forEach((checkbox) => {
+        checkbox.checked = boxState ? true: false; // Toggle the checked state
+    });
+    checkboxes.forEach((checkbox) => {
+        if(checkbox.checked) {
+            count++;
+        }
+    });
+    if(count == 0) {
+        document.querySelector('.mid').style.display = "none";
+    } else {
+        document.querySelector(`.count_selected`).textContent = count;
+    }
+}
+
+function selectCheckBox(boxClassName, multiSelBoxClassName) {
+    let checkboxes = document.querySelectorAll(`.${boxClassName}`);
+    let multiSelCheckbox = document.querySelector(`.${multiSelBoxClassName}`);
+    let count = 0;
+    checkboxes.forEach((checkbox) => {
+        if(checkbox.checked) {
+            count++;
+        }
+    });
+    if(count === checkboxes.length) {
+        multiSelCheckbox.checked = true; // Check the multi-select checkbox
+    } else {
+        multiSelCheckbox.checked = false; // Uncheck the multi-select checkbox
+    }
+}
+
+function displayMid(midClassName) {
+    let midElement = document.querySelector(`.${midClassName}`);
+    if(midElement) {
+        midElement.style.display = "flex"; // Show the mid element
+    } else {
+        console.error(`Element with class ${midClassName} not found.`);
+    }
+}
+
+function hideMid(midClassName) {
+    let midElement = document.querySelector(`.${midClassName}`);    
+    if(midElement) {
+        midElement.style.display = "none"; // Hide the mid element
+    } else {    
+        console.error(`Element with class ${midClassName} not found.`);
+    }
+}
+
+
+
+function updateCounter(counterClassName, checkBoxClassName) {
+    let counterElement = document.querySelector("."+counterClassName);
+    if(counterElement) {
+        let checkboxes = document.querySelectorAll(`.${checkBoxClassName}`);
+        let count = 0;
+        checkboxes.forEach((checkbox) => {
+            if(checkbox.checked) {
+                count++;
+            }
+        });
+        counterElement.textContent = count; // Update the counter text
+    } else {
+        console.error(`Counter element with class ${counterClassName} not found.`);
+    }
+}
+
+function resetCounter(counterClassName) {
+    let counterElement = document.querySelector("."+counterClassName);
+    if(counterElement) {
+        counterElement.textContent = "0"; // Reset the counter text to 0
+    } else {
+        console.error(`Counter element with class ${counterClassName} not found.`);
+    }
+}
+
+function resetAndHideGroupSelect(groupSelectId) {
+    let groupSelect = document.getElementById(groupSelectId);
+    if(groupSelect) {
+        groupSelect.style.display = "none"; // Hide the group select dropdown
+        groupSelect.required = false; // Make it not required
+        groupSelect.disabled = true; // Disable the group select dropdown
+    } else {
+        console.error(`Group select element with ID ${groupSelectId} not found.`);
+    }
+}
+
+function resetForm(formId) {
+    let form = document.getElementById(formId);
+    if(form) {
+        form.reset(); // Reset the form fields
+    }
+}
+
+function toggleGroupSelect(value, groupSelectId) {
+    let groupSelect = document.getElementById(groupSelectId);
+    if(groupSelect) {
+        if(value === "change_group" || value === "change_group_group" || value === "change_category") {
+            groupSelect.style.display = "block"; // Show the group select dropdown
+            groupSelect.required = true; // Make it required
+            groupSelect.disabled = false; // Enable the group select dropdown
+            groupSelect.focus(); // Set focus to the group select dropdown
+        } else {
+            groupSelect.style.display = "none"; // Hide the group select dropdown
+            groupSelect.required = false; // Make it not required
+            groupSelect.disabled = true; // Disable the group select dropdown
+        }
+    } else {
+        console.error(`Group select element with ID ${groupSelectId} not found.`);
+    }
+}
+
+
+function addAnotherToMyForm(formId, inputObjId, value) {
+    let form = document.getElementById(formId);
+    if (form) {
+        let inputObj = document.getElementById(inputObjId);
+        if (inputObj) {
+            inputObj.value = value;
+        } else {
+            console.error(`Input object with ID ${inputObjId} not found.`);
+            return;
+        }
+
+        // Optional: validate required fields before submitting
+        if (form.checkValidity()) {
+            form.submit();
+        } else {
+            console.warn("Form validation failed.");
+            form.reportValidity(); // Show native validation messages
+        }
+    } else {
+        console.error(`Form with ID ${formId} not found.`);
+    }
+}
+
+
+
+
+
+
+
 
 function dateReminder(startDate, daysRequested) {
     if(startDate == null || startDate == "" || startDate == undefined) {
@@ -135,10 +347,7 @@ window.onload = function dd() {
         editFields()
     }
 
-    if(document.querySelector(".setup_page")) {
-        let temp = localStorage.getItem("prevName");
-        loadSettings(null, temp);
-    }
+    
 
 
     let screenWidth = window.screen.width;
@@ -230,8 +439,6 @@ window.onload = function dd() {
 } 
 
 const loadLeave = (someValue ,leaveTypes, staffData) => {
-    console.log("CC", leaveTypes)
-    console.log("CC1", staffData)
     let leaveType = leaveTypes[someValue]
     let staffLeaveData = staffData[someValue]
     document.getElementById("leave_type").value = someValue;
@@ -248,16 +455,34 @@ const loadLeave = (someValue ,leaveTypes, staffData) => {
     document.querySelectorAll(".optional").forEach((e) => {
         e.style.display = "none";
     })
+    document.querySelectorAll(".optionalInput").forEach((e) => {
+        e.disabled = true;
+    })
+
     if(leaveType.i_date == "True") {
-        document.getElementById("m-due-date").style.display = "flex";
-    } else if (leaveType.i_note == "True") {
-        document.getElementById("med-note-container").style.display = "flex";
-    } else if (leaveType.i_institution == "True") {
-        document.getElementById("institution-container").style.display = "flex";
-    } else if (leaveType.i_course == "True") {
-        document.getElementById("course-container").style.display = "flex";
-    } else if (leaveType.i_letter == "True") {
-        document.getElementById("letter-container").style.display = "flex";
+        let obj = document.getElementById("m-due-date")
+        obj.style.display = "flex";
+        document.getElementById("due-date").disabled = false;
+    }
+    if (leaveType.i_note == "True") {
+        let obj = document.getElementById("med-note-container");
+        obj.style.display = "flex";
+        document.getElementById("med-note").disabled = false;
+    }
+    if (leaveType.i_institution == "True") {
+        let obj = document.getElementById("institution-container")
+        obj.style.display = "flex";
+        document.getElementById("institution").disabled = false;
+    }
+    if (leaveType.i_course == "True") {
+        let obj = document.getElementById("course-container");
+        obj.style.display = "flex";
+        document.getElementById("course").disabled = false;
+    }
+    if (leaveType.i_letter == "True") {
+        let obj = document.getElementById("letter-container");
+        obj.style.display = "flex";
+        document.getElementById("letter").disabled = false;
     }
 
     const daysSelect = document.getElementById('days_requested');
@@ -950,10 +1175,10 @@ const show4 =(todo) => {
         header.textContent = "Delete Leave Type";
         msg1.textContent = "Are you sure you want to delete this leave type?";
         msg2.textContent = "This action cannot be undone.";
-        localStorage.setItem("formName", "lvt_del");
-        localStorage.setItem("inputType", "input[name='leave_type']");
     }
 }
+
+
 
 // "input[name='leave_type']"
 const setForm = (event, formName, inputType=null) => {

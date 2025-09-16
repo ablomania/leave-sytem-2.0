@@ -8,6 +8,25 @@ from django.utils import timezone
 
 # Create your models here.
 
+class Entity(models.Model):
+    name = models.CharField(max_length=255, null=True)
+    logo = models.ImageField(upload_to='images/logos', null=True)
+    monday = models.BooleanField(default=False)
+    tuesday = models.BooleanField(default=False)
+    wednesday = models.BooleanField(default=False)
+    thursday = models.BooleanField(default=False)
+    friday = models.BooleanField(default=False)
+    saturday = models.BooleanField(default=False)
+    sunday = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    days_count = models.IntegerField(null=True)
+    def save(self, *args, **kwargs):
+        days = [self.monday, self.tuesday, self.wednesday, self.thursday, self.friday, self.saturday, self.sunday]
+        self.days_count = sum(1 for day in days if day)
+        super().save(*args, **kwargs)
+    def __str__(self):
+        return f"{self.name}"
+
 class Group(models.Model):
     name = models.CharField(max_length=50, null=True)
     image = models.ImageField(upload_to='images', null=True, default='images/hierarchy.png')
@@ -105,7 +124,11 @@ class LeaveUpdate(models.Model):
         choices=[("failed", "Failed"), ("successful", "Successful")],
         default="failed"
     )
-
+    type = models.CharField(
+        max_length=20,
+        choices=[("activation", "Activation"), ("update", "Update"), ("deactivation", "Deactivation")],
+        default="update"
+    )
     def __str__(self):
         return f"Update for {self.leaveobj} at {self.date_modified} → {self.status}"
 
