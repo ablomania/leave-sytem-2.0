@@ -29,6 +29,9 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 # from datetime import date
+# for ll in LeaveRequest.objects.all():
+#     ll.start_date = date.today()
+#     ll.save()
 
 # first = current = date(date.today().year, 1, 1)
 # day = first.isoweekday()
@@ -72,6 +75,7 @@ def get_client_ip_address(request):
 def login_user(request, next_page=None):
     next_page = next_page or '0'
     form = LoginForm(request.POST or None)
+    incorrect = False
 
     if request.method == 'POST' and form.is_valid():
         email = form.cleaned_data['username']
@@ -80,6 +84,7 @@ def login_user(request, next_page=None):
 
         if not staff:
             form.add_error(None, "Invalid username or password")
+            incorrect = True
             print("Staff not found for email:", email)
         else:
             user = authenticate(request, username=staff.username, password=password)
@@ -115,8 +120,9 @@ def login_user(request, next_page=None):
             else:
                 print("Authentication failed for user:", email)
                 form.add_error(None, "Invalid username or password")
+                incorrect = True
 
-    context = {'form': form, 'login': True, 'next_page': next_page, 'index': True}
+    context = {'form': form, 'login': True, 'next_page': next_page, 'index': True, "incorrect": incorrect}
     template = loader.get_template('login.html')
     response = HttpResponse(template.render(context, request))
     return response
@@ -920,6 +926,10 @@ def submit_inputs(request):
             res_leave(form_data)
             message = f"Leave type restored successfully."
             page = "setup_leave_types"
+        elif meta == "del_multi_lvt":
+            del_multi_lvt(dict(form_data))
+            message = f"Leave types deleted successfully."
+            page = "setup_leave_types"
 
         elif meta == "add_hol":
             add_holiday(form_data)
@@ -1176,6 +1186,16 @@ def leave_request(request):
         is_active=True, group_id=user.group.id
     ).exclude(id=user.id).order_by("first_name", "last_name")
 
+    approvers_set = set(Approver.objects.filter(is_active=True).values_list('staff_id', flat=True))
+    all_approvers = Staff.objects.filter(id__in=approvers_set).exclude(id=user.id)
+    active_leave_staff_ids = Leave.objects.filter(
+        is_active=True,
+        status=Leave.LeaveStatus.On_Leave
+    ).values_list('request__applicant_id', flat=True)
+    relieving_officers = relieving_officers.exclude(id__in=active_leave_staff_ids).exclude(id__in=approvers_set)
+
+    
+
     message = ""
 
     if request.method == "POST":
@@ -1192,6 +1212,7 @@ def leave_request(request):
         "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
         "user_id": user.id,
         "user": user,
+        "all_approvers": all_approvers,
         "allowed_leave_types": allowed_leave_types,
         "leave_type_dict": leave_type_dict,
         "allowed_leave_types_dict": allowed_leave_type_dict,
@@ -1626,6 +1647,10 @@ def leave_requests(request):
             "approver__group_to_approve"
         )
     )
+    relieving_acks = Ack.objects.filter(
+        type=Ack.Type.RELIEF,
+        is_active=True
+    )
 
     # 5. Split by status
     pending_approvals  = approvals.filter(status=Approval.ApprovalStatus.Pending)
@@ -1644,7 +1669,7 @@ def leave_requests(request):
         "pending_approvals": pending_approvals,
         "approved_approvals": approved_approvals,
         "denied_approvals": denied_approvals,
-        "loc": "approvals"
+        "loc": "approvals", "relieving_acks": relieving_acks
     }
     response = render(request, "leave_requests.html", context)
 

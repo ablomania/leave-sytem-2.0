@@ -3,6 +3,8 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 from datetime import timedelta
 from .models import *
+from .clean_up_functions import clean_up
+
 
 
 
@@ -10,7 +12,7 @@ def get_reset_trigger(leave_type, today):
     if leave_type.reset_period == "YEARLY":
         return today.month == 1 and today.day == 1
     elif leave_type.reset_period == "MONTHLY":
-        return True
+        return today.day == 1
     elif leave_type.reset_period == "QUARTERLY":
         return today.month in [1, 4, 7, 10] and today.day == 1
     elif leave_type.reset_period == "SEMI ANNUALLY":
@@ -115,9 +117,9 @@ def update_leave_progress():
                     "to": [staff.email],
                     "body": (
                         f"Dear {staff.first_name},\n\n"
-                        f"You have {leave.days_remaining} day(s) remaining on your current leave.\n"
+                        f"You have {leave.days_remaining} day(s) remaining on your current {leave.name.split()[0]} leave.\n"
                         f"Leave Type: {request.type.name}\n"
-                        f"Resumption Date: {request.return_date}\n\n"
+                        f"Resumption Date: {request.return_date.strftime('%A, %d %B %Y')}\n\n"
                         f"Please prepare accordingly.\n\n"
                         f"Regards,\nLeave Management System"
                     )
@@ -129,6 +131,9 @@ def update_leave_progress():
 
                 request.status = LeaveRequest.Status.COMPLETED
                 request.save(update_fields=["status"])
+                print(f"Leave completed for staff: {staff} on leave ID: {leave.id}")
+                # Restore approver roles if any switches were made
+                restore_original_approvers()
 
                 # Create a resumption record
                 print(f"Creating resumption record for staff: {staff}")
@@ -146,22 +151,22 @@ def update_leave_progress():
                     for a in Approval.objects.filter(request=request, is_active=True)
                     if a.approver and a.approver.staff.email
                 ]
-
                 pending_emails.append({
                     "subject": f"Leave Completed: {request.type.name}",
                     "to": [staff.email],
                     "cc": approver_emails,
                     "body": (
                         f"Dear {staff.first_name},\n\n"
-                        f"Your leave for {request.type.name} has been marked as completed.\n"
-                        f"Start Date: {request.start_date}\n"
-                        f"End Date: {request.end_date}\n"
-                        f"Resumption Date: {request.return_date}\n\n"
+                        f"Your leave for {request.type.name.split()[0]} Leave has been marked as completed.\n"
+                        f"Start Date: {request.start_date.strftime('%A, %d %B %Y')}\n"
+                        f"End Date: {request.end_date.strftime('%A, %d %B %Y')}\n"
+                        f"Resumption Date: {request.return_date.strftime('%A, %d %B %Y')}\n\n"
                         f"You currently have 0 days of leave remaining for this leave type.\n"
                         f"Please confirm your return to duty by submitting the Resumption of Duty form.\n\n"
                         f"Welcome back!\n\n"
                         f"Regards,\nLeave Management System"
                     )
+
 
                 })
 
@@ -183,18 +188,25 @@ def update_leave_progress():
             status=Leave.LeaveStatus.On_Leave
         ).select_related("request").first()
 
-        used_days = 0
-        if ongoing_leave:
-            current = ongoing_leave.request.start_date
-            while current <= today and current <= ongoing_leave.request.end_date:
-                if current.weekday() < 5 and current not in holidays:
-                    used_days += 1
-                current += timedelta(days=1)
-
         previous_remaining = detail.days_remaining
         new_entitlement = leave_type.days or 0
-        detail.days_taken = used_days
-        detail.days_remaining = max(new_entitlement - used_days, 0)
+
+        if ongoing_leave:
+            # Calculate days used in the new quota period (since reset date)
+            reset_date = today  # or whatever your reset date is
+            current = max(ongoing_leave.request.start_date, reset_date)
+            valid_days = []
+            while current <= today:
+                if current.weekday() < 5 and current not in holidays:
+                    valid_days.append(current)
+                current += timedelta(days=1)
+            used_days = len(valid_days)
+            detail.days_taken = used_days
+            detail.days_remaining = max(new_entitlement - used_days, 0)
+        else:
+            detail.days_taken = 0
+            detail.days_remaining = new_entitlement
+
         detail.save(update_fields=["days_taken", "days_remaining"])
 
         LeaveBalanceReset.objects.create(
@@ -215,7 +227,7 @@ def update_leave_progress():
                     f"Dear {staff.first_name},\n\n"
                     f"As part of the scheduled {leave_type.reset_period.lower()} leave quota reset, "
                     f"your available leave balance for '{leave_type.name}' has been adjusted.\n\n"
-                    f"Reset Date: {today}\n"
+                    f"Reset Date: {today.strftime('%A, %d %B %Y')}\n"
                     f"New Quota: {new_entitlement} day(s)\n"
                     f"Days Used So Far: {used_days} day(s)\n"
                     f"Updated Balance: {detail.days_remaining} day(s) remaining\n\n"
@@ -238,11 +250,16 @@ def update_leave_progress():
         except Exception as e:
             print(f"Email failed: {mail['subject']} → {mail['to']}\nError: {e}")
 
+    # 🧹 Final cleanup
+    clean_up()
+    print("Cleanup completed.")
 
 
 
 def restore_original_approvers():
+    from .tasks import send_leave_email
     # Get all resumption-confirmed staff who have completed leave
+    print("Restoring original approvers where applicable.")
     completed_requests = LeaveRequest.objects.filter(
         status=LeaveRequest.Status.COMPLETED,
         is_active=True
@@ -277,3 +294,53 @@ def restore_original_approvers():
                 # Mark switch record inactive
                 switch.is_active = False
                 switch.save(update_fields=["is_active"])
+                print(f"Restored original approver {old_approver} for staff {request.applicant}.")
+
+                # --- EMAILS ---
+                group = old_approver.group_to_approve
+                level = old_approver.level
+                group_name = group.name if group else "N/A"
+                level_name = level.name if level else "N/A"
+
+                # 1. Email old approver (now restored)
+                if old_approver.staff.email:
+                    subject_old = "Approver Role Restored"
+                    message_old = (
+                        f"Dear {old_approver.staff.get_full_name()},\n\n"
+                        f"Your approver responsibilities for group '{group_name}' (Level: {level_name}) "
+                        f"have been restored now that {request.applicant.get_full_name()} has resumed duty.\n\n"
+                        f"Please log in to the system to continue your approver duties.\n\n"
+                        f"Regards,\nGCPS Leave System"
+                    )
+                    send_leave_email.delay(subject_old, message_old, [old_approver.staff.email])
+
+                # 2. Email new approver (now deactivated)
+                if new_approver.staff.email:
+                    subject_new = "Approver Role Ended"
+                    message_new = (
+                        f"Dear {new_approver.staff.get_full_name()},\n\n"
+                        f"Your temporary approver assignment for group '{group_name}' (Level: {level_name}) "
+                        f"has ended as {request.applicant.get_full_name()} has resumed duty.\n\n"
+                        f"Thank you for your service during this period.\n\n"
+                        f"Regards,\nGCPS Leave System"
+                    )
+                    send_leave_email.delay(subject_new, message_new, [new_approver.staff.email])
+
+                # 3. Email group members
+                group_member_emails = list(
+                    Staff.objects.filter(
+                        group=group,
+                        is_active=True
+                    ).exclude(id__in=[old_approver.staff.id, new_approver.staff.id]).values_list('email', flat=True)
+                )
+                if group_member_emails:
+                    subject_group = "Approver Change Notification"
+                    message_group = (
+                        f"Dear Team Member,\n\n"
+                        f"Please be informed that {old_approver.staff.get_full_name()} has resumed their role as your group approver "
+                        f"for group '{group_name}' (Level: {level_name}).\n"
+                        f"{new_approver.staff.get_full_name()} is no longer your approver for this group.\n\n"
+                        f"For any leave requests or approvals, please contact your restored approver.\n\n"
+                        f"Regards,\nGCPS Leave System"
+                    )
+                    send_leave_email.delay(subject_group, message_group, list(group_member_emails))

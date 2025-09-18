@@ -105,6 +105,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 <p><strong>Start Date:</strong> {{approval.request.start_date}}</p>
                 <p><strong>End Date:</strong> {{approval.request.end_date}}</p>
                 <p><strong>Return Date:</strong> {{approval.request.return_date}}</p>
+                <p><strong>Relieving officer acceptance: </strong>
+                <span class="status-label">
+                  {%for relief in relieving_acks %}
+                  {% if relief.request.id == approval.request.id %}
+                    {% if relief.status == "Approved" %}
+                      Accepted
+                    {% elif relief.status == "Pending" %}
+                      Pending
+                    {% elif relief.status == "Denied" %}
+                      Denied
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+                </span>
+                </p>
                 {% if approval.request.institution %}
                 <p><strong>Institution:</strong> {{approval.request.institution}}</p>
                 {% endif %}

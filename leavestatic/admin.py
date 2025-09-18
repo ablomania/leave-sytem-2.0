@@ -23,4 +23,6 @@ admin.site.register(Holiday)
 admin.site.register(CancelledLeave)
 admin.site.register(Resumption)
 admin.site.register(LeaveUpdate)
+admin.site.register(ApproverSwitch)
+
 

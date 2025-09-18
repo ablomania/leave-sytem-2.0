@@ -11,8 +11,8 @@
             <img src="{% static 'images/logo.jpg' %}" alt="logo" width="100px" height="100px"/>
         </div>
         <H2>GCPS Leave System</H2>
-        {% if is_sys_admin %}
-        <b>System Admin</b>
+        {% if incorrect %}
+        <em style="color: brown;">incorrect email or password</em>
         {% endif %}
         <form action="" method="post" id="login_form">
             {% for field in form %}

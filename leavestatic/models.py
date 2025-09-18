@@ -102,8 +102,8 @@ class CancelledLeave(models.Model):
     days_remaining_at_cancel = models.IntegerField(null=True)
     is_active = models.BooleanField(default=True)
 
-    def __str__(self):
-        return f"{self.staff.get_full_name()} - {self.leave_request.type.name} cancelled on {self.date_cancelled.date()}"
+    # def __str__(self):
+    #     return f"{self.staff.get_full_name()} - {self.leave_request.type.name} cancelled on {self.date_cancelled.date()}"
 
 
 
@@ -210,6 +210,8 @@ class StaffLeaveDetail(models.Model):
             self.days_remaining =  self.leave_type.days - self.days_taken
         else: self.days_remaining = None
         super().save(*args, **kwargs)
+    def __str__(self):
+        return f"{self.staff.get_full_name()} - {self.leave_type.name} - Taken: {self.days_taken}, Remaining: {self.days_remaining}"
 
         
 class Holiday(models.Model):
@@ -221,6 +223,8 @@ class Holiday(models.Model):
     type = models.CharField(max_length=10, choices=Type.choices, default=Type.Fixed)
     recurs_annually = models.BooleanField(null=True)
     is_active = models.BooleanField(default=True)
+    date_modified = models.DateField(auto_now=True)
+    notes = models.TextField(null=True, blank=True)
     def __str__(self):
         return f"{self.name}"
 
@@ -231,7 +235,7 @@ class Approver(models.Model):
     level = models.ForeignKey(Level, on_delete=models.CASCADE, related_name="level_for_approver_group", null=True)
     is_active = models.BooleanField(default=True)
     class Meta:
-        unique_together = ('staff', 'group_to_approve')
+        unique_together = ('staff', 'group_to_approve', 'level')
 
 class Approval(models.Model):
     class ApprovalStatus(models.TextChoices):

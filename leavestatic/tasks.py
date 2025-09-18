@@ -9,7 +9,7 @@ def run_leave_progress_update():
     update_leave_progress()
 
 
-@shared_task(name="leavestatic.tasks.reinstate_original_approvers")
+@shared_task(name="leavestatic.tasks.restore_original_approvers")
 def reinstate_original_approvers():
     restore_original_approvers()
 

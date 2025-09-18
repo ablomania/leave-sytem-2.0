@@ -14,6 +14,7 @@
             if (select) {
             loadLeave(select.value, window.leaveOptions, window.staffLeaveData);
             }
+            disableSubmit();
         };
         const all_holidays = JSON.parse('{{ holiday_json|safe }}');
     </script>
@@ -27,7 +28,7 @@
             <select name="leave_type_id" id="leave_type_id"
             onchange="loadLeave(value, {{allowed_leave_types_dict|safe}}, {{staff_leave_data|safe}})">
             {% for leave_type in allowed_leave_types %}
-                <option value="{{ leave_type.id }}">{{ leave_type.name }}</option>
+                <option value="{{ leave_type.id }}" {% if forloop.counter == 1 %} selected {%endif%}>{{ leave_type.name }}</option>
             {% endfor %}
             </select>
         </div>
@@ -63,8 +64,9 @@
                 </div>
 
                 <div class="f1">
+                    <p id="spp1" style="color: brown; font-weight: bold;">Please select the numbers of leave days that you need</p>
                     <label for="days_requested">Days requested</label>
-                    <select name="days_requested" id="days_requested" required onchange="dateReminder(start_date.value, value)">
+                    <select name="days_requested" id="days_requested" required onchange="dateReminder(start_date.value, value), disableSubmit()">
                         
                     </select>
                 </div>
@@ -93,6 +95,9 @@
                         <option value="" disabled selected>-- Select Officer to temporarily relieve you of your duties --</option>
                         {% for staff in officers %}
                         <option value="{{ staff.id }}">{{ staff.first_name }} {{ staff.last_name }} {{ staff.other_names }} ({{ staff.seniority.name }})</option>
+                        {% endfor %}
+                        {% for approver in all_approvers %}
+                        <option value="{{ approver.id }}">{{ approver.first_name }} {{ approver.last_name }} {{ approver.other_names }} (Approver)</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -124,7 +129,7 @@
             </div>
 
             <div class="l-button-wrapper">
-                <button type="submit">Submit</button>
+                <button type="submit" id="submit-button">Submit</button>
             </div>
             </form>
             

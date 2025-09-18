@@ -438,6 +438,19 @@ window.onload = function dd() {
     });
 } 
 
+const disableSubmit = () => {
+    let sButton = document.getElementById("submit-button");
+    let daysRequested = document.getElementById("days_requested").value;
+    reminder = document.getElementById("spp1");
+    if (daysRequested === "-- Select Days --") {
+        sButton.disabled = true; // Disable the submit button
+        reminder.style.display = "block";
+    } else {
+        sButton.disabled = false; // Enable the submit button
+        reminder.style.display = "none";
+    }
+}
+
 const loadLeave = (someValue ,leaveTypes, staffData) => {
     let leaveType = leaveTypes[someValue]
     let staffLeaveData = staffData[someValue]
@@ -496,6 +509,7 @@ const loadLeave = (someValue ,leaveTypes, staffData) => {
     placeholder.disabled = true;
     placeholder.selected = true;
     daysSelect.appendChild(placeholder);
+    
 
     // Add actual options (e.g., 1 to 30)
     for (let i = 1; i <= staffLeaveData.remaining; i++) {

@@ -3,6 +3,8 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from .tasks import *
 
+
+
 #Staff
 def add_staff(form_data, request):
     def get_instance(model, key):
@@ -264,55 +266,71 @@ def add_approver(form_data):
         is_special = form_data.get("is_special_approver") == "True"
         Staff.objects.filter(id=approver_id).update(is_special_approver=is_special)
 
-        # Check for existing assignment
-        exists = Approver.objects.filter(
+        # Try to find an existing Approver object (active or inactive)
+        approver_qs = Approver.objects.filter(
             staff_id=approver_id,
             group_to_approve_id=approver_group_id,
             level_id=approver_level_id
-        ).exists()
+        ).order_by('-id')  # Prefer most recent
 
-        if not exists:
-            # 🧩 Create new approver record
-            new_approver = Approver.objects.create(
+        if approver_qs.exists():
+            # Recycle the most recent one
+            approver_obj = approver_qs.first()
+            approver_obj.is_active = True
+            approver_obj.save(update_fields=["is_active"])
+            action = "recycled"
+        else:
+            # Create a new Approver object
+            approver_obj = Approver.objects.create(
                 staff_id=approver_id,
                 group_to_approve_id=approver_group_id,
-                level_id=approver_level_id
-            )
-
-            # 🔎 Fetch matching pending requests
-            senior_staff_ids = Approver.objects.filter(
-                level__level__gte=new_approver.level.level,
+                level_id=approver_level_id,
                 is_active=True
-            ).values_list("staff_id", flat=True)
-
-            pending_requests = LeaveRequest.objects.filter(
-                applicant__group_id=approver_group_id,
-                status=LeaveRequest.Status.PENDING,
-                is_active=True
-            ).exclude(applicant_id__in=senior_staff_ids)
-
-            # 🚦 Add approvals for those requests
-            Approval.objects.bulk_create([
-                Approval(
-                    approver=new_approver,
-                    request=request,
-                    status=Approval.ApprovalStatus.Pending,
-                    is_active=True
-                ) for request in pending_requests
-            ])
-
-            # ✉️ Notify approver via email
-            approver = new_approver
-            subject = "New Approver Assignment"
-            message = (
-                f"Dear {approver.staff.first_name},\n\n"
-                f"You have been assigned as an approver for group '{approver.group_to_approve.name}' "
-                f"at level '{approver.level.name}'.\n\n"
-                f"There are {pending_requests.count()} pending leave requests awaiting your review.\n"
-                f"Please log in to the system to view and take action.\n\n"
-                f"Regards,\nLeave Management System"
             )
-            send_leave_email.delay(subject, message, [approver.staff.email])
+            action = "created"
+
+        # 🔎 Fetch matching pending requests
+        senior_staff_ids = Approver.objects.filter(
+            level__level__gte=approver_obj.level.level,
+            is_active=True
+        ).values_list("staff_id", flat=True)
+
+        pending_requests = LeaveRequest.objects.filter(
+            applicant__group_id=approver_group_id,
+            status=LeaveRequest.Status.PENDING,
+            is_active=True
+        ).exclude(applicant_id__in=senior_staff_ids)
+
+        # 🚦 Add approvals for those requests
+        Approval.objects.bulk_create([
+            Approval(
+                approver=approver_obj,
+                request=request,
+                status=Approval.ApprovalStatus.Pending,
+                is_active=True
+            ) for request in pending_requests
+        ])
+
+        # ✉️ Notify approver via email
+        subject = "New Approver Assignment"
+        message = (
+            f"Dear {approver_obj.staff.first_name},\n\n"
+            f"You have been assigned as an approver for group '{approver_obj.group_to_approve.name}' "
+            f"at level '{approver_obj.level.name}'.\n\n"
+            f"There are {pending_requests.count()} pending leave requests awaiting your review.\n"
+            f"Please log in to the system to view and take action.\n\n"
+            f"Regards,\nLeave Management System"
+        )
+        send_leave_email.delay(subject, message, [approver_obj.staff.email])
+
+        # Optionally: Audit log
+        # ApproverEditLog.objects.create(
+        #     staff_id=approver_id,
+        #     group_id=approver_group_id,
+        #     level_id=approver_level_id,
+        #     action=action,
+        #     performed_by=...,  # Add user if available
+        # )
 
     except (KeyError, ValueError, Staff.DoesNotExist) as e:
         print(f"Error adding approver: {e}")
@@ -595,7 +613,22 @@ def res_leave(form_data):
 
     except LeaveType.DoesNotExist:
         print(f"LeaveType with ID {leave_id} does not exist.")
+    return
 
+
+def del_multi_lvt(form_data):
+    leave_ids = form_data.get('leave_type_ids', [])
+    for id in leave_ids:
+        try:
+            leave_type = LeaveType.objects.get(id=id)
+            leave_type.is_active = False
+            leave_type.save()
+
+            # Deactivate related leave detail records
+            StaffLeaveDetail.objects.filter(leave_type=leave_type).update(is_active=False)
+
+        except LeaveType.DoesNotExist:
+            print(f"LeaveType with ID {id} does not exist.")
     return
 
 
