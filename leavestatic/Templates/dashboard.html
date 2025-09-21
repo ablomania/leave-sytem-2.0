@@ -42,6 +42,15 @@
                 </div>
             </a>
            {% endif %}
+
+           {% if approver_resume_objs.count > 0 %}
+            <a href="{% url 'resumptions' 'pending' %}">
+                <div class="grid_item">
+                    <img src="{% static 'images/recycle.png' %}"  height="100px" width="100px" alt="">
+                    <p>Resumptions</p>
+                </div>
+            </a>
+           {% endif %}
             
            {% if self_ack %}
             <a href="{% url 'confirm_leave_view' self_ack.id %}">

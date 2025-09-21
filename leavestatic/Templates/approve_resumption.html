@@ -1,0 +1,240 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+Resumption Approvals
+{% endblock %}
+
+{% block content %}
+<script>
+    const resumptionConfirmer = (resObjId, confirmed, staffName) => {
+        let confirmer = null;
+        if (confirmed) {
+            console.log(confirmed);
+            confirmer = document.querySelector(".confirm-pending");
+        } else {
+            confirmer = document.querySelector(".deny-pending");
+        }
+        confirmer.style.display = "flex";
+        const staffNameNodes = confirmer.querySelectorAll(".staff-name");
+        staffNameNodes.forEach(e => e.textContent = staffName);
+        confirmer.querySelector(".pending_id").value = `${resObjId}`;
+    }
+    
+    const closeResWindow = (resWindow) => {
+        const myWindow = document.querySelector(`.${resWindow}`);
+        myWindow.style.display = "none";
+        confirmer.querySelector(".pending_id").value = "";
+    }
+
+    const loadChanger = (changerClass, myObj) => {
+        console.log("Hello", myObj)
+        const changer = document.querySelector(`.${changerClass}`);
+        changer.style.display = 'flex';
+        changer.querySelectorAll('.staff_name').forEach((e) => {
+            e.textContent = myObj.staff_name;
+        });
+        changer.querySelector('.date_submitted').textContent = myObj.date_submitted;
+        changer.querySelector('.start_date').textContent = myObj.start_date;
+        changer.querySelector('.end_date').textContent = myObj.end_date;
+        changer.querySelector('.days_given').textContent = myObj.days_given;
+        changer.querySelector('.days_used').textContent = Number(myObj.days_given) - Number(myObj.days_remaining);
+        changer.querySelector('.days_remaining').textContent = myObj.days_remaining;
+        changer.querySelector('.return_date').textContent = myObj.return_date;
+        changer.querySelector('.status').textContent = myObj.leave_status;
+        changer.querySelector('.notes').textContent = myObj.notes;
+        changer.querySelector('input[name="res_id"]').value = myObj.staff_id;
+        let inputNode = changer.querySelector(".agree");
+        myObj.status === "approver confirmed" ? inputNode.checked = true : changer.querySelector(".deny-b").checked = true;
+    }
+
+    
+</script>
+<div class="resumption-approval-wrapper">
+    <div class="resumption-nav">
+        <a {% if mode == 'pending' %} style="background-color: #90caf9;" {% endif %} href="{% url 'resumptions' 'pending' %}">Pending</a>
+        <a {% if mode == 'confirmed' %} style="background-color: #90caf9;" {% endif %} href="{% url 'resumptions' 'confirmed' %}">Confirmed</a>
+        <a {% if mode == 'denied' %} style="background-color: #90caf9;" {% endif %} href="{% url 'resumptions' 'denied' %}">Denied</a>
+    </div>
+    <div class="resumptions-body">
+        <div class="rs-pending">
+            {% for res in resumptions %}
+            <div class="rs-card">
+                <div class="rs-head">
+                    <p class="staff_name">
+                        <strong style="color: black;">{{ res.staff.first_name }} {{ res.staff.last_name }}</strong>
+                        {% if mode == "confirmed" %}<strong class="stat">Confirmed</strong>{% elif mode == "denied" %}<strong class="stat-d" style="color: #b32f2f;">Denied</strong>{% endif %}
+                    </p>
+                    <p class="st"><strong>Status of staff:</strong> I have returned to my duties</p>
+                    <p class="st"><strong>Date submitted: </strong>{{res.date_submitted}}</p>
+                </div>
+                <div class="rs-body">
+                    <p class="lr"><strong style="color: black;">Leave record</strong></p>
+                    <div class="leave-details">
+                        <p><strong>Type of leave: </strong>{{res.leave_obj.request.type.name}}</p>
+                        <p><strong>Days approved: </strong>{{res.leave_obj.request.days_requested}}</p>
+                        <p><strong>Days remaining on leave: </strong>{{res.leave_obj.days_remaining}}</p>
+                        <p><strong>Start date: </strong>{{res.leave_obj.request.start_date}}</p>
+                        <p><strong>End date: </strong>{{res.leave_obj.request.end_date}}</p>
+                        <p><strong>Expected return date: </strong>{{res.leave_obj.request.return_date}}</p>
+                        <p><strong>Status: </strong>{{res.leave_obj.status}}</p>
+                    </div>
+                    <div class="buttons">
+                        {% if mode == "pending" %}
+                        <p>Has <strong style="color: black;">{{res.staff.first_name}} {{res.staff.last_name}}, {{res.staff.other_names}}</strong> returned from their leave?</p>
+                        <div>
+                            <button type="button" onclick="resumptionConfirmer(`{{res.id}}`, true, `{{res.staff.first_name}} {{res.staff.last_name}} {{res.staff.other_names}}`)">Confirm</button>
+                            <button type="button" onclick="resumptionConfirmer(`{{res.id}}`, false, `{{res.staff.first_name}} {{res.staff.last_name}} {{res.staff.other_names}}`)">Deny</button>
+                        </div>
+                        {% elif mode == "confirmed" or mode == "denied" %}
+                        {% if res.date_submitted|date:"U" > now|date:"U"|add:"-604800" %}
+                        <p>Click to change your response for <strong style="color: black;">{{ res.staff.first_name }} {{ res.staff.other_names }} {{ res.staff.last_name }}</strong>'s return from their leave:</p>
+                        <div>
+                            <button type="button" style="background-color: #66bb6a;"
+                                onclick="loadChanger('rs-change', {
+                                    'staff_name': '{{ res.staff.first_name }} {{ res.staff.other_names }} {{ res.staff.last_name }}',
+                                    'staff_id': '{{ res.staff.id }}',
+                                    'date_submitted': '{{ res.date_submitted }}',
+                                    'start_date': '{{ res.leave_obj.request.start_date }}',
+                                    'end_date': '{{ res.leave_obj.request.end_date }}',
+                                    'days_given': '{{ res.leave_obj.days_granted }}',
+                                    'days_remaining': '{{ res.leave_obj.days_remaining }}',
+                                    'return_date': '{{ res.leave_obj.request.return_date }}',
+                                    'leave_status': '{{ res.leave_obj.status }}',
+                                    'notes': '{{ res.notes }}',
+                                    'status': '{{ res.status }}'
+                                })"
+                            >Change Response</button>
+                        </div>
+                        {% else %}
+                            <p style="color: red;"><strong>Note:</strong> This resumption was submitted more than 7 days ago and can no longer be edited.</p>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p style="padding: 2em; text-align: center; color: #888;">No records found.</p>
+            {% endfor %}
+        </div>
+
+        {% if is_paginated %}
+        <div class="pagination" style="display: flex; justify-content: center; align-items: center; margin: 20px 0; gap: 8px;">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if mode %}&mode={{ mode }}{% endif %}" class="page-link">&laquo; First</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if mode %}&mode={{ mode }}{% endif %}" class="page-link">&lsaquo; Prev</a>
+            {% endif %}
+            <span style="margin: 0 8px;">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if mode %}&mode={{ mode }}{% endif %}" class="page-link">Next &rsaquo;</a>
+                <a href="?page={{ paginator.num_pages }}{% if mode %}&mode={{ mode }}{% endif %}" class="page-link">Last &raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="confirm-pending" style="display: none;">
+    <div class="a10">
+        <div class="inn">
+            <h2>Are you sure?</h2>
+            <p><strong>Note: </strong>By checking the box below, you officially confirm that <span class="staff-name"></span> has resumed their duties after exhausting their <span class="leave-name"></span> Leave. </p>
+            <form action="" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="res_id" class="pending_id">
+                <div>
+                    <input type="checkbox" value="agree" name="confirmation" id="accept" required>
+                    <label for="accept">Yes, I confirm that <span class="staff-name"></span> has successfully resumed their duties</label>
+                </div>
+                <div class="buttons">
+                    <button type="submit">Submit</button>
+                    <button type="button" onclick="closeResWindow('confirm-pending')">Discard</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+</div>
+
+<div class="deny-pending"  style="display: none;">
+    <div class="a10">
+        <div class="inn">
+            <h2>Are you sure?</h2>
+            <p><strong>Note: </strong>By checking the box below, you officially deny that <span class="staff-name"></span> has resumed their duties after exhausting their <span class="leave-name"></span> Leave. </p>
+            <form action="" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="res_id" class="pending_id">
+                <div>
+                    <input type="checkbox" value="deny" name="confirmation" id="deny" required>
+                    <label for="deny"><span class="staff-name"></span> has not resumed their duties</label>
+                </div>
+                <div class="buttons">
+                    <button type="submit">Submit</button>
+                    <button type="button" onclick="closeResWindow('deny-pending')">Discard</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+</div>
+
+<div class="rs-change" style="display: none;">
+    <div class="inn0">
+        <div class="inn2">
+            <h2>Change Response</h2>
+            <div class="inn3">
+                <div class="cv2">
+                    <p><strong>Staff Name: </strong></p>
+                    <p class="staff_name" style="color: #0074d9; font-weight: bold;"></p>
+                    <p><strong>From Staff: </strong></p>
+                    <p>I have returned to my duties</p>
+                    <p><strong>Date Submitted</strong></p>
+                    <p class="date_submitted"></p>
+                </div>
+                <div class="sm2">
+                    <p style="color: #0074d9; font-weight: bold; margin-top: 0;">Leave details</p> 
+                    <div class="leave_details cv2">
+                        <p><strong>Start Date: </strong></p>
+                        <p class="start_date"></p>
+                        <p><strong>End Date: </strong></p>
+                        <p class="end_date"></p>
+                        <p><strong>Days Given: </strong></p>
+                        <p class="days_given"></p>
+                        <p><strong>Days Used: </strong></p>
+                        <p class="days_used"></p>
+                        <p><strong>Days Remaining: </strong></p>
+                        <p class="days_remaining"></p>
+                        <p><strong>Expected Return Date: </strong></p>
+                        <p class="return_date"></p>
+                        <p><strong>Leave Status: </strong></p>
+                        <p class="status"></p>
+                        <p><strong>Notes: </strong></p>
+                        <p class="notes"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ch11">
+                <form action="" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="res_id">
+                    <div>
+                        <input type="radio" name="confirmation" value="agree" class="agree" id="agree" required>
+                        <label for="agree">I confirm that <span class="staff_name"></span> has resumed work</label>
+                    </div>
+                    <div>
+                        <input type="radio" name="confirmation" value="deny" class="deny-b" id="deny-b" required>
+                        <label for="deny-b"><span class="staff_name"></span> has not resumed their duties yet.</label>
+                    </div>
+                    <div class="buttons">
+                        <button type="submit" class="change-button">Save changes</button>
+                        <button type="button" onclick="document.querySelector('.rs-change').style.display='none';">Discard</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    
+</div>
+{% endblock %}

@@ -19,6 +19,7 @@ urlpatterns = [
     path('update_leave', views.trigger_leave_update, name="update_leave"),
     path('system_setup', views.setup, name='setup'),
     path('submit_inputs', views.submit_inputs, name='submit_inputs'),
+    path('approve_resumptions/<str:mode>', views.resumption_approvals, name="resumptions"),
     # Approvers
     path('setup/approvers/add', views.approver_add, name='setup_approver_add'),
     path('setup/approvers/edit/<int:staff_id>', views.approver_edit, name='setup_approver_edit'),
