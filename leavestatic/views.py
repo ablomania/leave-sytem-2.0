@@ -1400,83 +1400,27 @@ def resumption_approvals(request, mode):
     session_slug = get_user_from_session_cookie(request)
     if not session_slug or mode not in ["pending", "confirmed", "denied"]:
         return redirect(reverse("login", args=["dashboard"]))
-
+    
     user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
     if not user:
         return redirect(reverse("login", args=["dashboard"]))
+    
+    kk = Resumption.objects.get(id=5)
+    kk.date_submitted = datetime.date.today() - datetime.timedelta(days=31)
 
-    # Remove test code
-    # kk = Resumption.objects.get(id=5)
-    # kk.date_submitted = datetime.date.today() - datetime.timedelta(days=31)
-
+    
     is_approver = check_for_approver(user.id)
     if mode == "pending":
-        resumptions_qs = Resumption.objects.filter(approver_staff_id=user.id, is_active=True, status=Resumption.ResumptionStatus.staff_confirmed).order_by("-date_created")
+        resumptions = Resumption.objects.filter(approver_staff_id=user.id, is_active=True, status=Resumption.ResumptionStatus.staff_confirmed).order_by("-date_created")
     elif mode == "confirmed":
-        resumptions_qs = Resumption.objects.filter(approver_staff_id=user.id, is_active=True, status=Resumption.ResumptionStatus.approver_confirmed, date_submitted__lte=(datetime.date.today()-datetime.timedelta(-30)))
+        resumptions = Resumption.objects.filter(approver_staff_id=user.id, is_active=True, status=Resumption.ResumptionStatus.approver_confirmed, date_submitted__lte=(datetime.date.today()-datetime.timedelta(-30)))
     elif mode == "denied":
-        resumptions_qs = Resumption.objects.filter(approver_staff_id=user.id, is_active=True, status=Resumption.ResumptionStatus.approver_denied, date_submitted__lte=(datetime.date.today()-datetime.timedelta(-30)))
-
-    # Pagination
-    from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-    page_number = request.GET.get("page", 1)
-    paginator = Paginator(resumptions_qs, 6)
-    try:
-        resumptions_page = paginator.page(page_number)
-    except PageNotAnInteger:
-        resumptions_page = paginator.page(1)
-    except EmptyPage:
-        resumptions_page = paginator.page(paginator.num_pages)
-
-    if request.method == "POST":
-        form_data = request.POST
-        resume_obj_id = form_data.get("res_id")
-        approver_agrees = form_data.get("confirmation") == "agree"
-        if resume_obj_id and resume_obj_id.isdigit():
-            resume_obj = Resumption.objects.filter(id=int(resume_obj_id), approver_staff_id=user.id, is_active=True).first()
-            if resume_obj:
-                if approver_agrees:
-                    resume_obj.status = Resumption.ResumptionStatus.approver_confirmed
-                    resume_obj.date_approved = timezone.now()
-                    resume_obj.save()
-                    # Send email to staff
-                    subject = f"Resumption Approved: {resume_obj.leave_obj.request.type.name.split()[0]} Leave"
-                    body = (
-                        f"Dear {resume_obj.staff.first_name},\n\n"
-                        f"Your resumption from {resume_obj.leave_obj.request.type.name.split()[0]} leave has been approved by {user.first_name} {user.last_name}.\n"
-                        f"Leave Start Date: {resume_obj.leave_obj.request.start_date}\n"
-                        f"Leave End Date: {resume_obj.leave_obj.request.end_date}\n"
-                        f"Resumption Date: {resume_obj.leave_obj.request.return_date}\n\n"
-                        f"Welcome back!\n\n"
-                        f"Regards,\nLeave Management System"
-                    )
-                    send_leave_email.delay(subject, body, [resume_obj.staff.email])
-                else:
-                    reason = form_data.get("reason", "").strip()
-                    resume_obj.status = Resumption.ResumptionStatus.approver_denied
-                    resume_obj.reason = reason
-                    resume_obj.date_approved = timezone.now()
-                    resume_obj.save()
-                    # Send denial email to staff
-                    subject = f"Resumption Denied: {resume_obj.leave_obj.request.type.name.split()[0]} Leave"
-                    body = (
-                        f"Dear {resume_obj.staff.first_name},\n\n"
-                        f"Your resumption from {resume_obj.leave_obj.request.type.name.split()[0]} leave has been denied by {user.first_name} {user.last_name}.\n"
-                        f"Your appprover has denied that you have resumed duty.\n\n"
-                        f"Please contact your approver for further details.\n\n"
-                        f"Regards,\nLeave Management System"
-                    )
-                    send_leave_email.delay(subject, body, [resume_obj.staff.email])
-
-
+        resumptions = Resumption.objects.filter(approver_staff_id=user.id, is_active=True, status=Resumption.ResumptionStatus.approver_denied, date_submitted__lte=(datetime.date.today()-datetime.timedelta(-30)))
+    
     context = {
         "is_approver": is_approver,
-        "resumptions": resumptions_page.object_list,
-        "mode": mode,
-        "paginator": paginator,
-        "page_obj": resumptions_page,
-        "is_paginated": paginator.num_pages > 1,
-        "loc": "resumptions"
+        "resumptions": resumptions,
+        "mode": mode
     }
 
     template = loader.get_template("approve_resumption.html")
@@ -1518,6 +1462,70 @@ def relieve_ack(request, id):
     return response
 
 
+def change_relieving_officer(request, leave_request_id):
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
+        return redirect(reverse("login", args=["dashboard"]))
+
+    user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
+    if not user:
+        return redirect(reverse("login", args=["dashboard"]))
+    
+    is_approver = check_for_approver(user.id)
+    leave_request = get_object_or_404(
+        LeaveRequest.objects.select_related("applicant", "type"),
+        id=leave_request_id,
+        applicant=user,
+        is_active=True,
+        status=LeaveRequest.Status.PENDING
+    )
+    relieving_ack = Ack.objects.filter(
+        request=leave_request,
+        type=Ack.Type.RELIEF,
+        is_active=True
+    ).first()
+    relieving_officers = Staff.objects.filter(
+        is_active=True, group_id=user.group.id
+    ).exclude(id=user.id).order_by("first_name", "last_name")
+
+    approvers_set = set(Approver.objects.filter(is_active=True).values_list('staff_id', flat=True))
+    active_leave_staff_ids = Leave.objects.filter(
+        is_active=True,
+        status=Leave.LeaveStatus.On_Leave
+    ).values_list('request__applicant_id', flat=True)
+    relieving_officers = relieving_officers.exclude(id__in=active_leave_staff_ids).exclude(id__in=approvers_set)
+
+    message = ""
+
+    if request.method == "POST":
+        form_data = request.POST
+        new_officer_id = form_data.get("relieving_officer")
+        if new_officer_id and new_officer_id.isdigit():
+            new_officer = Staff.objects.filter(id=int(new_officer_id), is_active=True).first()
+            if new_officer and new_officer.id != relieving_ack.staff.id:
+                relieving_ack.staff = new_officer
+                relieving_ack.save()
+                message = "Relieving officer updated successfully."
+                messages.success(request, message)
+                return redirect(reverse("dashboard"))
+            else:
+                message = "Invalid relieving officer selected."
+        else:
+            message = "Please select a valid relieving officer."
+
+    context = {
+        "leave_request": leave_request,
+        "relieving_officers": relieving_officers,
+        "is_approver": is_approver,
+        "message": message,
+        "relieving_ack": relieving_ack
+    }
+
+    response = render(request, "change_relieving_officer.html", context)
+    response.set_cookie('message', message, max_age=1, secure=False, httponly=True)
+    response = set_session_cookie(response, session_slug)
+    return response
+
 
 def leave_history(request):
     """Displays a user's leave history with approval and acknowledgment progress."""
@@ -1531,7 +1539,7 @@ def leave_history(request):
     
     is_approver = check_for_approver(user.id)
 
-    # Prefetch related approvals, acknowledgments, and leave objects
+    # Prefetch related approvals, acknowledgments, and leave objects (with resumptions on Leave only)
     leave_requests = (
         LeaveRequest.objects
         .filter(applicant=user)
@@ -1539,8 +1547,10 @@ def leave_history(request):
         .prefetch_related(
             Prefetch("approval_set", queryset=Approval.objects.select_related("approver__staff")),
             Prefetch("ack_set", queryset=Ack.objects.select_related("staff")),
-            Prefetch("leave_set", queryset=Leave.objects.all()),
-            Prefetch("resumption_set", queryset=Resumption.objects.all()),
+            Prefetch(
+                "leave_set",
+                queryset=Leave.objects.prefetch_related("resumption_set")
+            ),
         )
         .order_by("-application_date")
     )
@@ -1724,7 +1734,7 @@ def leave_requests(request):
         return redirect(reverse("login", args=["0"]))
 
     # 4. Fetch all relevant approvals in one go
-    approvals = (
+    approvals_qs = (
         Approval.objects
         .filter(
             approver__in=approvers,
@@ -1742,42 +1752,65 @@ def leave_requests(request):
         is_active=True
     )
 
-    # 5. Dynamic mode selection and pagination
+    # Determine mode (pending, approved, denied)
+    mode = request.GET.get("mode", "pending")
+    if mode not in ["pending", "approved", "denied"]:
+        mode = "pending"
+
+    if mode == "pending":
+        approvals = approvals_qs.filter(status=Approval.ApprovalStatus.Pending)
+    elif mode == "approved":
+        approvals = approvals_qs.filter(status=Approval.ApprovalStatus.Approved)
+    elif mode == "denied":
+        approvals = approvals_qs.filter(status=Approval.ApprovalStatus.Denied)
+
+    # Pagination
     from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-    mode = request.GET.get('mode', 'pending')
-    mode_map = {
-        'pending': Approval.ApprovalStatus.Pending,
-        'approved': Approval.ApprovalStatus.Approved,
-        'denied': Approval.ApprovalStatus.Denied,
-    }
-    if mode not in mode_map:
-        mode = 'pending'
-    approvals_qs = approvals.filter(status=mode_map[mode])
-    page = request.GET.get('page', 1)
-    paginator = Paginator(approvals_qs, 5)
+    paginator = Paginator(approvals, 10)
+    page_number = request.GET.get("page")
     try:
-        page_obj = paginator.page(page)
+        page_obj = paginator.page(page_number)
     except PageNotAnInteger:
         page_obj = paginator.page(1)
     except EmptyPage:
         page_obj = paginator.page(paginator.num_pages)
 
+    # For each approval, get related approvals for the same request (for modal display)
+    related_approvals_dict = {}
+    for approval in page_obj:
+        related_approvals_dict[approval.id] = list(
+            Approval.objects.filter(request=approval.request, is_active=True)
+            .exclude(id=approval.id)
+            .select_related("approver__staff", "approver__level")
+        )
+
+    # 5. POST handling
     if request.method == "POST":
         form_data = request.POST
-        if form_data['form_meta'] == "approve": approve_leave(form_data)
-        elif form_data["form_meta"] == "deny": deny_leave(form_data)
-        return redirect(reverse("leave_requests") + f'?mode={mode}')
+        if form_data.get('form_meta') == "approve":
+            approve_leave(form_data)
+        elif form_data.get("form_meta") == "deny":
+            deny_leave(form_data)
+        elif form_data.get("form_meta") == "change":
+            print(form_data)
+            if form_data.get("confirmation") == "approve":
+                approve_leave(form_data)
+                print("Approved")
+            elif form_data.get("confirmation") == "deny":
+                deny_leave(form_data)
+                print("Denied")
+        return redirect(reverse("leave_requests"))
 
     context = {
         "is_approver": is_approver,
-        "approval_groups": approvers,
-        "approvals": page_obj.object_list,
-        "page_obj": page_obj,
-        "paginator": paginator,
+        "approvals": page_obj,
         "mode": mode,
-        "loc": "approvals",
+        "related_approvals": None,  # For modal, JS will fetch per approval if needed
         "relieving_acks": relieving_acks,
         "is_paginated": paginator.num_pages > 1,
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "loc": "approvals"
     }
     response = render(request, "leave_requests.html", context)
     response = set_session_cookie(response, session_slug)

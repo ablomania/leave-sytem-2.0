@@ -3,13 +3,39 @@
 function triggerApproveModal(approval) {
   openApprovalModal('confirm-pending', {
     staff_name: approval.staff_name,
-    id: approval.id
+    id: approval.id,
+    leave_type: approval.leave_type,
+    date_submitted: approval.date_submitted,
+    start_date: approval.start_date,
+    end_date: approval.end_date,
+    days_requested: approval.days_requested,
+    status: approval.status,
+    notes: approval.notes,
+    institution: approval.institution,
+    course: approval.course,
+    due_date: approval.due_date,
+    med_note_url: approval.med_note_url,
+    admission_letter_url: approval.admission_letter_url,
+    relieving_officers: approval.relieving_officers || []
   });
 }
 function triggerDenyModal(approval) {
   openApprovalModal('deny-pending', {
     staff_name: approval.staff_name,
-    id: approval.id
+    id: approval.id,
+    leave_type: approval.leave_type,
+    date_submitted: approval.date_submitted,
+    start_date: approval.start_date,
+    end_date: approval.end_date,
+    days_requested: approval.days_requested,
+    status: approval.status,
+    notes: approval.notes,
+    institution: approval.institution,
+    course: approval.course,
+    due_date: approval.due_date,
+    med_note_url: approval.med_note_url,
+    admission_letter_url: approval.admission_letter_url,
+    relieving_officers: approval.relieving_officers || []
   });
 }
 function triggerChangeModal(approval) {
@@ -22,7 +48,14 @@ function triggerChangeModal(approval) {
     days_requested: approval.days_requested,
     status: approval.status,
     notes: approval.notes,
-    id: approval.id
+    approval_id: approval.approval_id,
+    id: approval.id,
+    institution: approval.institution,
+    course: approval.course,
+    due_date: approval.due_date,
+    med_note_url: approval.med_note_url,
+    admission_letter_url: approval.admission_letter_url,
+    relieving_officers: approval.relieving_officers || []
   });
 }
 
@@ -70,12 +103,103 @@ function triggerChangeModal(approval) {
     color: #888;
     cursor: not-allowed;
   }
+  .tg2{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 10px;
+    p{
+      margin: 0;
+      margin-bottom: 5px;
+    }
+  }
+  .approval-modal.confirm-pending .inn,
+  .approval-modal.deny-pending .inn {
+    background: rgba(255,255,255,0.97);
+    border-radius: 14px;
+    padding: 1.5em 1.2em 1.2em 1.2em;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    /* width: 100%; */
+    /* max-width: 100%; */
+    /* margin: 0 auto; */
+    height: max-content;
+  }
+  .approval-modal.confirm-pending h2,
+  .approval-modal.deny-pending h2 {
+    color: #0074d9;
+    font-weight: 700;
+    margin-bottom: 0.7em;
+    letter-spacing: 0.01em;
+  }
+  .approval-modal.deny-pending h2 {
+    color: #b32f2f;
+  }
+  .approval-modal.confirm-pending button,
+  .approval-modal.deny-pending button {
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 0.5em 1.2em;
+    margin: 0 0.3em;
+    border: none;
+    background: #0074d9;
+    color: #fff;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .approval-modal.deny-pending button {
+    background: #b32f2f;
+  }
+  .approval-modal.confirm-pending button:hover {
+    background: #005fa3;
+  }
+  .approval-modal.deny-pending button:hover {
+    background: #8a2323;
+  }
+  .approval-modal.confirm-pending label,
+  .approval-modal.deny-pending label {
+    font-weight: 500;
+    color: #222;
+  }
+  .approval-modal.confirm-pending input[type="checkbox"],
+  .approval-modal.deny-pending input[type="checkbox"] {
+    accent-color: #0074d9;
+    margin-right: 0.5em;
+  }
+  .approval-modal.deny-pending input[type="checkbox"] {
+    accent-color: #b32f2f;
+  }
+
+  /* Modal animation */
+  .approval-modal {
+    animation: modalFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.3s;
+  }
+  @keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(40px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Relieving officers and approvers styling */
+  .modal-relieving-officers, .modal-related-approvals {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    padding: 1em 1.2em;
+    margin: 1em 0 1.2em 0;
+    transition: box-shadow 0.3s;
+  }
+  .modal-relieving-officers p, .modal-related-approvals p {
+    margin: 0.2em 0;
+  }
+  .modal-relieving-officers:hover, .modal-related-approvals:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+  }
 </style>
     <div class="resumption-approval-wrapper">
       <div class="resumption-nav" style="display: flex; gap: 10px; margin-bottom: 20px;">
-        <a href="?mode=pending" class="{% if mode == 'pending' %}active{% endif %}">Pending</a>
-        <a href="?mode=approved" class="{% if mode == 'approved' %}active{% endif %}">Approved</a>
-        <a href="?mode=denied" class="{% if mode == 'denied' %}active{% endif %}">Denied</a>
+        <a href="?mode=pending" {% if mode == 'pending' %} style="background-color: #005fa3; color: #fff;" {% endif %}>Pending</a>
+        <a href="?mode=approved" {% if mode == 'approved' %} style="background-color: #005fa3; color: #fff;" {% endif %}>Approved</a>
+        <a href="?mode=denied" {% if mode == 'denied' %} style="background-color: #005fa3; color: #fff;" {% endif %}>Denied</a>
       </div>
       <div class="resumptions-body">
         <div class="rs-pending">
@@ -89,7 +213,7 @@ function triggerChangeModal(approval) {
                   </p>
                 </div>
                 <div class="rs-body">
-                  {% if mode == 'pending' %}
+                  <div class="leave-details">
                     <p><strong>Date Applied:</strong> {{ approval.request.application_date }}</p>
                     <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
                     <p><strong>Days Requested:</strong> {{ approval.request.days_requested }}</p>
@@ -100,6 +224,7 @@ function triggerChangeModal(approval) {
                     <span class="status-label">
                       {%for relief in relieving_acks %}
                       {% if relief.request.id == approval.request.id %}
+                      <strong> {{relief.staff.first_name}} {{relief.staff.last_name}} </strong> &#8594; 
                         {% if relief.status == "Approved" %}
                           Accepted
                         {% elif relief.status == "Pending" %}
@@ -117,50 +242,83 @@ function triggerChangeModal(approval) {
                     {% if approval.request.course %}
                     <p><strong>Course:</strong> {{approval.request.course}}</p>
                     {% endif %}
-                    {% if approval.request.letter or approval.request.med_note %}<p><strong>Document:</strong></p>{% endif %}
+                    {% if approval.request.letter or approval.request.med_note %}<p><strong>Document(s):</strong></p>{% endif %}
                     {% if approval.request.med_note %}
                     <a style="text-decoration: underline; color: #0074d9;" href="{{ approval.request.med_note.url }}" target="_blank">
                       Medical note
-                    </a>
-                    {% endif %}<br />
+                    </a> | 
+                    {% endif %} 
                     {% if approval.request.letter %}
                     <a style="text-decoration: underline; color: #0074d9;" href="{{ approval.request.letter.url }}" target="_blank">
                       Admission letter
                     </a>
                     {% endif %}
-                  {% elif mode == 'approved' %}
-                    <p><strong>Date:</strong> {{ approval.request.application_date }}</p>
-                    <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
-                    <p><strong>Days Approved:</strong> {{ approval.days_approved }}</p>
-                  {% elif mode == 'denied' %}
-                    <p><strong>Date:</strong> {{ approval.request.application_date }}</p>
-                    <p><strong>Type:</strong> {{ approval.request.type.name }}</p>
-                    <p><strong>Reason:</strong> {{ approval.reason|default:"—" }}</p>
-                  {% endif %}
+                  <div class="related-approvals">
+                    <p><strong>Related approvals</strong></p>
+                    {% for approval in related_approvals %}
+                    <p><strong>{{approval.approver.staff.first_name}} {{approval.approver.staff.last_name}} ({{approval.approver.level.name}})</strong>  &#8594;  <strong style="text-transform: lowercase;">{{approval.status}}</strong></p>
+                    {% endfor %}
+                  </div>
+                  </div>
                   {% if mode == 'pending' %}
                   <div class="buttons">
-                    <button type="button" class="btn btn-success" onclick="triggerApproveModal({
-                        staff_name: '{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}',
-                        id: '{{ approval.id }}'
-                    })">Approve</button>
-                    <button type="button" class="btn btn-danger" onclick="triggerDenyModal({
-                        staff_name: '{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}',
-                        id: '{{ approval.id }}'
-                    })">Deny</button>
+                    <p>Do you want to approve this <strong>{{approval.request.type.name}}</strong> leave for <strong>{{approval.request.applicant.first_name}} {{approval.request.applicant.last_name}}</strong>?</p>
+          <button type="button" class="btn btn-success" onclick='triggerApproveModal({
+            staff_name: "{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}",
+            id: "{{ approval.id }}",
+            leave_type: "{{ approval.request.type.name }}",
+            date_submitted: "{{ approval.request.application_date }}",
+            start_date: "{{ approval.request.start_date }}",
+            end_date: "{{ approval.request.end_date }}",
+            days_requested: "{{ approval.request.days_requested }}",
+            status: "{{ approval.get_status_display }}",
+            notes: "{{ approval.reason }}",
+            institution: "{{ approval.request.institution }}",
+            course: "{{ approval.request.course }}",
+            due_date: "{{ approval.request.return_date }}",
+            med_note_url: "{% if approval.request.med_note %}{{ approval.request.med_note.url }}{% endif %}",
+            admission_letter_url: "{% if approval.request.letter %}{{ approval.request.letter.url }}{% endif %}",
+            relieving_officers: [{% for relief in relieving_acks %}{% if relief.request.id == approval.request.id %}{% if not forloop.first %},{% endif %}{ name: "{{ relief.staff.first_name }} {{ relief.staff.last_name }}", status: "{{ relief.status }}" }{% endif %}{% endfor %}]
+          })'>Approve</button>
+          <button type="button" class="btn btn-danger" onclick='triggerDenyModal({
+            staff_name: "{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}",
+            id: "{{ approval.id }}",
+            leave_type: "{{ approval.request.type.name }}",
+            date_submitted: "{{ approval.request.application_date }}",
+            start_date: "{{ approval.request.start_date }}",
+            end_date: "{{ approval.request.end_date }}",
+            days_requested: "{{ approval.request.days_requested }}",
+            status: "{{ approval.get_status_display }}",
+            notes: "{{ approval.reason }}",
+            institution: "{{ approval.request.institution }}",
+            course: "{{ approval.request.course }}",
+            due_date: "{{ approval.request.return_date }}",
+            med_note_url: "{% if approval.request.med_note %}{{ approval.request.med_note.url }}{% endif %}",
+            admission_letter_url: "{% if approval.request.letter %}{{ approval.request.letter.url }}{% endif %}",
+            relieving_officers: [{% for relief in relieving_acks %}{% if relief.request.id == approval.request.id %}{% if not forloop.first %},{% endif %}{ name: "{{ relief.staff.first_name }} {{ relief.staff.last_name }}", status: "{{ relief.status }}" }{% endif %}{% endfor %}]
+          })'>Deny</button>
                   </div>
                   {% elif mode == 'approved' or mode == 'denied' %}
                   <div class="buttons">
-                    <button type="button" class="btn btn-primary" onclick="triggerChangeModal({
-                        staff_name: '{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}',
-                        leave_type: '{{ approval.request.type.name }}',
-                        date_submitted: '{{ approval.request.application_date }}',
-                        start_date: '{{ approval.request.start_date }}',
-                        end_date: '{{ approval.request.end_date }}',
-                        days_requested: '{{ approval.request.days_requested }}',
-                        status: '{{ approval.get_status_display }}',
-                        notes: '{{ approval.reason|default:'' }}',
-                        id: '{{ approval.id }}'
-                    })">Change Response</button>
+                    <p>Click on the button below to change your response</p>
+          <button type="button" class="btn btn-primary" onclick='triggerChangeModal({
+            staff_name: "{{ approval.request.applicant.first_name }} {{ approval.request.applicant.last_name }}",
+            leave_type: "{{ approval.request.type.name }}",
+            date_submitted: "{{ approval.request.application_date }}",
+            start_date: "{{ approval.request.start_date }}",
+            end_date: "{{ approval.request.end_date }}",
+            days_requested: "{{ approval.request.days_requested }}",
+            status: "{{ approval.get_status_display }}",
+            notes: "{{ approval.reason}}",
+            approval_id: "{{ approval.id }}",
+            id: "{{ approval.id }}",
+            institution: "{{ approval.request.institution }}",
+            course: "{{ approval.request.course }}",
+            due_date: "{{ approval.request.return_date }}",
+            med_note_url: "{% if approval.request.med_note %}{{ approval.request.med_note.url }}{% endif %}",
+            admission_letter_url: "{% if approval.request.letter %}{{ approval.request.letter.url }}{% endif %}",
+            relieving_officers: [{% for relief in relieving_acks %}{% if relief.request.id == approval.request.id %}{% if not forloop.first %},{% endif %}{ name: "{{ relief.staff.first_name }} {{ relief.staff.last_name }}", status: "{{ relief.status }}" }{% endif %}{% endfor %}]
+          })'>Change Response</button>
                   </div>
                   {% endif %}
                 </div>
@@ -190,11 +348,42 @@ function triggerChangeModal(approval) {
 <div class="approval-modal confirm-pending" style="display: none;">
   <div class="a10">
     <div class="inn">
-      <h2>Are you sure?</h2>
-      <p><strong>Note: </strong>By checking the box below, you officially approve this leave request for <span class="staff-name"></span>.</p>
       <form action="" method="post">
         {% csrf_token %}
+        <input type="hidden" name="form_meta" value="approve">
         <input type="hidden" name="approval_id" class="pending_id">
+        <h2>Are you sure?</h2>
+        <p><strong>Note: </strong>By checking the box below, you officially approve this leave request for <span class="staff-name"></span>.</p>
+        <div class="tg2">
+          <div class="modal-leave-details" style="background: #f9f9fc; border-radius: 10px; padding: 0.7em 1em; margin: 1em 0 1.2em 0;">
+            <p class="leave_type-row" ><strong>Type:</strong> <span class="leave_type"></span></p>
+            <p class="date_submitted-row" style="display:none;"><strong>Date Submitted:</strong> <span class="date_submitted"></span></p>
+            <p class="start_date-row" style="display:none;"><strong>Start Date:</strong> <span class="start_date"></span></p>
+            <p class="end_date-row" style="display:none;"><strong>End Date:</strong> <span class="end_date"></span></p>
+            <p class="days_requested-row" style="display:none;"><strong>Days Requested:</strong> <span class="days_requested"></span></p>
+            <p class="status-row" style="display:none;"><strong>Status:</strong> <span class="status"></span></p>
+            <p class="notes-row" style="display:none;"><strong>Notes:</strong> <span class="notes"></span></p>
+          </div>
+          <div class="modal-extra-info">
+            <p class="institution-row" style="display:none;"><strong>Institution:</strong> <span class="institution"></span></p>
+            <p class="course-row" style="display:none;"><strong>Course:</strong> <span class="course"></span></p>
+            <p class="due-date-row" style="display:none;"><strong>Due Date:</strong> <span class="due_date"></span></p>
+            <p class="med-note-row" style="display:none;"><strong>Medical Note:</strong> <span class="med_note" style="text-decoration: underline; color: #005fa3;"></span></p>
+            <p class="admission-letter-row" style="display:none;"><strong>Admission Letter:</strong> <span class="admission_letter" style="text-decoration: underline; color: #005fa3;"></span></p>
+          </div>
+        </div>
+        
+        <div class="modal-relieving-officers"></div>
+        <div class="modal-related-approvals">
+          <p><strong>Other Approvers:</strong></p>
+          {% if related_approvals %}
+            {% for ra in related_approvals %}
+              <p><strong>{{ ra.approver.staff.first_name }} {{ ra.approver.staff.last_name }} ({{ ra.approver.level.name }})</strong> &#8594; <span style="text-transform: lowercase;">{{ ra.status }}</span></p>
+            {% endfor %}
+          {% else %}
+            <p><em>No other approvers.</em></p>
+          {% endif %}
+        </div>
         <div>
           <input type="checkbox" value="approve" name="confirmation" id="approve" required>
           <label for="approve">Yes, I approve this leave for <span class="staff-name"></span></label>
@@ -211,11 +400,42 @@ function triggerChangeModal(approval) {
 <div class="approval-modal deny-pending" style="display: none;">
   <div class="a10">
     <div class="inn">
-      <h2>Are you sure?</h2>
-      <p><strong>Note: </strong>By checking the box below, you officially deny this leave request for <span class="staff-name"></span>.</p>
       <form action="" method="post">
         {% csrf_token %}
+        <input type="hidden" name="form_meta" value="deny">
         <input type="hidden" name="approval_id" class="pending_id">
+        <h2>Are you sure?</h2>
+        <p><strong>Note: </strong>By checking the box below, you officially deny this leave request for <span class="staff-name"></span>.</p>
+        <div class="tg2">
+          <div class="modal-leave-details" style="background: #f9f9fc; border-radius: 10px; padding: 0.7em 1em; margin: 1em 0 1.2em 0;">
+            <p class="leave_type-row" style="display:none;"><strong>Type:</strong> <span class="leave_type"></span></p>
+            <p class="date_submitted-row" style="display:none;"><strong>Date Submitted:</strong> <span class="date_submitted"></span></p>
+            <p class="start_date-row" style="display:none;"><strong>Start Date:</strong> <span class="start_date"></span></p>
+            <p class="end_date-row" style="display:none;"><strong>End Date:</strong> <span class="end_date"></span></p>
+            <p class="days_requested-row" style="display:none;"><strong>Days Requested:</strong> <span class="days_requested"></span></p>
+            <p class="status-row" style="display:none;"><strong>Status:</strong> <span class="status"></span></p>
+            <p class="notes-row" style="display:none;"><strong>Notes:</strong> <span class="notes"></span></p>
+          </div>
+          <div class="modal-extra-info">
+            <p class="institution-row" style="display:none;"><strong>Institution:</strong> <span class="institution"></span></p>
+            <p class="course-row" style="display:none;"><strong>Course:</strong> <span class="course"></span></p>
+            <p class="due-date-row" style="display:none;"><strong>Due Date:</strong> <span class="due_date"></span></p>
+            <p class="med-note-row" style="display:none;"><strong>Medical Note:</strong> <span class="med_note" style="text-decoration: underline; color: #005fa3;"></span></p>
+            <p class="admission-letter-row" style="display:none;"><strong>Admission Letter:</strong> <span class="admission_letter" style="text-decoration: underline; color: #005fa3;"></span></p>
+          </div>
+        </div>
+        
+        <div class="modal-relieving-officers"></div>
+        <div class="modal-related-approvals">
+          <p><strong>Other Approvers:</strong></p>
+          {% if related_approvals %}
+            {% for ra in related_approvals %}
+              <p><strong>{{ ra.approver.staff.first_name }} {{ ra.approver.staff.last_name }} ({{ ra.approver.level.name }})</strong> &#8594; <span style="text-transform: lowercase;">{{ ra.status }}</span></p>
+            {% endfor %}
+          {% else %}
+            <p><em>No other approvers.</em></p>
+          {% endif %}
+        </div>
         <div>
           <input type="checkbox" value="deny" name="confirmation" id="deny" required>
           <label for="deny"><span class="staff-name"></span>'s leave is denied</label>
@@ -229,7 +449,7 @@ function triggerChangeModal(approval) {
   </div>
 </div>
 
-<div class="approval-modal change-approval" style="display: none;">
+<div class="approval-modal change-approval rs-change" style="display: none;">
   <div class="inn0">
     <div class="inn2">
       <h2>Change Approval Response</h2>
@@ -241,9 +461,14 @@ function triggerChangeModal(approval) {
           <p class="leave_type"></p>
           <p><strong>Date Submitted</strong></p>
           <p class="date_submitted"></p>
+          <p class="institution-row" style="display:none;"><strong>Institution:</strong> <span class="institution"></span></p>
+          <p class="course-row" style="display:none;"><strong>Course:</strong> <span class="course" ></span></p>
+          <p class="due-date-row" style="display:none;"><strong>Due Date:</strong> <span class="due_date"></span></p>
+          <p class="med-note-row" style="display:none;"><strong>Medical Note:</strong> <span class="med_note" style="text-decoration: underline; color: #005fa3;"></span></p>
+          <p class="admission-letter-row" style="display:none;"><strong>Admission Letter:</strong> <span class="admission_letter" style="text-decoration: underline; color: #005fa3;"></span></p>
         </div>
         <div class="sm2">
-          <p style="color: #0074d9; font-weight: bold; margin-top: 0;">Leave details</p>
+          <p style="color: #0074d9; font-weight: bold; margin-top: 0;">Leave Request details</p>
           <div class="leave_details cv2">
             <p><strong>Start Date: </strong></p>
             <p class="start_date"></p>
@@ -258,10 +483,22 @@ function triggerChangeModal(approval) {
           </div>
         </div>
       </div>
+      <div class="modal-relieving-officers"></div>
+      <div class="modal-related-approvals">
+        <p><strong>Other Approvers:</strong></p>
+        {% if related_approvals %}
+          {% for ra in related_approvals %}
+            <p><strong>{{ ra.approver.staff.first_name }} {{ ra.approver.staff.last_name }} ({{ ra.approver.level.name }})</strong> &#8594; <span style="text-transform: lowercase;">{{ ra.status }}</span></p>
+          {% endfor %}
+        {% else %}
+          <p><em>No other approvers.</em></p>
+        {% endif %}
+      </div>
       <div class="ch11">
         <form action="" method="post">
           {% csrf_token %}
           <input type="hidden" name="approval_id">
+          <input type="hidden" name="form_meta" value="change">
           <div>
             <input type="radio" name="confirmation" value="approve" class="agree" id="approve-change" required>
             <label for="approve-change">Approve this leave</label>
@@ -284,7 +521,33 @@ function triggerChangeModal(approval) {
   // Modal openers (to be called from buttons in the card)
   function openApprovalModal(modalClass, approvalObj) {
     const modal = document.querySelector('.' + modalClass);
+    console.log("Opening modal:", modalClass, approvalObj);
     if (!modal) return;
+    // Leave details (show/hide rows based on value)
+    const leaveDetails = [
+      { key: 'leave_type', row: '.leave_type-row' },
+      { key: 'date_submitted', row: '.date_submitted-row' },
+      { key: 'start_date', row: '.start_date-row' },
+      { key: 'end_date', row: '.end_date-row' },
+      { key: 'days_requested', row: '.days_requested-row' },
+      { key: 'status', row: '.status-row' },
+      { key: 'notes', row: '.notes-row' },
+    ];
+    leaveDetails.forEach(function(field) {
+      if (modal.querySelector(field.row)) {
+        if (approvalObj[field.key] && approvalObj[field.key].toString().trim() !== '') {
+          modal.querySelector(field.row).style.display = '';
+          modal.querySelector(field.row + ' span').textContent = approvalObj[field.key];
+        } else {
+          console.log("Here we go:", field.key, approvalObj[field.key]);
+          modal.querySelector(field.row).style.display = 'none';
+        }
+      }
+    });
+    // select and reset all form elements first
+    modal.querySelectorAll('form input[type="checkbox"], form input[type="radio"]').forEach(input => {
+      input.checked = false;
+    });
     modal.style.display = 'flex';
     if (approvalObj) {
       // Populate modal fields
@@ -297,6 +560,66 @@ function triggerChangeModal(approval) {
       if (modal.querySelector('.days_requested')) modal.querySelector('.days_requested').textContent = approvalObj.days_requested || '';
       if (modal.querySelector('.status')) modal.querySelector('.status').textContent = approvalObj.status || '';
       if (modal.querySelector('.notes')) modal.querySelector('.notes').textContent = approvalObj.notes || '';
+      if (modal.querySelector('input[name="approval_id"]')) modal.querySelector('input[name="approval_id"]').value = approvalObj.approval_id || approvalObj.id || '';
+      // Optional fields: show/hide rows based on value
+      // Institution
+      if (modal.querySelector('.institution-row')) {
+        if (approvalObj.institution && approvalObj.institution.trim() !== '') {
+          modal.querySelector('.institution-row').style.display = '';
+          modal.querySelector('.institution').textContent = approvalObj.institution;
+        } else {
+          modal.querySelector('.institution-row').style.display = 'none';
+        }
+      }
+      // Course
+      if (modal.querySelector('.course-row')) {
+        if (approvalObj.course && approvalObj.course.trim() !== '') {
+          modal.querySelector('.course-row').style.display = '';
+          modal.querySelector('.course').textContent = approvalObj.course;
+        } else {
+          modal.querySelector('.course-row').style.display = 'none';
+        }
+      }
+      // Due Date
+      if (modal.querySelector('.due-date-row')) {
+        if (approvalObj.due_date && approvalObj.due_date.trim() !== '') {
+          modal.querySelector('.due-date-row').style.display = '';
+          modal.querySelector('.due_date').textContent = approvalObj.due_date;
+        } else {
+          modal.querySelector('.due-date-row').style.display = 'none';
+        }
+      }
+      // Medical Note
+      if (modal.querySelector('.med-note-row')) {
+        if (approvalObj.med_note_url && approvalObj.med_note_url.trim() !== '') {
+          modal.querySelector('.med-note-row').style.display = '';
+          modal.querySelector('.med_note').innerHTML = `<a href="${approvalObj.med_note_url}" target="_blank">View Medical Note</a>`;
+        } else {
+          modal.querySelector('.med-note-row').style.display = 'none';
+        }
+      }
+      // Admission Letter
+      if (modal.querySelector('.admission-letter-row')) {
+        if (approvalObj.admission_letter_url && approvalObj.admission_letter_url.trim() !== '') {
+          modal.querySelector('.admission-letter-row').style.display = '';
+          modal.querySelector('.admission_letter').innerHTML = `<a href="${approvalObj.admission_letter_url}" target="_blank">View Admission Letter</a>`;
+        } else {
+          modal.querySelector('.admission-letter-row').style.display = 'none';
+        }
+      }
+      // Render relieving officers dynamically
+      if (modal.querySelector('.modal-relieving-officers')) {
+        const container = modal.querySelector('.modal-relieving-officers');
+        let html = '<p><strong>Relieving Officer(s):</strong></p>';
+        if (approvalObj.relieving_officers && approvalObj.relieving_officers.length > 0) {
+          approvalObj.relieving_officers.forEach(function(relief) {
+            html += `<p><strong>${relief.name}</strong> &#8594; <span style="text-transform: lowercase;">${relief.status}</span></p>`;
+          });
+        } else {
+          html += '<p><em>No relieving officers.</em></p>';
+        }
+        container.innerHTML = html;
+      }
     }
   }
   function closeApprovalModal(modalClass) {

@@ -4011,7 +4011,8 @@ textarea:focus {
         border: 1px solid #ccc;
         background-color: #f9f9f9;
         transition: box-shadow 0.3s ease, transform 0.3s ease;
-        height: 290px;
+        /* height: max-content; */
+        height: 330px;
 
         strong{
             color: gray;
@@ -4133,7 +4134,6 @@ textarea:focus {
             background-image: url('/static/images/like(1).png') ;
             background-position: cover;
             background-repeat: no-repeat;
-            bac
             width: 100%;
             height: 100%;
         }
@@ -4159,7 +4159,7 @@ textarea:focus {
                 }
                 button[type=submit] {
                     background-color: #007BFF;
-                    width: 60px;
+                    width: max-content;
                     &:hover{
                         background-color: #0056b3;
                     }

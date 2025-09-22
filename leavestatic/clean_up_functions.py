@@ -75,7 +75,7 @@ def clean_acks():
     dangling_acks.delete()
 
 def clean_resumptions():
-    dangling_resumptions = Resumption.objects.filter(leave_request=None) | Resumption.objects.filter(staff=None)
+    dangling_resumptions = Resumption.objects.filter(leave_obj=None) | Resumption.objects.filter(staff=None)
     dangling_resumptions.delete()
 
 def clean_cancelled_leaves():

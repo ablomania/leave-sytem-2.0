@@ -20,6 +20,7 @@ urlpatterns = [
     path('system_setup', views.setup, name='setup'),
     path('submit_inputs', views.submit_inputs, name='submit_inputs'),
     path('approve_resumptions/<str:mode>', views.resumption_approvals, name="resumptions"),
+    path('change_relieving_officer/<int:leave_request_id>', views.change_relieving_officer, name="change_relieving_officer"),
     # Approvers
     path('setup/approvers/add', views.approver_add, name='setup_approver_add'),
     path('setup/approvers/edit/<int:staff_id>', views.approver_edit, name='setup_approver_edit'),

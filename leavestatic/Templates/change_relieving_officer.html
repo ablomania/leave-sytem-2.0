@@ -1,0 +1,114 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+Change relieving officer
+{% endblock %}
+
+{% block content %}
+<style>
+  .change_relieving-container {
+	width: 60%;
+    height: 500px;
+	/* margin: 40px auto; */
+	background: #fff;
+    margin-top: 5px;
+	border-radius: 10px;
+	box-shadow: 0 4px 18px rgba(0,0,0,0.10);
+	padding: 0;
+	font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .change_relieving-header {
+	padding: 22px 32px 16px 32px;
+	border-bottom: 1px solid #e3e3e3;
+  }
+  .change_relieving-header h4 {
+	margin: 0;
+	font-size: 1.5rem;
+	font-weight: 600;
+	letter-spacing: 0.5px;
+  }
+  .change_relieving-body {
+	padding: 32px 32px 24px 32px;
+  }
+  .change_relieving-body label {
+	font-weight: 500;
+	margin-bottom: 8px;
+	color: #333;
+  }
+  .change_relieving-body select.form-select {
+	border-radius: 6px;
+	border: 1px solid #bfc9d1;
+	padding: 10px 12px;
+	font-size: 1rem;
+	margin-bottom: 18px;
+  }
+  .change_relieving-body .btn-success {
+	background: linear-gradient(90deg, #28a745 60%, #218838 100%);
+	border: none;
+	font-weight: 500;
+	padding: 8px 22px;
+	border-radius: 6px;
+	transition: background 0.2s;
+  }
+  .change_relieving-body .btn-success:hover {
+	background: #218838;
+  }
+  .change_relieving-body .btn-secondary {
+	margin-left: 10px;
+	border-radius: 6px;
+	padding: 8px 22px;
+  }
+  .change_relieving-body .alert-info {
+	background: #eaf6ff;
+	color: #0c5460;
+	border: 1px solid #b8daff;
+	border-radius: 6px;
+	padding: 10px 18px;
+	margin-bottom: 18px;
+  }
+  .change_relieving-body .mt-3 {
+	margin-top: 1.5rem;
+	font-size: 1.05rem;
+  }
+  .change_relieving-body strong {
+	color: #0056b3;
+  }
+</style>
+<div class="change_relieving-container">
+	<div class="change_relieving-header">
+		<h4>Change Relieving Officer</h4>
+	</div>
+	<div class="change_relieving-body">
+		{% if message %}
+			<div class="alert alert-info">{{ message }}</div>
+		{% endif %}
+		<form method="post" novalidate>
+			{% csrf_token %}
+			<div class="mb-3">
+				<label for="relieving_officer" class="form-label">Select New Relieving Officer</label>
+				<select class="form-select" id="relieving_officer" name="relieving_officer" required>
+					<option value="">-- Select Officer --</option>
+					{% for officer in relieving_officers %}
+						<option value="{{ officer.id }}" {% if relieving_ack.request.id == leave_request.id %}selected{% endif %}>
+							{{ officer.last_name }}, {{ officer.first_name }} {{ officer.other_names }}
+						</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="mb-3">
+				<button type="submit" class="btn btn-success">Update Relieving Officer</button>
+				<a href="{% url 'dashboard' %}" class="btn btn-secondary ms-2">Cancel</a>
+			</div>
+		</form>
+		<div class="mt-3">
+			<strong>Current Relieving Officer:</strong>
+			{% if relieving_ack %}
+				{{ relieving_ack.staff.last_name }}, {{ relieving_ack.staff.first_name }} {{ relieving_ack.staff.other_names }}
+			{% else %}
+				<span class="text-muted">None assigned</span>
+			{% endif %}
+		</div>
+	</div>
+</div>
+{% endblock %}

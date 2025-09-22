@@ -35,6 +35,7 @@
             {% if ack.type == "RELIEF" %}
               <p>{{ ack.staff.first_name }}:
                 <span class="status-tag status-{{ ack.status|lower }}">{{ ack.status }}</span>
+              <a href="{% url 'change_relieving_officer' req.id %}">&#9998;</a>
               </p>
               {% endif %}
               {% if ack.type == "SELF" %}
@@ -59,35 +60,33 @@
               <p class="empty">No approvals yet.</p>
             {% endfor %}
 
-            <!-- Show corresponding Leave object if exists and request is approved -->
-            {% if req.status == 'APPROVED' or req.status == 'COMPLETED' and req.leave_set.all %}
+            <!-- Show corresponding Leave object if exists and request is approved or completed -->
+            {% if req.status == 'APPROVED' or req.status == 'COMPLETED' and req.leave_set %}
             <h4>Leave Record</h4>
             <div class="leave-object-info">
-              {% for leave in req.leave_set.all %}
+              {% for leave in req.leave_set %}
                 <div class="leave-object-details">
                   <p><strong>Name:</strong> {{ leave.name }}</p>
                   <p><strong>Status:</strong> {{ leave.status }}</p>
                   <p><strong>Days Granted:</strong> {{ leave.days_granted }}</p>
                   <p><strong>Days Remaining:</strong> {{ leave.days_remaining }}</p>
                 </div>
+                {% if req.status == 'COMPLETED' and leave.resumption_set %}
+                  <div class="resumption-info">
+                    <h4>Resumption Details</h4>
+                    {% for resumption in leave.resumption_set %}
+                      <p><strong>Date Submitted:</strong> {{ resumption.date_submitted|date:"M j, Y" }}</p>
+                      {% if resumption.notes %}
+                        <p><strong>Notes:</strong> {{ resumption.notes }}</p>
+                      {% endif %}
+                    {% empty %}
+                      <p class="empty">No resumption details found.</p>
+                    {% endfor %}
+                  </div>
+                {% endif %}
               {% empty %}
                 <p class="empty">No leave record found.</p>
               {% endfor %}
-              {% if req.status == 'COMPLETED' and req.resumption_set %}
-                <div class="resumption-info">
-                  <h4>Resumption Details</h4>
-                  {% for resumption in req.resumption_set.all %}
-                    <p><strong>Date Submitted:</strong> {{ resumption.date_submitted|date:"M j, Y" }}</p>
-                    <p><strong>Confirmed:</strong> {{ resumption.confirmed }}</p>
-                    {% if resumption.notes %}
-                      <p><strong>Notes:</strong> {{ resumption.notes }}</p>
-                    {% endif %}
-                  {% empty %}
-                    <p class="empty">No resumption details found.</p>
-                  {% endfor %}
-                </div>
-              {% endif %}
-
             </div>
             {% endif %}
           </div>
