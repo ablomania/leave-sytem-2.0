@@ -105,6 +105,37 @@ class CancelledLeave(models.Model):
     # def __str__(self):
     #     return f"{self.staff.get_full_name()} - {self.leave_request.type.name} cancelled on {self.date_cancelled.date()}"
 
+class Extension_ack(models.Model):
+    leave_extension = models.ForeignKey("LeaveExtension", on_delete=models.CASCADE, null=True)
+    date_created = models.DateTimeField(auto_now_add=True)
+    reason = models.TextField(null=True)
+    staff = models.ForeignKey("Staff", on_delete=models.CASCADE)
+    status = models.CharField(
+        max_length=10,
+        choices=[("Pending", "Pending"), ("Approved", "Approved"), ("Denied", "Denied")],
+        default="Pending"
+    )
+    is_active = models.BooleanField(default=True)
+    def __str__(self):
+        return f"{self.id}"
+
+
+class LeaveExtension(models.Model):
+    requested_by = models.ForeignKey("Staff", on_delete=models.CASCADE)
+    leave_request = models.ForeignKey("LeaveRequest", on_delete=models.CASCADE, null=True)
+    leave_obj = models.ForeignKey("Leave", on_delete=models.CASCADE, null=True)
+    days_extended = models.IntegerField(null=True)
+    date_created = models.DateTimeField(auto_now_add=True)
+    reason = models.TextField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[("pending", "Pending"), ("approved", "Approved"), ("denied", "Denied")],
+        default="pending"
+    )
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.requested_by.get_full_name()} - {self.leave_request.type.name} extension requested on {self.date_created.date()}"
 
 
 class Resumption(models.Model):

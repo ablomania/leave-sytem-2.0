@@ -386,7 +386,7 @@ function triggerChangeModal(approval) {
         </div>
         <div>
           <input type="checkbox" value="approve" name="confirmation" id="approve" required>
-          <label for="approve">Yes, I approve this leave for <span class="staff-name"></span></label>
+          <label for="approve">Yes, I approve this leave for <span class="staff-name"></span> <span class="star">*</span></label>
         </div>
         <div class="buttons">
           <button type="submit">Submit</button>
@@ -438,7 +438,7 @@ function triggerChangeModal(approval) {
         </div>
         <div>
           <input type="checkbox" value="deny" name="confirmation" id="deny" required>
-          <label for="deny"><span class="staff-name"></span>'s leave is denied</label>
+          <label for="deny"><span class="staff-name"></span>'s leave is denied <span class="star">*</span></label>
         </div>
         <div class="buttons">
           <button type="submit">Submit</button>
@@ -505,7 +505,7 @@ function triggerChangeModal(approval) {
           </div>
           <div>
             <input type="radio" name="confirmation" value="deny" class="deny-b" id="deny-change" required>
-            <label for="deny-change">Deny this leave</label>
+            <label for="deny-change">Deny this leave </label>
           </div>
           <div class="buttons">
             <button type="submit" class="change-button">Save changes</button>

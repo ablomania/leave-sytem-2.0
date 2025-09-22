@@ -6,6 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.utils import timezone
 from django.core.mail import EmailMessage
+import datetime
 from .tasks import send_leave_email, restore_cancelled_approvers
 
 
@@ -56,17 +57,11 @@ def handle_leave_cancellation(leave, staff, reason):
 
     Resumption.objects.create(
         staff=staff,
-        leave_request=leave_request,
-        confirmed=True,
+        leave_obj=leave,
+        status=Resumption.ResumptionStatus.staff_confirmed,
         notes=f"System-generated resumption due to cancellation on {today}.",
         is_active=True
     )
-
-    # Deactivate pending approvals
-    Approval.objects.filter(request=leave_request, status=Approval.ApprovalStatus.Pending, is_active=True).update(is_active=False)
-
-    # 🎯 Restore approvers asynchronously
-    restore_cancelled_approvers.delay(leave.id)
 
     # Compile CC recipients
     cc_emails = [
@@ -90,7 +85,7 @@ def handle_leave_cancellation(leave, staff, reason):
         f"Your leave balance has been updated accordingly.\n\n"
         f"{leave_request.type.name.split()[0]} Leave Days Remaining: {detail.days_remaining if detail else 'N/A'}\n\n"
         f"— A system-generated resumption has been logged.\n"
-        f"— Your approving responsibilities have been restored.\n" if is_approver else ""
+        f"— Your approving responsibilities will be restored, when HR confirms your resumption of duty.\n" if is_approver else ""
         f"— Relieving officers have been notified.\n\n"
         f"For questions, contact HR.\n\n"
         f"Sincerely,\nGCPS Leave System"
@@ -282,37 +277,134 @@ def update_ack_status(form_data, status):
     try:
         ack_id = int(form_data.get("ack_id"))
         updated = Ack.objects.filter(id=ack_id).update(status=status, reason=form_data.get("reason", ""))
-        return True  # True if update succeeded
+        is_relieving = True if Ack.objects.filter(id=ack_id).first().type == Ack.Type.RELIEF else False
+        return True, is_relieving  # True if update succeeded
     except (ValueError, TypeError):
         return False  # Invalid ack_id
 
 
 
 def approve_ack(form_data, request_obj):
-    updated = update_ack_status(form_data, Ack.Status.Approved)
+    updated, is_relieving = update_ack_status(form_data, Ack.Status.Approved)
     ack_id = int(form_data.get("ack_id"))
     if updated:
         finalize_leave_approval(request_obj)
         staff = request_obj.applicant
         ack_obj = Ack.objects.filter(id=ack_id).first()
-        subject = f'Relieving Officer Approval — {request_obj.type.name.split()[0]} Leave'
-        message = (
-            f"Dear { staff.first_name },"
-            f"\n\nYour assigned relieving officer, { ack_obj.staff.first_name } { ack_obj.staff.last_name }, has reviewed your leave request for { request_obj.type.name.split()[0] } Leave and has officially approved to act in your stead during your absence."
-            f"\nLeave Period: { request_obj.start_date.strftime('%A, %d %B %Y') } to { request_obj.end_date.strftime('%A, %d %B %Y') }."
-            f"\n\nThis approval confirms that your responsibilities will be temporarily delegated and continuity of operations will be maintained."
-            f"Please ensure all necessary handover notes and access permissions are in place before your departure."
-            f"\n\nBest wishes during your leave."
-            f"\nSincerely, "
-            f"\nGCPS Leave System"
-        )
-        send_leave_email.delay(subject, message, [staff.email])
+        if is_relieving:
+            subject = f'Relieving Officer Approval — {request_obj.type.name.split()[0]} Leave'
+            message = (
+                f"Dear { staff.first_name },"
+                f"\n\nYour assigned relieving officer, { ack_obj.staff.first_name } { ack_obj.staff.last_name }, has reviewed your leave request for { request_obj.type.name.split()[0] } Leave and has officially approved to act in your stead during your absence."
+                f"\nLeave Period: { request_obj.start_date.strftime('%A, %d %B %Y') } to { request_obj.end_date.strftime('%A, %d %B %Y') }."
+                f"\n\nThis approval confirms that your responsibilities will be temporarily delegated and continuity of operations will be maintained."
+                f"Please ensure all necessary handover notes and access permissions are in place before your departure."
+                f"\n\nBest wishes during your leave."
+                f"\nSincerely, "
+                f"\nGCPS Leave System"
+            )
+            send_leave_email.delay(subject, message, [staff.email])
+        else:
+            subject = f'Acceptance to go on leave — {request_obj.type.name.split()[0]} Leave'
+            message = (
+                f"Dear { staff.first_name },"
+                f"\n\nYou have successfully accepted to go on { request_obj.type.name.split()[0] } Leave."
+                f"\nLeave Period: { request_obj.start_date.strftime('%A, %d %B %Y') } to { request_obj.end_date.strftime('%A, %d %B %Y') }."
+                f"\n\nThis acceptance confirms that your responsibilities will be temporarily delegated and continuity of operations will be maintained."
+                f"Please ensure all necessary handover notes and access permissions are in place before your departure."
+                f"\n\nBest wishes during your leave."
+                f"\nSincerely, "
+                f"\nGCPS Leave System"
+            )
+            send_leave_email.delay(subject, message, [staff.email]) 
     return updated
 
 
+def approve_extension_ack(extension_ack_obj):
+    extension_ack_obj.status = "Approved"
+    extension_ack_obj.save()
+    leave_extension = extension_ack_obj.leave_extension
+    leave_extension.status = "approved"
+    leave_extension.save()
+    leave_request = leave_extension.leave_request
+    staff = leave_request.applicant
+
+    subject = f'Leave Extension Approved — {leave_request.type.name.split()[0]} Leave'
+    message = (
+        f"Dear { staff.first_name },"
+        f"\n\nYour request to extend your { leave_request.type.name.split()[0] } Leave has been approved."
+        f"\nOriginal Leave Period: { leave_request.start_date.strftime('%A, %d %B %Y') } to { leave_request.end_date.strftime('%A, %d %B %Y') }."
+        f"\nNew End Date: {(leave_request.start_date + datetime.timedelta(days=leave_extension.days_extended)).strftime('%A, %d %B %Y') }."
+        f"\nTotal Days Extended: { leave_extension.days_extended } day(s)."
+        f"\n\nPlease ensure that all necessary arrangements are in place for your extended absence."
+        f"\n\nBest wishes during your extended leave."
+        f"\nSincerely, "
+        f"\nGCPS Leave System"
+    )
+    
+    # send email to approvers and relieving officer
+    approvals = Approval.objects.filter(request=leave_request, is_active=True)
+    cc_emails = [
+        a.approver.staff.email
+        for a in approvals
+        if a.approver and a.approver.staff.email
+    ]
+    relief_ack = Ack.objects.filter(
+        request=leave_request,
+        type=Ack.Type.RELIEF,
+        status=Ack.Status.Approved
+    ).first()
+    if relief_ack and relief_ack.staff.email:
+        cc_emails.append(relief_ack.staff.email)
+    send_leave_email.delay(subject, message, [staff.email], cc_emails)
+    
+    print(f"Extension ack {extension_ack_obj.id} approved and applicant notified.")
+    return True
+
+
+def deny_extension_ack(extension_ack_obj):
+    extension_ack_obj.status = "Denied"
+    extension_ack_obj.save()
+    leave_extension = extension_ack_obj.leave_extension
+    leave_extension.status = "denied"
+    leave_extension.save()
+    leave_request = leave_extension.leave_request
+    staff = leave_request.applicant
+
+    subject = f'Leave Extension Denied — {leave_request.type.name.split()[0]} Leave'
+    message = (
+        f"Dear { staff.first_name },"
+        f"\n\nYour request to extend your { leave_request.type.name.split()[0] } Leave has been denied."
+        f"\nOriginal Leave Period: { leave_request.start_date.strftime('%A, %d %B %Y') } to { leave_request.end_date.strftime('%A, %d %B %Y') }."
+        f"\nRequested New End Date: {(leave_request.start_date + datetime.timedelta(days=leave_extension.days_extended)).strftime('%A, %d %B %Y') }."
+        f"\nTotal Days Requested for Extension: { leave_extension.days_extended } day(s)."
+        f"\n\nPlease contact HR for further clarification or to discuss alternative arrangements."
+        f"\n\nSincerely, "
+        f"\nGCPS Leave System"
+    )
+    
+    # send email to approvers and relieving officer
+    approvals = Approval.objects.filter(request=leave_request, is_active=True)
+    cc_emails = [
+        a.approver.staff.email
+        for a in approvals
+        if a.approver and a.approver.staff.email
+    ]
+    relief_ack = Ack.objects.filter(
+        request=leave_request,
+        type=Ack.Type.RELIEF,
+        status=Ack.Status.Approved
+    ).first()
+    if relief_ack and relief_ack.staff.email:
+        cc_emails.append(relief_ack.staff.email)
+    send_leave_email.delay(subject, message, [staff.email], cc_emails)
+    
+    print(f"Extension ack {extension_ack_obj.id} denied and applicant notified.")
+    return True
+
 
 def deny_ack(form_data, request_obj):
-    updated = update_ack_status(form_data, Ack.Status.Denied)
+    updated, is_relieving = update_ack_status(form_data, Ack.Status.Denied)
     ack_id = int(form_data.get("ack_id"))
     if updated:
         finalize_leave_approval(request_obj)
@@ -321,24 +413,43 @@ def deny_ack(form_data, request_obj):
 
         trigger = {
             "name": f"{ ack_obj.staff.first_name } {ack_obj.staff.last_name} {ack_obj.staff.other_names}",
-            "role": "Relieving Officer",
+            "role": "Relieving Officer" if is_relieving else "Self",
             "date": timezone.now(),
             "reason": ack_obj.reason
         }
-        cancel_leave_request(request_obj, trigger)
+        if is_relieving:
+            # cancel_leave_request(request_obj, trigger)
 
-        subject = f'Relieving Officer Disapproval — {request_obj.type.name.split()[0]} Leave'
-        message = (
-            f"Dear { staff.first_name },"
-            f"\n\nYour assigned relieving officer, { ack_obj.staff.get_full_name() }, has reviewed your leave request for {request_obj.type.name.split()[0]} Leave and has declined to act in your stead during the requested period."
-            f"\n\nLeave Period: { request_obj.start_date.strftime('%A, %d %B %Y') } to { request_obj.end_date.strftime('%A, %d %B %Y') }" 
-            f"\nReason for Disapproval: { ack_obj.reason if ack_obj.reason != "" else "No reason"}."
-            f"\n\nThis decision may affect the approval process of your leave. Kindly consult your supervisor or HR to discuss alternative arrangements or reassignment of relieving duties."
-            f"We understand this may be inconvenient and appreciate your cooperation in resolving it promptly."
-            f"\n\nSincerely," 
-            f"\nGCPS Leave System"
-        )
-        send_leave_email.delay(subject, message, [staff.email])
+            subject = f'Relieving Officer Disapproval — {request_obj.type.name.split()[0]} Leave'
+            message = (
+                f"Dear { staff.first_name },"
+                f"\n\nYour assigned relieving officer, { ack_obj.staff.get_full_name() }, has reviewed your leave request for {request_obj.type.name.split()[0]} Leave and has declined to act in your stead during the requested period."
+                f"\n\nLeave Period: { request_obj.start_date.strftime('%A, %d %B %Y') } to { request_obj.end_date.strftime('%A, %d %B %Y') }" 
+                f"\nReason for Disapproval: { ack_obj.reason if ack_obj.reason != "" else "No reason"}."
+                f"\nKindly log on to the platform and select a new relieving officer.\n"
+                f"\nYou have two weeks remaining to select a new relieving officer."
+                f"\nNote: Failure to select a new officer will result in cancellation of your leave request\n"
+                f"\n\nThis decision may affect the approval process of your leave."
+                f"We understand this may be inconvenient and appreciate your cooperation in resolving it promptly."
+                f"\n\nSincerely," 
+                f"\nGCPS Leave System"
+            )
+            send_leave_email.delay(subject, message, [staff.email])
+        else:
+            cancel_leave_request(request_obj, trigger)
+
+            subject = f'Relieving Officer Disapproval — {request_obj.type.name.split()[0]} Leave'
+            message = (
+                f"Dear { staff.first_name },"
+                f"\n\nYour assigned relieving officer, { ack_obj.staff.get_full_name() }, has reviewed your leave request for {request_obj.type.name.split()[0]} Leave and has declined to act in your stead during the requested period."
+                f"\n\nLeave Period: { request_obj.start_date.strftime('%A, %d %B %Y') } to { request_obj.end_date.strftime('%A, %d %B %Y') }" 
+                f"\nReason for Disapproval: { ack_obj.reason if ack_obj.reason != "" else "No reason"}."
+                f"\n\nThis decision may affect the approval process of your leave. Kindly consult your supervisor or HR to discuss alternative arrangements or reassignment of relieving duties."
+                f"We understand this may be inconvenient and appreciate your cooperation in resolving it promptly."
+                f"\n\nSincerely," 
+                f"\nGCPS Leave System"
+            )
+            send_leave_email.delay(subject, message, [staff.email])
         return updated
 
 
@@ -346,10 +457,11 @@ def cancel_leave_request(request_obj, triggered_by):
     """
     Cancels a leave request based on the response of approvers, relieving officer
     """
-    request_obj.status = LeaveRequest.Status.DENIED
+    request_obj.status = LeaveRequest.Status.DENIED if triggered_by["role"] != "Self" else LeaveRequest.Status.CANCELLED
     request_obj.save()
     staff = request_obj.applicant
-    subject = f'Leave Request Denied {request_obj.type.name.split()[0]} Leave, { request_obj.start_date.strftime('%A, %d %B %Y') } to { request_obj.end_date.strftime('%A, %d %B %Y') }'
+    status = request_obj.status.lower()
+    subject = f'Leave Request {status} {request_obj.type.name.split()[0]} Leave, { request_obj.start_date.strftime('%A, %d %B %Y') } to { request_obj.end_date.strftime('%A, %d %B %Y') }'
     message = (
         f"Dear { staff.first_name },"
         f"\n\nDetails of the decision:"

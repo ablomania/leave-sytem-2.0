@@ -129,7 +129,7 @@
         {% csrf_token %}
 
         <div class="fld456">
-            <label for="approver_name">Approver Name</label>
+            <label for="approver_name">Approver Name <span class="star">*</span></label>
             <select name="approver_name" id="approver_name">
                 <option value="None">--------</option>
                 {% for approver in all_staff %}
@@ -139,7 +139,7 @@
         </div>
 
         <div class="fld456">
-            <label for="approver_group">Group to approve</label>
+            <label for="approver_group">Group to approve <span class="star">*</span></label>
             <select name="approver_group" id="approver_group">
                 {% for group in groups_list.keys %}
                 <option value="{{group.id}}">{{group.name}}</option>
@@ -148,7 +148,7 @@
         </div>
 
         <div class="fld456">
-            <label for="approver_level">Approver Level</label>
+            <label for="approver_level">Approver Level <span class="star">*</span></label>
             <select name="approver_level" id="approver_level">
                 {% for level in all_levels %}
                 <option value="{{level.id}}">{{level.name}}</option>

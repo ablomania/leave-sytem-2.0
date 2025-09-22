@@ -1,0 +1,311 @@
+{% extends 'main.html' %}
+{% load static %}
+
+{% block title %}
+Relieving Assignments
+{% endblock %}
+
+{% block content %}
+<script>
+// Modal open/close logic and dynamic population
+function openReliefModal(action, ackObj) {
+	const modal = document.querySelector('.relief-modal');
+	if (!modal) return;
+	// Populate modal fields
+	modal.querySelector('.modal-title').textContent = (action === 'accept' ? 'Accept Relieving Assignment' : 'Deny Relieving Assignment');
+	modal.querySelector('.modal-ack-id').value = ackObj.id || '';
+	modal.querySelector('.modal-applicant').textContent = ackObj.applicant || '';
+	modal.querySelector('.modal-type').textContent = ackObj.type || '';
+	modal.querySelector('.modal-start').textContent = ackObj.start_date || '';
+	modal.querySelector('.modal-end').textContent = ackObj.end_date || '';
+	modal.querySelector('.modal-days').textContent = ackObj.days_requested || '';
+	modal.querySelector('.modal-notes').textContent = ackObj.notes || '';
+	modal.querySelector('.modal-action').value = action;
+	// Reset checkbox
+	modal.querySelector('.modal-confirm').checked = false;
+	modal.style.display = 'flex';
+}
+function closeReliefModal() {
+	const modal = document.querySelector('.relief-modal');
+	if (modal) modal.style.display = 'none';
+}
+</script>
+<style>
+	.btn {
+		display: inline-block;
+		font-weight: 600;
+		border: none;
+		border-radius: 7px;
+		padding: 8px 22px;
+		font-size: 1rem;
+		cursor: pointer;
+		transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+		margin: 0 4px 4px 0;
+		box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+		outline: none;
+	}
+	.btn-success {
+		background: linear-gradient(90deg, #28a745 60%, #218838 100%);
+		color: #fff;
+	}
+	.btn-success:hover, .btn-success:focus {
+		background: #218838;
+		color: #fff;
+	}
+	.btn-danger {
+		background: linear-gradient(90deg, #dc3545 60%, #b32f2f 100%);
+		color: #fff;
+	}
+	.btn-danger:hover, .btn-danger:focus {
+		background: #b32f2f;
+		color: #fff;
+	}
+	.btn-primary {
+		background: linear-gradient(90deg, #0074d9 60%, #005fa3 100%);
+		color: #fff;
+	}
+	.btn-primary:hover, .btn-primary:focus {
+		background: #005fa3;
+		color: #fff;
+	}
+	.btn-secondary {
+		background: #e3e6ea;
+		color: #222;
+		border: 1px solid #bfc9d1;
+	}
+	.btn-secondary:hover, .btn-secondary:focus {
+		background: #d1d5db;
+		color: #111;
+	}
+	.btn:active {
+		box-shadow: 0 0 0 2px #0074d9 inset;
+	}
+    .relieving-assignments-wrapper{
+        background-color: #fff;
+        border-radius: 10px;
+        width: 100%;
+    }
+    .relieving-body{
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        padding: 10px;
+    }
+	.relieving-nav {
+		display: flex;
+		gap: 10px;
+		margin-bottom: 24px;
+        justify-content: center;
+	}
+	.relieving-nav a {
+		padding: 8px 22px;
+		border-radius: 7px;
+		background: #0074d9;
+		color: #fff;
+		text-decoration: none;
+		font-weight: 600;
+		transition: background 0.2s;
+	}
+	.relieving-nav a.active, .relieving-nav a:focus {
+		background: #005fa3;
+		color: #fff;
+	}
+	.relieving-nav a:hover {
+		background: #005fa3;
+	}
+	.relieving-card {
+		background: #fff;
+		border-radius: 13px;
+		box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+		margin-bottom: 22px;
+		padding: 1.5em 1.3em 1.1em 1.3em;
+		transition: box-shadow 0.2s;
+		animation: fadeIn 0.5s;
+	}
+	.relieving-card:hover {
+		box-shadow: 0 4px 18px rgba(0,0,0,0.13);
+	}
+	.relieving-card .rc-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.7em;
+	}
+	.relieving-card .rc-head strong {
+		color: #0074d9;
+		font-size: 1.1em;
+	}
+	.relieving-card .rc-status {
+		font-weight: 600;
+		text-transform: capitalize;
+		padding: 3px 12px;
+		border-radius: 6px;
+		font-size: 0.98em;
+	}
+	.rc-status.pending { background: #ffeeba; color: #856404; }
+	.rc-status.approved { background: #d4edda; color: #155724; }
+	.rc-status.denied { background: #f8d7da; color: #721c24; }
+	.relieving-card .rc-body p {
+		margin: 0.2em 0 0.5em 0;
+		color: #222;
+	}
+	@keyframes fadeIn {
+		from { opacity: 0; transform: translateY(30px) scale(0.98); }
+		to { opacity: 1; transform: translateY(0) scale(1); }
+	}
+</style>
+
+<div class="relieving-assignments-wrapper">
+	<div class="relieving-nav">
+		<a href="{% url 'assignments' 'pending' %}" class="{% if mode == 'pending' %}active{% endif %}">Pending</a>
+		<a href="{% url 'assignments' 'confirmed' %}" class="{% if mode == 'confirmed' %}active{% endif %}">Confirmed</a>
+		<a href="{% url 'assignments' 'denied' %}" class="{% if mode == 'denied' %}active{% endif %}">Denied</a>
+	</div>
+	<div class="relieving-body">
+			{% if relieving_acks %}
+				{% for ack in relieving_acks %}
+					<div class="relieving-card">
+						<div class="rc-head">
+							<strong>{{ ack.request.applicant.first_name }} {{ ack.request.applicant.last_name }}</strong>
+							<span class="rc-status {{ ack.status|lower }}">{{ ack.status }}</span>
+						</div>
+						<div class="rc-body">
+							<p><strong>Leave Type:</strong> {{ ack.request.type.name }}</p>
+							<p><strong>Start Date:</strong> {{ ack.request.start_date }}</p>
+							<p><strong>End Date:</strong> {{ ack.request.end_date }}</p>
+							<p><strong>Days Requested:</strong> {{ ack.request.days_requested }}</p>
+							<p><strong>Application Date:</strong> {{ ack.request.application_date }}</p>
+							{% if ack.request.institution %}<p><strong>Institution:</strong> {{ ack.request.institution }}</p>{% endif %}
+							{% if ack.request.course %}<p><strong>Course:</strong> {{ ack.request.course }}</p>{% endif %}
+							{% if ack.request.letter or ack.request.med_note %}<p><strong>Document(s):</strong></p>{% endif %}
+							{% if ack.request.med_note %}
+								<a style="text-decoration: underline; color: #0074d9;" href="{{ ack.request.med_note.url }}" target="_blank">Medical note</a>{% if ack.request.letter %} | {% endif %}
+							{% endif %}
+							{% if ack.request.letter %}
+								<a style="text-decoration: underline; color: #0074d9;" href="{{ ack.request.letter.url }}" target="_blank">Admission letter</a>
+							{% endif %}
+							{% if ack.reason %}<p><strong>Notes:</strong> {{ ack.reason }}</p>{% endif %}
+										<div style="margin-top: 1em;">
+											{% if mode == 'pending' %}
+												<button type="button" class="btn btn-success" onclick='openReliefModal("approve", {
+													id: "{{ ack.id }}",
+													applicant: "{{ ack.request.applicant.first_name }} {{ ack.request.applicant.last_name }}",
+													type: "{{ ack.request.type.name|default_if_none:'' }}",
+													start_date: "{{ ack.request.start_date|default_if_none:'' }}",
+													end_date: "{{ ack.request.end_date|default_if_none:'' }}",
+													days_requested: "{{ ack.request.days_requested|default_if_none:'' }}",
+													notes: "{{ ack.reason|default:'' }}"
+												})'>Accept</button>
+												<button type="button" class="btn btn-danger" onclick='openReliefModal("deny", {
+													id: "{{ ack.id }}",
+													applicant: "{{ ack.request.applicant.first_name }} {{ ack.request.applicant.last_name }}",
+													type: "{{ ack.request.type.name|default_if_none:'' }}",
+													start_date: "{{ ack.request.start_date|default_if_none:'' }}",
+													end_date: "{{ ack.request.end_date|default_if_none:'' }}",
+													days_requested: "{{ ack.request.days_requested|default_if_none:'' }}",
+													notes: "{{ ack.reason|default:'' }}"
+												})'>Deny</button>
+											{% elif mode == 'confirmed' or mode == 'denied' %}
+												<button type="button" class="btn btn-primary" onclick='openChangeReliefModal({
+													id: "{{ ack.id }}",
+													applicant: "{{ ack.request.applicant.first_name }} {{ ack.request.applicant.last_name }}",
+													type: "{{ ack.request.type.name|default_if_none:'' }}",
+													start_date: "{{ ack.request.start_date|default_if_none:'' }}",
+													end_date: "{{ ack.request.end_date|default_if_none:'' }}",
+													days_requested: "{{ ack.request.days_requested|default_if_none:'' }}",
+													notes: "{{ ack.reason|default:'' }}"
+												})'>Change Decision</button>
+											{% endif %}
+										</div>
+                                        </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p style="padding: 2em; text-align: center; color: #888;">No {{ mode }} relieving assignments.</p>
+                {% endif %}
+    </div>
+</div>
+
+<script>
+// Modal for changing decision
+function openChangeReliefModal(ackObj) {
+	const modal = document.querySelector('.change-relief-modal');
+	if (!modal) return;
+	modal.querySelector('.modal-ack-id').value = ackObj.id || '';
+	modal.querySelector('.modal-applicant').textContent = ackObj.applicant || '';
+	modal.querySelector('.modal-type').textContent = ackObj.type || '';
+	modal.querySelector('.modal-start').textContent = ackObj.start_date || '';
+	modal.querySelector('.modal-end').textContent = ackObj.end_date || '';
+	modal.querySelector('.modal-days').textContent = ackObj.days_requested || '';
+	modal.querySelector('.modal-notes').textContent = ackObj.notes || '';
+	// Reset radio buttons
+	modal.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+	modal.style.display = 'flex';
+}
+function closeChangeReliefModal() {
+	const modal = document.querySelector('.change-relief-modal');
+	if (modal) modal.style.display = 'none';
+}
+</script>
+
+<!-- Modal for Change Decision -->
+<div class="change-relief-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.18); align-items:center; justify-content:center; z-index:1000;">
+	<div style="background:#fff; border-radius:14px; box-shadow:0 4px 18px rgba(0,0,0,0.13); padding:2em 2.2em; min-width:340px; max-width:95vw;">
+		<form method="post" action="">
+			{% csrf_token %}
+			<input type="hidden" name="ack_id" class="modal-ack-id">
+			<input type="hidden" name="form_meta" value="change">
+			<h2>Change Relieving Assignment Decision</h2>
+			<div style="margin-bottom:1em;">
+				<p><strong>Applicant:</strong> <span class="modal-applicant"></span></p>
+				<p><strong>Type:</strong> <span class="modal-type"></span></p>
+				<p><strong>Start Date:</strong> <span class="modal-start"></span></p>
+				<p><strong>End Date:</strong> <span class="modal-end"></span></p>
+				<p><strong>Days Requested:</strong> <span class="modal-days"></span></p>
+				<p><strong>Notes:</strong> <span class="modal-notes"></span></p>
+			</div>
+			<div style="margin-bottom:1em;">
+				<input type="radio" name="confirmation" value="approve" id="approve-change" required>
+				<label for="approve-change">Accept this assignment</label><br>
+				<input type="radio" name="confirmation" value="deny" id="deny-change" required>
+				<label for="deny-change">Deny this assignment</label>
+			</div>
+			<div style="display:flex; gap:12px;">
+				<button type="submit" class="btn btn-primary">Save</button>
+				<button type="button" class="btn btn-secondary" onclick="closeChangeReliefModal()">Discard</button>
+			</div>
+		</form>
+	</div>
+</div>
+						
+
+<!-- Modal for Accept/Deny Relieving Assignment -->
+<div class="relief-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.18); align-items:center; justify-content:center; z-index:1000;">
+	<div style="background:#fff; border-radius:14px; box-shadow:0 4px 18px rgba(0,0,0,0.13); padding:2em 2.2em; min-width:340px; max-width:95vw;">
+		<form method="post" action="">
+			{% csrf_token %}
+			<input type="hidden" name="ack_id" class="modal-ack-id">
+			<!-- <input type="hidden" name="form_meta" class=""> -->
+			<h2 class="modal-title">Action</h2>
+			<div style="margin-bottom:1em;">
+				<p><strong>Applicant:</strong> <span class="modal-applicant"></span></p>
+				<p><strong>Type:</strong> <span class="modal-type"></span></p>
+				<p><strong>Start Date:</strong> <span class="modal-start"></span></p>
+				<p><strong>End Date:</strong> <span class="modal-end"></span></p>
+				<p><strong>Days Requested:</strong> <span class="modal-days"></span></p>
+				<p><strong>Notes:</strong> <span class="modal-notes"></span></p>
+			</div>
+			<div style="margin-bottom:1em;">
+				<input type="checkbox"  id="modal-confirm" class="modal-confirm modal-action" name="confirmation" value="approve" required>
+				<label for="modal-confirm">I confirm this action</label>
+			</div>
+			<div style="display:flex; gap:12px;">
+				<button type="submit" class="btn btn-primary">Save</button>
+				<button type="button" class="btn btn-secondary" onclick="closeReliefModal()">Discard</button>
+			</div>
+		</form>
+	</div>
+</div>
+	</div>
+</div>
+{% endblock %}

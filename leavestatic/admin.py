@@ -24,5 +24,7 @@ admin.site.register(CancelledLeave)
 admin.site.register(Resumption)
 admin.site.register(LeaveUpdate)
 admin.site.register(ApproverSwitch)
+admin.site.register(LeaveExtension)
+admin.site.register(Extension_ack)
 
 

@@ -252,8 +252,35 @@ def update_leave_progress():
 
     # 🧹 Final cleanup
     clean_up()
+    extend_leaves()
     print("Cleanup completed.")
 
+
+def extend_leaves():
+    approved_extensions = LeaveExtension.objects.filter(
+        is_active=True,
+        status="approved",
+        leave_obj__is_active=True,
+        leave_obj__status__in=[Leave.LeaveStatus.On_Leave, Leave.LeaveStatus.Pending]
+    )
+    for extension in approved_extensions:
+        leave = extension.leave_obj
+        leave.days_granted += extension.days_extended
+        # calculate for date_remaining
+        leave.days_remaining += extension.days_extended
+        leave.save()
+        # update staff leave detail
+        detail = StaffLeaveDetail.objects.filter(
+            staff=leave.request.applicant,
+            leave_type=leave.request.type,
+            is_active=True
+        ).first()
+        if detail:
+            detail.days_taken += extension.days_extended
+            detail.save()
+        extension.is_active = False
+        extension.save()
+        print(f"Extended leave ID {leave.id} by {extension.days_extended} days.")
 
 
 def restore_original_approvers():

@@ -30,7 +30,7 @@
             <a href="{% url 'leave_request' %}">
                 <div class="grid_item">
                     <img src="{% static 'images/ask.png' %}" height="100px" width="100px" alt="icon">
-                    <p>Request for leave</p>
+                    <p>Request For Leave</p>
                 </div>
             </a>
             
@@ -38,7 +38,16 @@
             <a href="{% url 'relieve_ack' r_ack.id %}">
                 <div class="grid_item">
                     <img src="{% static 'images/like.png' %}" height="100px" width="100px" alt="">
-                    <p>Relieve assignments ({{all_relief_acks}})</p>
+                    <p>Pending Assignments <span class="star">({{all_relief_acks}})</span></p>
+                </div>
+            </a>
+           {% endif %}
+
+           {% if extension_ack.count > 0 %}
+            <a href="{% url 'extensions' %}">
+                <div class="grid_item">
+                    <img src="{% static 'images/leaf33.png' %}"  height="100px" width="100px" alt="">
+                    <p>Leave Extensions <span class="star">({{extension_ack.count}})</span></p>
                 </div>
             </a>
            {% endif %}
@@ -47,7 +56,16 @@
             <a href="{% url 'resumptions' 'pending' %}">
                 <div class="grid_item">
                     <img src="{% static 'images/recycle.png' %}"  height="100px" width="100px" alt="">
-                    <p>Resumptions</p>
+                    <p>Resumptions <span class="star">({{approver_resume_objs.count}})</span></p>
+                </div>
+            </a>
+           {% endif %}
+
+           {% if assignments %}
+            <a href="{% url 'assignments' 'pending' %}">
+                <div class="grid_item">
+                    <img src="{% static 'images/gift.png' %}"  height="100px" width="100px" alt="">
+                    <p>Assignments</p>
                 </div>
             </a>
            {% endif %}
