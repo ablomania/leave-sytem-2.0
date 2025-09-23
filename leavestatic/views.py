@@ -208,14 +208,20 @@ def dashboard(request):
     r_ack = all_relief_acks.first()
     leaves_count = LeaveRequest.objects.filter(applicant_id=user.id).count()
     on_leave = Leave.objects.filter(request__applicant_id=user.id, status=Leave.LeaveStatus.On_Leave).first()
-    resume_obj = Resumption.objects.filter(staff_id=user.id, is_active=True, confirmed=False).first()
-
+    resume_obj = Resumption.objects.filter(staff_id=user.id, is_active=True, status=Resumption.ResumptionStatus.pending).first()
+    approver_resume_objs = Resumption.objects.filter(approver_staff_id=user.id, is_active=True)
+    assignments = Ack.objects.filter(type=Ack.Type.RELIEF, is_active=True, staff_id=user.id)
+    # Count of leave extension_acks needing approval
+    extension_ack = Extension_ack.objects.filter(staff_id=user.id, status="Pending", is_active=True)
     context = {
         "user_name": f"{user.last_name}, {user.first_name} {user.other_names}",
         'is_approver': is_approver, "self_ack": self_ack,
         "r_ack": r_ack, "leaves_count": leaves_count,
         "on_leave": on_leave, "resume_obj": resume_obj,
         "loc": "dashboard", "all_relief_acks": all_relief_acks.count(),
+        "approver_resume_objs": approver_resume_objs,
+        "assignments": assignments,
+        "extension_ack": extension_ack,
     }
 
     response = render(request, "dashboard.html", context)
@@ -1361,7 +1367,7 @@ def leaveComplete(request, id):
 
         # Save resumption record
         resume_obj.notes = notes
-        resume_obj.confirmed = confirmed
+        resume_obj.status = Resumption.ResumptionStatus.staff_confirmed if confirmed else Resumption.ResumptionStatus.pending
         resume_obj.date_submitted = timezone.now()
         resume_obj.save()
         # Send confirmation email
@@ -1391,6 +1397,35 @@ def leaveComplete(request, id):
     response = render(request, "leave_complete_form.html", context)
     response.set_cookie('message', message, max_age=1, secure=False, httponly=True)
     response = set_session_cookie(response, session_slug)
+    return response
+
+
+def resumption_approvals(request, mode):
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug or mode not in ["pending", "confirmed", "denied"]:
+        return redirect(reverse("login", args=["dashboard"]))
+    
+    user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
+    if not user:
+        return redirect(reverse("login", args=["dashboard"]))
+    
+    
+    is_approver = check_for_approver(user.id)
+    if mode == "pending":
+        resumptions = Resumption.objects.filter(approver_staff_id=user.id, is_active=True, status=Resumption.ResumptionStatus.staff_confirmed).order_by("-date_created")
+    elif mode == "confirmed":
+        resumptions = Resumption.objects.filter(approver_staff_id=user.id, is_active=True, status=Resumption.ResumptionStatus.approver_confirmed, date_submitted__lte=(datetime.date.today()-datetime.timedelta(-30)))
+    elif mode == "denied":
+        resumptions = Resumption.objects.filter(approver_staff_id=user.id, is_active=True, status=Resumption.ResumptionStatus.approver_denied, date_submitted__lte=(datetime.date.today()-datetime.timedelta(-30)))
+    
+    context = {
+        "is_approver": is_approver,
+        "resumptions": resumptions,
+        "mode": mode
+    }
+
+    template = loader.get_template("approve_resumption.html")
+    response = HttpResponse(template.render(context, request))
     return response
 
 
@@ -1428,6 +1463,262 @@ def relieve_ack(request, id):
     return response
 
 
+def change_relieving_officer(request, leave_request_id):
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
+        return redirect(reverse("login", args=["dashboard"]))
+
+    user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
+    if not user:
+        return redirect(reverse("login", args=["dashboard"]))
+    
+    is_approver = check_for_approver(user.id)
+    leave_request = get_object_or_404(
+        LeaveRequest.objects.select_related("applicant", "type"),
+        id=leave_request_id,
+        applicant=user,
+        is_active=True,
+        status=LeaveRequest.Status.PENDING
+    )
+    relieving_ack = Ack.objects.filter(
+        request=leave_request,
+        type=Ack.Type.RELIEF,
+        is_active=True
+    ).first()
+    old_officer = relieving_ack.staff if relieving_ack else None
+    relieving_officers = Staff.objects.filter(
+        is_active=True, group_id=user.group.id
+    ).exclude(id=user.id).order_by("first_name", "last_name")
+
+    approvers_set = set(Approver.objects.filter(is_active=True).values_list('staff_id', flat=True))
+    active_leave_staff_ids = Leave.objects.filter(
+        is_active=True,
+        status=Leave.LeaveStatus.On_Leave
+    ).values_list('request__applicant_id', flat=True)
+    relieving_officers = relieving_officers.exclude(id__in=active_leave_staff_ids).exclude(id__in=approvers_set)
+
+    message = ""
+
+    if request.method == "POST":
+        form_data = request.POST
+        new_officer_id = form_data.get("relieving_officer")
+        if new_officer_id and new_officer_id.isdigit():
+            new_officer = Staff.objects.filter(id=int(new_officer_id), is_active=True).first()
+            if new_officer and new_officer.id != relieving_ack.staff.id:
+                relieving_ack.staff = new_officer
+                relieving_ack.save()
+                # send email to leave applicant
+                subject = f"Relieving Officer Updated: {leave_request.type.name.split()[0]} Leave"
+                body = (
+                    f"Dear {user.first_name},\n\n"
+                    f"Your relieving officer for your upcoming {leave_request.type.name.split()[0]} leave has been updated.\n"
+                    f"New Relieving Officer: {new_officer.first_name} {new_officer.last_name}\n"
+                    f"Leave Start Date: {leave_request.start_date}\n"
+                    f"Leave End Date: {leave_request.end_date}\n\n"
+                    f"Please coordinate with your new relieving officer to ensure a smooth transition of duties during your absence.\n\n"
+                    f"Regards,\nLeave Management System"
+                )
+                send_leave_email.delay(subject, body, [user.email])
+
+                if old_officer:
+                    # send email to old relieving officer
+                    subject = f"Relieving Duty Reassigned: {leave_request.type.name.split()[0]} Leave"
+                    body = (
+                        f"Dear {user.first_name},\n\n"
+                        f"You have been relieved of your duties as the relieving officer for {user.first_name} {user.last_name}'s upcoming {leave_request.type.name.split()[0]} leave.\n"
+                        f"Leave Start Date: {leave_request.start_date}\n"
+                        f"Leave End Date: {leave_request.end_date}\n\n"
+                        f"Thank you for your willingness to assist. Please contact the new relieving officer for any further coordination.\n\n"
+                        f"Regards,\nLeave Management System"
+                    )
+                    send_leave_email.delay(subject, body, [old_officer.email])
+                
+                # Send email to notify new relieving officer
+                subject = f"Relieving Duty Assigned: {leave_request.type.name.split()[0]} Leave"
+                body = (
+                    f"Dear {new_officer.first_name},\n\n"
+                    f"You have been assigned as the relieving officer for {user.first_name} {user.last_name}'s upcoming {leave_request.type.name.split()[0]} leave.\n"
+                    f"Leave Start Date: {leave_request.start_date}\n"
+                    f"Leave End Date: {leave_request.end_date}\n\n"
+                    f"Please ensure you are available to cover their duties during this period using this link.\n\n"
+                    f"{request.build_absolute_uri(reverse('dashboard'))}\n\n"
+                    f"Regards,\nLeave Management System"
+                )
+                send_leave_email.delay(subject, body, [new_officer.email])
+                message = "Relieving officer updated successfully."
+                messages.success(request, message)
+                return redirect(reverse("dashboard"))
+            else:
+                message = "Invalid relieving officer selected."
+        else:
+            message = "Please select a valid relieving officer."
+
+    context = {
+        "leave_request": leave_request,
+        "relieving_officers": relieving_officers,
+        "is_approver": is_approver,
+        "message": message,
+        "relieving_ack": relieving_ack
+    }
+
+    response = render(request, "change_relieving_officer.html", context)
+    response.set_cookie('message', message, max_age=1, secure=False, httponly=True)
+    response = set_session_cookie(response, session_slug)
+    return response
+
+
+def extend_leave(request, leave_id):
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
+        return redirect(reverse("login", args=["dashboard"]))
+
+    user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
+    if not user:
+        return redirect(reverse("login", args=["staff_on_leave"]))
+    
+    is_approver = check_for_approver(user.id)
+    leave = Leave.objects.filter(
+        id=leave_id
+    ).first()
+    leave_request = leave.request
+    staff_leave_data = StaffLeaveDetail.objects.filter(staff=user, leave_type=leave.request.type).first()   
+    message = ""
+
+    if request.method == "POST":
+        form_data = request.POST
+        days_to_add = form_data.get("days_to_add")
+        reason = form_data.get("reason", "").strip()
+
+        try:
+            highest_approval = Approval.objects.filter(
+                request=leave_request,
+                is_active=True
+            ).order_by('-approver__level__level').first()
+            highest_approver = highest_approval.approver
+            
+            # create a leave extension record
+            new_leave_extension = LeaveExtension(
+                leave_request=leave_request,
+                days_extended=int(days_to_add),
+                reason=reason,
+                leave_obj=leave,
+                requested_by=user
+            )
+            new_leave_extension.save()
+            #create extension_ack object
+            extension_ack = Extension_ack(
+                leave_extension=new_leave_extension,
+                staff=highest_approver.staff
+            )
+            extension_ack.save()
+            # notify highest level approver
+            if highest_approver:
+                subject = f"Leave Extension Requested: {leave_request.type.name.split()[0]} Leave"
+                body = (
+                    f"Dear {highest_approver.staff.first_name},\n\n"
+                    f"{user.first_name} {user.last_name} has requested an extension of {days_to_add} days for their current {leave_request.type.name.split()[0]} leave.\n"
+                    f"Original End Date: {leave_request.end_date.strftime('%A, %d %B %Y')}\n"
+                    f"Original Return Date: {leave_request.return_date.strftime('%A, %d %B %Y')}\n"
+                    f"Reason for Extension: {reason.lower()}\n\n"
+                    f"Please review and approve or deny this request at your earliest convenience using the link below:\n\n"
+                    f"{request.build_absolute_uri(reverse('dashboard'))}\n\n"
+                    f"Regards,\nLeave Management System"
+                )
+                send_leave_email.delay(subject, body, [highest_approver.staff.email])
+            message = "Leave extension request submitted successfully."
+            messages.success(request, message)
+            return redirect(reverse("dashboard"))
+        except Exception as e:
+            message = f"Error submitting extension request: {str(e)}"
+    response = render(request, "extend_leave.html", {
+        "leave_request": leave_request,
+        "is_approver": is_approver,
+        "message": message,
+        "leave": leave,
+        "days_range": range(1, staff_leave_data.days_remaining + 1)
+    })
+    response.set_cookie('message', message, max_age=1, secure=False, httponly=True)
+    response = set_session_cookie(response, session_slug)
+    return response
+
+
+def relieving_assignments(request, mode):
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug or mode not in ["pending", "confirmed", "denied"]:
+        return redirect(reverse("login", args=["dashboard"]))
+
+    user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
+    if not user:
+        return redirect(reverse("login", args=["dashboard"]))
+
+    is_approver = check_for_approver(user.id)
+    today = timezone.now().date()
+
+    # Filter relieving assignments by mode
+    if mode == "pending":
+        relieving_acks_qs = Ack.objects.select_related("request__applicant", "request__type").filter(
+            type=Ack.Type.RELIEF,
+            staff=user,
+            is_active=True,
+            request__is_active=True,
+            request__start_date__gte=today,
+            request__status=LeaveRequest.Status.PENDING,
+            status=Ack.Status.Pending
+        ).order_by("request__start_date")
+    elif mode == "confirmed":
+        relieving_acks_qs = Ack.objects.select_related("request__applicant", "request__type").filter(
+            type=Ack.Type.RELIEF,
+            staff=user,
+            is_active=True,
+            request__is_active=True,
+            request__start_date__gte=today,
+            status=Ack.Status.Approved
+        ).exclude(request__status__in=[LeaveRequest.Status.APPROVED, LeaveRequest.Status.COMPLETED, LeaveRequest.Status.CANCELLED]).order_by("request__start_date")
+    elif mode == "denied":
+        relieving_acks_qs = Ack.objects.select_related("request__applicant", "request__type").filter(
+            type=Ack.Type.RELIEF,
+            staff=user,
+            is_active=True,
+            request__is_active=True,
+            request__start_date__gte=today,
+            status=Ack.Status.Denied
+        ).order_by("request__start_date")
+
+    # Pagination: 6 items per page
+    from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+    paginator = Paginator(relieving_acks_qs, 6)
+    page_number = request.GET.get("page")
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    if request.method == "POST":
+        form_data = request.POST
+        ack_id = form_data.get("ack_id")
+        ack = get_object_or_404(Ack, id=ack_id)
+        if form_data['confirmation'] == "approve":
+            approve_ack(form_data, ack.request)
+        elif form_data['confirmation'] == "deny":
+            deny_ack(form_data, ack.request)
+        return redirect(f"{reverse('assignments', args=[mode])}?page={page_obj.number}")
+
+    context = {
+        "is_approver": is_approver,
+        "relieving_acks": page_obj,
+        "mode": mode,
+        "is_paginated": paginator.num_pages > 1,
+        "page_obj": page_obj,
+        "paginator": paginator,
+        'loc': 'relieving'
+    }
+
+    response = render(request, "relieving_assignments.html", context)
+    response = set_session_cookie(response, session_slug)
+    return response
+
 
 def leave_history(request):
     """Displays a user's leave history with approval and acknowledgment progress."""
@@ -1441,7 +1732,8 @@ def leave_history(request):
     
     is_approver = check_for_approver(user.id)
 
-    # Prefetch related approvals, acknowledgments, and leave objects
+
+    # Prefetch related approvals, acknowledgments, leave objects, and leave extensions
     leave_requests = (
         LeaveRequest.objects
         .filter(applicant=user)
@@ -1449,15 +1741,29 @@ def leave_history(request):
         .prefetch_related(
             Prefetch("approval_set", queryset=Approval.objects.select_related("approver__staff")),
             Prefetch("ack_set", queryset=Ack.objects.select_related("staff")),
-            Prefetch("leave_set", queryset=Leave.objects.all()),
-            Prefetch("resumption_set", queryset=Resumption.objects.all()),
+            Prefetch(
+                "leave_set",
+                queryset=Leave.objects.prefetch_related("resumption_set")
+            ),
+            Prefetch(
+                "leaveextension_set",
+                queryset=LeaveExtension.objects.filter(is_active=True)
+            ),
         )
         .order_by("-application_date")
     )
 
-    # Group leave by year
+    # Group leave by year and annotate each leave with a flag for showing the extend link
     grouped_leave_dict = {}
     for lr in leave_requests:
+        # For each leave in leave_set, check if there is a pending extension
+        for leave in lr.leave_set.all():
+            # Find if there is a pending extension for this leave
+            pending_extension = any(
+                ext.leave_obj_id == leave.id and ext.status == 'pending'
+                for ext in lr.leaveextension_set.all()
+            )
+            leave.show_extend_link = not pending_extension
         year = lr.application_date.year
         grouped_leave_dict.setdefault(year, []).append(lr)
 
@@ -1496,6 +1802,72 @@ def leave_history(request):
     return response
 
 
+def leave_extensions(request):
+    session_slug = get_user_from_session_cookie(request)
+    if not session_slug:
+        return redirect(reverse("login", args=["leave_extensions"]))
+
+    user = Staff.objects.filter(id=get_user_id_from_login_session(session_slug)).first()
+    if not user:
+        return redirect(reverse("login", args=["staff_on_leave"]))
+    
+    is_approver = check_for_approver(user.id)
+
+    # fetch all leave extension acks related to user
+    leave_extension_qs = (
+        LeaveExtension.objects
+        .filter(is_active=True)
+        .select_related(
+            "leave_request__applicant",
+            "leave_request__type",
+            "requested_by",
+            "leave_obj"
+        )
+        .prefetch_related(
+            Prefetch(
+                "extension_ack_set",
+                queryset=Extension_ack.objects.filter(is_active=True).select_related("staff")
+            )
+        )
+        .order_by("-date_created")
+    )
+    # Pagination: 6 items per page
+    from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+    paginator = Paginator(leave_extension_qs, 6)
+    page_number = request.GET.get("page")
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    if request.method == "POST":
+        form_data = request.POST
+        extension_ack_id = form_data.get("extension_id")
+        action = form_data.get("action")
+        if action not in ["approve", "deny"]:
+            messages.error(request, "Invalid action.")
+            return redirect(f"{reverse('leave_extensions')}?page={page_obj.number}")
+        extension_ack = get_object_or_404(Extension_ack, id=extension_ack_id)
+        if action == "approve":
+            approve_extension_ack(extension_ack)
+        elif action == "deny":
+            deny_extension_ack(extension_ack)
+        return redirect(f"{reverse('extensions')}?page={page_obj.number}")
+
+    context = {
+        "leave_extensions": page_obj,
+        "is_approver": is_approver,
+        "loc": "extensions",
+        "is_paginated": paginator.num_pages > 1,
+        "page_obj": page_obj,
+        "paginator": paginator,
+    }
+
+    response = render(request, "leave_extensions.html", context)
+    response = set_session_cookie(response, session_slug)
+    return response
 
 
 def user_logout(request):
@@ -1634,7 +2006,7 @@ def leave_requests(request):
         return redirect(reverse("login", args=["0"]))
 
     # 4. Fetch all relevant approvals in one go
-    approvals = (
+    approvals_qs = (
         Approval.objects
         .filter(
             approver__in=approvers,
@@ -1652,27 +2024,66 @@ def leave_requests(request):
         is_active=True
     )
 
-    # 5. Split by status
-    pending_approvals  = approvals.filter(status=Approval.ApprovalStatus.Pending)
-    approved_approvals = approvals.filter(status=Approval.ApprovalStatus.Approved)
-    denied_approvals   = approvals.filter(status=Approval.ApprovalStatus.Denied)
+    # Determine mode (pending, approved, denied)
+    mode = request.GET.get("mode", "pending")
+    if mode not in ["pending", "approved", "denied"]:
+        mode = "pending"
 
+    if mode == "pending":
+        approvals = approvals_qs.filter(status=Approval.ApprovalStatus.Pending)
+    elif mode == "approved":
+        approvals = approvals_qs.filter(status=Approval.ApprovalStatus.Approved)
+    elif mode == "denied":
+        approvals = approvals_qs.filter(status=Approval.ApprovalStatus.Denied)
+
+    # Pagination
+    from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+    paginator = Paginator(approvals, 10)
+    page_number = request.GET.get("page")
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    # For each approval, get related approvals for the same request (for modal display)
+    related_approvals_dict = {}
+    for approval in page_obj:
+        related_approvals_dict[approval.id] = list(
+            Approval.objects.filter(request=approval.request, is_active=True)
+            .exclude(id=approval.id)
+            .select_related("approver__staff", "approver__level")
+        )
+
+    # 5. POST handling
     if request.method == "POST":
         form_data = request.POST
-        if form_data['form_meta'] == "approve": approve_leave(form_data)
-        elif form_data["form_meta"] == "deny": deny_leave(form_data)
+        if form_data.get('form_meta') == "approve":
+            approve_leave(form_data)
+        elif form_data.get("form_meta") == "deny":
+            deny_leave(form_data)
+        elif form_data.get("form_meta") == "change":
+            print(form_data)
+            if form_data.get("confirmation") == "approve":
+                approve_leave(form_data)
+                print("Approved")
+            elif form_data.get("confirmation") == "deny":
+                deny_leave(form_data)
+                print("Denied")
         return redirect(reverse("leave_requests"))
-    # 6. Render
+
     context = {
         "is_approver": is_approver,
-        "approval_groups": approvers,
-        "pending_approvals": pending_approvals,
-        "approved_approvals": approved_approvals,
-        "denied_approvals": denied_approvals,
-        "loc": "approvals", "relieving_acks": relieving_acks
+        "approvals": page_obj,
+        "mode": mode,
+        "related_approvals": None,  # For modal, JS will fetch per approval if needed
+        "relieving_acks": relieving_acks,
+        "is_paginated": paginator.num_pages > 1,
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "loc": "approvals"
     }
     response = render(request, "leave_requests.html", context)
-
-    # 7. Mirror session key into a cookie
     response = set_session_cookie(response, session_slug)
     return response

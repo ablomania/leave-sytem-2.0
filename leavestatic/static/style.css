@@ -1,3 +1,7 @@
+.star{
+    color: red;
+    font-weight: bold;
+}
 @media screen and (max-width: 425px) {
     .main-nav {
         display: flex;
@@ -3950,6 +3954,317 @@ textarea:focus {
         }
     }
 
+
+    .resumption-approval-wrapper {
+        width: 100%;
+        border-radius: 10px;
+        background-color: #fff;
+        padding: 10px;
+        padding-top: 0px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        animation: fadeIn 0.5s ease-in;
+        position: relative;
+
+        @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .resumption-nav {
+        display: flex;
+        justify-content: space-evenly;
+        gap: 5px;
+        height: 40px;
+        margin-bottom: 10px;
+    }
+
+    .resumption-nav a {
+        background-color: #e3f2fd;
+        color: #000;
+        text-decoration: none;
+        flex: 1;
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 5px;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+    }
+
+    .resumption-nav a:hover {
+        background-color: #42a5f5;
+        color: #fff;
+    }
+
+    .resumptions-body {
+        margin-top: 10px;
+    }
+
+    .rs-pending {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+    }
+
+    .rs-card {
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        background-color: #f9f9f9;
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
+        /* height: max-content; */
+        height: 330px;
+
+        strong{
+            color: gray;
+        }
+    }
+
+    .rs-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+        .buttons{
+            display: flex;
+        }
+        .rs-head, .leave-details, .lr{
+            display: none;
+        }
+    }
+
+    .leave-details{
+        border-radius: 10px;
+        border-top-right-radius: 0px;
+        background-color: #fff;
+        padding: 10px;
+    }
+
+    .st, .rs-body p {
+        margin: 5px 0;
+    }
+
+    .staff_name{
+        border-bottom: 1px solid gray;
+        margin-top: 5px;
+        padding-bottom: 10px;
+        color: #0056b3;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        .stat{
+            background-color: lightblue;
+            color: #0056b3;
+            padding: 5px;
+            border-radius: 5px;
+        }
+    }
+    .stat-d{
+        background-color: red;
+        color: #b32f2f;
+        padding: 5px;
+        border-radius: 5px;
+    }
+
+    .leave-details p {
+        margin: 3px 0;
+        font-size: 14px;
+    }
+
+    .buttons {
+        margin-top: 10px;
+        display: none;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 60px;
+        height: 100px;
+        gap: 5px;
+    }
+
+    .special-buttons{
+        display: none;
+    }
+
+    .buttons button {
+        padding: 8px 12px;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .buttons button:first-of-type {
+        background-color: #66bb6a;
+        color: white;
+    }
+
+    .buttons button:first-of-type:hover {
+        background-color: #43a047;
+    }
+
+    .buttons button:last-of-type {
+        background-color: #ef5350;
+        color: white;
+    }
+
+    .buttons button:last-of-type:hover {
+        background-color: #e53935;
+    }
+
+    }
+
+    .confirm-pending, .deny-pending {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: #edeeae;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        padding: 20px;
+        z-index: 1000;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        .a10{
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-image: url('/static/images/like(1).png') ;
+            background-position: cover;
+            background-repeat: no-repeat;
+            width: 100%;
+            height: 100%;
+        }
+        .inn{
+            display: flex;
+            flex-direction: column;
+            width: 60%;
+            div{
+                flex-direction: row;
+            }
+            .buttons{
+                padding-top: 10px;
+                button{
+                    width: max-content;
+                    border: none;
+                    height: 40px;
+                    border-radius: 5px;
+                    color: #fff;
+                    background-color: #b32f2f;
+                    &:hover{
+                        background-color: #a8071a;
+                    }
+                }
+                button[type=submit] {
+                    background-color: #007BFF;
+                    width: max-content;
+                    &:hover{
+                        background-color: #0056b3;
+                    }
+                }
+            }
+        }
+    }
+
+
+    .rs-change{
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100vw;
+        height: 100vh;
+        position: fixed;
+        top: 0px;
+        left: 0px;
+        background-color: #edeeae;
+        background-image: url('/static/images/3pen.png') ;
+        background-position: center;
+        .inn3{
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            gap: 40px;
+            align-items: flex-start;
+            background-color: #fafafa;
+            border-radius: 10px;
+            padding: 10px;
+            .sm2{
+                padding: 0px;
+                height: 100%;
+                margin: 0px;
+            }
+        }
+        .inn0{
+            width: 100%;
+            height: 100%;
+            /* From https://css.glass */
+            background: rgba(255, 255, 255, 0.13);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            justify-content: center;
+            align-items: center;
+            display: flex;
+        }
+        .inn2{
+            display: flex;
+            flex-direction: column;
+            width: 60%;
+            .cv2{
+                display: grid;
+                grid-template-columns: 1fr 2fr;
+                gap: 10px;
+                p{
+                    padding: 0;
+                    margin: 0;
+                }
+            }
+            .ch11{
+                display: flex;
+                flex-direction: column;
+                background-color: #fafafa;
+                margin-top: 10px;
+                border-radius: 10px;
+                padding: 10px;
+                form{
+                    display: flex;
+                    flex-direction: column;
+                    gap: 20px;
+                }
+                div{
+                    display: flex;
+                    flex-direction: row;
+                    gap: 5px;
+                    align-items: center;
+                }
+                .buttons{
+                    display: flex;
+                    flex-direction: row;
+                    gap: 20px;
+                    button{
+                        color: #fff;
+                        background-color: #b52a37;
+                        width: 120px;
+                        height: 40px;
+                        border: none;
+                        border-radius: 5px;
+                    }
+                    button[type=submit] {
+                        background-color: #218838;
+                    }
+                }
+            }
+        }
+    }
+    
 
 
 

@@ -138,9 +138,9 @@ def update_leave_progress():
                 # Create a resumption record
                 print(f"Creating resumption record for staff: {staff}")
                 resumption_record = Resumption.objects.create(
-                    leave_request=request,
+                    leave_obj=leave,
                     staff=staff,
-                    confirmed=False,
+                    status=Resumption.ResumptionStatus.pending,
                     is_active=True
                 )
                 if resumption_record: print(f"Resumption record created: {resumption_record}")
@@ -252,31 +252,58 @@ def update_leave_progress():
 
     # 🧹 Final cleanup
     clean_up()
+    extend_leaves()
     print("Cleanup completed.")
 
+
+def extend_leaves():
+    approved_extensions = LeaveExtension.objects.filter(
+        is_active=True,
+        status="approved",
+        leave_obj__is_active=True,
+        leave_obj__status__in=[Leave.LeaveStatus.On_Leave, Leave.LeaveStatus.Pending]
+    )
+    for extension in approved_extensions:
+        leave = extension.leave_obj
+        leave.days_granted += extension.days_extended
+        # calculate for date_remaining
+        leave.days_remaining += extension.days_extended
+        leave.save()
+        # update staff leave detail
+        detail = StaffLeaveDetail.objects.filter(
+            staff=leave.request.applicant,
+            leave_type=leave.request.type,
+            is_active=True
+        ).first()
+        if detail:
+            detail.days_taken += extension.days_extended
+            detail.save()
+        extension.is_active = False
+        extension.save()
+        print(f"Extended leave ID {leave.id} by {extension.days_extended} days.")
 
 
 def restore_original_approvers():
     from .tasks import send_leave_email
     # Get all resumption-confirmed staff who have completed leave
     print("Restoring original approvers where applicable.")
-    completed_requests = LeaveRequest.objects.filter(
-        status=LeaveRequest.Status.COMPLETED,
+    completed_leaves = Leave.objects.filter(
+        status=Leave.LeaveStatus.Completed,
         is_active=True
     ).select_related("applicant")
 
-    for request in completed_requests:
+    for leave in completed_leaves:
         resumption = Resumption.objects.filter(
-            leave_request=request,
-            staff=request.applicant,
-            confirmed=True,
+            leave_obj=leave,
+            staff=leave.request.applicant,
+            status=Resumption.ResumptionStatus.approver_confirmed,
             is_active=True
         ).first()
 
         if resumption:
             # Find active switch records for this leave
             switches = ApproverSwitch.objects.filter(
-                leave_obj__request=request,
+                leave_obj__request=leave.request,
                 is_active=True
             ).select_related("old_approver", "new_approver")
 
@@ -294,7 +321,7 @@ def restore_original_approvers():
                 # Mark switch record inactive
                 switch.is_active = False
                 switch.save(update_fields=["is_active"])
-                print(f"Restored original approver {old_approver} for staff {request.applicant}.")
+                print(f"Restored original approver {old_approver} for staff {leave.request.applicant}.")
 
                 # --- EMAILS ---
                 group = old_approver.group_to_approve
@@ -308,7 +335,7 @@ def restore_original_approvers():
                     message_old = (
                         f"Dear {old_approver.staff.get_full_name()},\n\n"
                         f"Your approver responsibilities for group '{group_name}' (Level: {level_name}) "
-                        f"have been restored now that {request.applicant.get_full_name()} has resumed duty.\n\n"
+                        f"have been restored now that {leave.request.applicant.get_full_name()} has resumed duty.\n\n"
                         f"Please log in to the system to continue your approver duties.\n\n"
                         f"Regards,\nGCPS Leave System"
                     )
@@ -320,7 +347,7 @@ def restore_original_approvers():
                     message_new = (
                         f"Dear {new_approver.staff.get_full_name()},\n\n"
                         f"Your temporary approver assignment for group '{group_name}' (Level: {level_name}) "
-                        f"has ended as {request.applicant.get_full_name()} has resumed duty.\n\n"
+                        f"has ended as {leave.request.applicant.get_full_name()} has resumed duty.\n\n"
                         f"Thank you for your service during this period.\n\n"
                         f"Regards,\nGCPS Leave System"
                     )
